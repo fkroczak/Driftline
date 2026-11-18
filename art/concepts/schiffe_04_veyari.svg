@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="680" viewBox="0 0 380 340" shape-rendering="crispEdges"><title>Veyari-Schiffe: Forschungsschiff und Lanzenschiff</title>
+<defs><pattern id="tile" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#2a2f4a"/><rect width="8" height="1" fill="#353a5c"/><rect width="1" height="8" fill="#353a5c"/></pattern><pattern id="exp" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#3a3a40"/><rect width="8" height="1" fill="#46464c"/><rect width="1" height="8" fill="#46464c"/></pattern></defs>
+<rect width="380" height="340" fill="#14162a"/>
+<text x="10" y="15" fill="#b4b2a9" font-family="sans-serif" font-size="12">Veyari Typ A: Forschungsschiff</text>
+<rect x="0" y="22" width="380" height="140" fill="#0b0d1a"/>
+<text x="10" y="183" fill="#b4b2a9" font-family="sans-serif" font-size="12">Veyari Typ B: Lanzenschiff</text>
+<rect x="0" y="190" width="380" height="140" fill="#0b0d1a"/>
+<g fill="#fff"><rect x="30" y="30" width="2" height="2"/><rect x="360" y="40" width="2" height="2"/><rect x="190" y="155" width="2" height="2"/><rect x="20" y="210" width="2" height="2"/><rect x="250" y="322" width="2" height="2"/></g>
+<g transform="translate(0,7)">
+<ellipse cx="34" cy="85" rx="16" ry="20" fill="#cecbf6" opacity="0.3"/><ellipse cx="44" cy="85" rx="10" ry="16" fill="#0d0f20"/><ellipse cx="44" cy="85" rx="8" ry="14" fill="#afa9ec"/><ellipse cx="42" cy="85" rx="4" ry="8" fill="#eeedfe"/>
+<circle cx="318" cy="85" r="22" fill="#cecbf6" opacity="0.2"/><circle cx="318" cy="85" r="17" fill="none" stroke="#0d0f20" stroke-width="7"/><circle cx="318" cy="85" r="17" fill="none" stroke="#7f77dd" stroke-width="4"/><circle cx="318" cy="85" r="17" fill="none" stroke="#cecbf6" stroke-width="1"/>
+<ellipse cx="175" cy="85" rx="138" ry="53" fill="#0d0f20"/>
+<ellipse cx="175" cy="85" rx="135" ry="50" fill="#3c3489"/>
+<ellipse cx="175" cy="78" rx="128" ry="38" fill="#534ab7"/>
+<ellipse cx="175" cy="66" rx="105" ry="18" fill="#7f77dd"/>
+<ellipse cx="165" cy="58" rx="60" ry="6" fill="#afa9ec"/>
+<ellipse cx="175" cy="85" rx="131" ry="46" fill="none" stroke="#fac775" stroke-width="1"/>
+<circle cx="318" cy="85" r="5" fill="#cecbf6"/><circle cx="318" cy="85" r="2" fill="#ffffff"/>
+<rect x="296" y="77" width="10" height="16" fill="#cecbf6"/><rect x="297" y="78" width="3" height="5" fill="#ffffff"/>
+<g stroke="#0d0f20" stroke-width="2"><rect x="72" y="69" width="32" height="32" fill="url(#tile)"/><rect x="104" y="53" width="32" height="32" fill="url(#tile)"/><rect x="104" y="85" width="32" height="32" fill="url(#tile)"/><rect x="136" y="69" width="32" height="32" fill="url(#tile)"/><rect x="168" y="53" width="32" height="32" fill="url(#tile)"/><rect x="168" y="85" width="32" height="32" fill="url(#tile)"/><rect x="200" y="69" width="32" height="32" fill="url(#exp)"/><rect x="232" y="69" width="32" height="32" fill="url(#tile)"/><rect x="264" y="69" width="30" height="32" fill="url(#tile)"/></g>
+<rect x="83" y="80" width="10" height="10" fill="#d85a30"/><rect x="86" y="83" width="4" height="4" fill="#f5c4b3"/>
+<rect x="115" y="64" width="10" height="10" fill="#ef9f27"/><rect x="118" y="67" width="4" height="4" fill="#faeeda"/>
+<rect x="115" y="96" width="10" height="10" fill="#639922"/><rect x="118" y="99" width="4" height="4" fill="#eaf3de"/>
+<circle cx="152" cy="85" r="9" fill="#d4537e" opacity="0.35"/><rect x="147" y="80" width="10" height="10" fill="#d4537e"/><rect x="150" y="83" width="4" height="4" fill="#fbeaf0"/>
+<rect x="179" y="64" width="10" height="10" fill="#7f77dd"/><rect x="182" y="67" width="4" height="4" fill="#eeedfe"/>
+<rect x="179" y="96" width="10" height="10" fill="#378add"/><rect x="182" y="99" width="4" height="4" fill="#e6f1fb"/>
+<rect x="243" y="80" width="10" height="10" fill="#e24b4a"/><rect x="246" y="83" width="4" height="4" fill="#fcebeb"/>
+<rect x="274" y="80" width="10" height="10" fill="#5dcaa5"/><rect x="277" y="83" width="4" height="4" fill="#e1f5ee"/>
+<g fill="#888780"><rect x="211" y="84" width="10" height="2"/><rect x="215" y="80" width="2" height="10"/></g>
+</g>
+<g transform="translate(0,175)">
+<polygon points="88,62 132,30 196,30 214,62" fill="#0d0f20"/><polygon points="94,62 134,33 194,33 210,62" fill="#534ab7"/><polygon points="134,33 194,33 198,40 128,40" fill="#7f77dd"/><rect x="134" y="33" width="60" height="1" fill="#fac775"/>
+<polygon points="88,108 132,140 196,140 214,108" fill="#0d0f20"/><polygon points="94,108 134,137 194,137 210,108" fill="#3c3489"/><rect x="134" y="136" width="60" height="1" fill="#fac775"/>
+<ellipse cx="30" cy="85" rx="12" ry="14" fill="#cecbf6" opacity="0.3"/><rect x="28" y="72" width="14" height="26" fill="#0d0f20"/><rect x="30" y="74" width="12" height="22" fill="#afa9ec"/><rect x="31" y="78" width="4" height="12" fill="#eeedfe"/>
+<polygon points="37,58 250,57 300,72 300,98 250,113 37,112" fill="#0d0f20"/>
+<polygon points="40,61 250,60 296,74 296,96 250,110 40,109" fill="#534ab7"/>
+<polygon points="40,61 250,60 268,66 40,66" fill="#7f77dd"/><rect x="40" y="61" width="200" height="1" fill="#afa9ec"/>
+<polygon points="40,104 268,104 250,110 40,109" fill="#3c3489"/>
+<rect x="40" y="63" width="210" height="1" fill="#fac775"/><rect x="40" y="106" width="210" height="1" fill="#fac775"/>
+<rect x="288" y="80" width="62" height="10" fill="#0d0f20"/><rect x="290" y="82" width="58" height="6" fill="#ba7517"/><rect x="290" y="82" width="58" height="2" fill="#fac775"/>
+<g fill="#0d0f20"><rect x="300" y="76" width="4" height="18"/><rect x="318" y="76" width="4" height="18"/><rect x="336" y="76" width="4" height="18"/></g>
+<circle cx="354" cy="85" r="12" fill="#fac775" opacity="0.3"/><circle cx="354" cy="85" r="6" fill="#fac775"/><circle cx="354" cy="85" r="3" fill="#faeeda"/>
+<g stroke="#0d0f20" stroke-width="2"><rect x="54" y="69" width="32" height="32" fill="url(#tile)"/><rect x="86" y="69" width="32" height="32" fill="url(#tile)"/><rect x="118" y="69" width="32" height="32" fill="url(#tile)"/><rect x="150" y="69" width="32" height="32" fill="url(#exp)"/><rect x="182" y="69" width="32" height="32" fill="url(#tile)"/><rect x="214" y="69" width="32" height="32" fill="url(#tile)"/><rect x="246" y="69" width="32" height="32" fill="url(#tile)"/></g>
+<rect x="65" y="80" width="10" height="10" fill="#d85a30"/><rect x="68" y="83" width="4" height="4" fill="#f5c4b3"/>
+<rect x="97" y="80" width="10" height="10" fill="#ef9f27"/><rect x="100" y="83" width="4" height="4" fill="#faeeda"/>
+<rect x="129" y="80" width="10" height="10" fill="#378add"/><rect x="132" y="83" width="4" height="4" fill="#e6f1fb"/>
+<rect x="193" y="80" width="10" height="10" fill="#639922"/><rect x="196" y="83" width="4" height="4" fill="#eaf3de"/>
+<rect x="225" y="80" width="10" height="10" fill="#e24b4a"/><rect x="228" y="83" width="4" height="4" fill="#fcebeb"/>
+<rect x="257" y="80" width="10" height="10" fill="#5dcaa5"/><rect x="260" y="83" width="4" height="4" fill="#e1f5ee"/>
+<g fill="#888780"><rect x="161" y="84" width="10" height="2"/><rect x="165" y="80" width="2" height="10"/></g>
+</g>
+</svg>
