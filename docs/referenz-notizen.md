@@ -43,9 +43,20 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Ausweichen in Prozent und Sauerstoff in Prozent als kleine Balken.
 - Die Währung (Schrott) steht als eigener Zähler mit Zahnrad-Symbol. Ein Tooltip erklärt jedes Element („Aktuelle Schrottmenge.“).
 - Die Tooltips erklären auch die Regel dahinter. Treibstoff: Jeder Sprung kostet 1 Einheit. Raketen: Manche Waffen verbrauchen pro Schuss 1 Rakete.
+- Sauerstoff: Prozentwert für das ganze Schiff. Die Lebenserhaltung hält ihn konstant, solange sie Energie hat.
+- Ausweichen: Chance in Prozent, dass ein Schuss das Schiff verfehlt. Hängt von der Energie im Antrieb ab.
 - Rechts davon der Sprungknopf: wird hervorgehoben, sobald der Sprungantrieb geladen ist.
 
 → Driftline: segmentierter Hüllenbalken mit Farbstufen Grün, Orange, Rot aus der Palette. Für Schilde, Treibstoff, Raketen, Drohnenteile, Währung, Ausweichen und Sauerstoff jeweils eigene Symbole (12–16 px), kein Zahnrad für die Währung. Jedes HUD-Element bekommt einen Tooltip.
+
+## Energieleiste unten links
+
+- Senkrechter Balken links für die Reaktorenergie. Gefüllte Segmente sind frei verfügbare Energie.
+- Daneben eine Säule pro System: rundes Symbol unten, darüber die Segmente der zugeteilten Energie.
+- Über einer Säule zeigt ein kleines Figürchen an, dass der Raum besetzt ist. Sterne darüber stehen für die Fähigkeitsstufe der Person.
+- Tooltip auf einem System: Funktion, aktuelle Stufe und was sie bewirkt (z. B. „Stufe 8: Vier Schildbarrieren“), Bonus bei Besetzung (z. B. 30 % schnelleres Laden), Status (z. B. volle Energie) und Tastenkürzel für Energie an und aus.
+
+→ Driftline: Systemsymbole in einer runden Plakette (etwa 16–24 px), segmentierte Energiesäulen, ein Besetzt-Symbol mit Stufenanzeige. Das Tooltip-Panel muss mehrere Absätze tragen.
 
 ## Sektorkarte (Sprungkarte)
 
