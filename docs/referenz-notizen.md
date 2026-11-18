@@ -42,6 +42,8 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Bereits besuchte Knoten sehen anders aus als unbesuchte.
 - Knoten können ein Label tragen: Ausgang, Notruf, Auftrag.
 - Nebelgebiete liegen als farbige Wolken auf der Karte und wirken als Gefahrenzone.
+- Fährt man mit der Maus über einen Knoten, werden seine Verbindungen gelb hervorgehoben. Ein Tooltip nennt den Status und, falls bekannt, den Grund, zum Beispiel „Nicht besucht. Ziel eines Auftrags.“
+- Manche Knoten tragen einen großen, farbig leuchtenden Ring als Sondermarker.
 - Unten stehen Name und Typ des Sektors, dazu „Abbrechen“.
 - Der Hintergrund ist eine fotoartige Galaxie.
   → Driftline: Hintergrund als Pixel-Art in der eigenen Palette, kein Foto.
