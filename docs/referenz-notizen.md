@@ -35,6 +35,17 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - **Ausrüstung:** Waffen, Drohnen, Fracht, Ausbauten, jeweils mit Gegenstandsbild (etwa 48 × 32 px).
 - **HUD:** Hülle, Schilde, Treibstoff, Raketen, Drohnenteile, Währung, Energie, Waffenleiste, Sprungknopf.
 
+## HUD oben links (Detail)
+
+- Hüllenbalken aus einzelnen Segmenten (etwa 30), daneben der Zahlenwert der Hülle. Die Farbe wechselt je nach Zustand.
+- Darunter die Schilde als runde Ladungen (hier 4), mit einem Ladebalken für die nächste Ladung.
+- Zähler mit Symbol und Zahl: Treibstoff, Raketen, Drohnenteile.
+- Ausweichen in Prozent und Sauerstoff in Prozent als kleine Balken.
+- Die Währung (Schrott) steht als eigener Zähler mit Zahnrad-Symbol. Ein Tooltip erklärt jedes Element („Aktuelle Schrottmenge.“).
+- Rechts davon der Sprungknopf: wird hervorgehoben, sobald der Sprungantrieb geladen ist.
+
+→ Driftline: segmentierter Hüllenbalken mit Farbstufen Grün, Orange, Rot aus der Palette. Für Schilde, Treibstoff, Raketen, Drohnenteile, Währung, Ausweichen und Sauerstoff jeweils eigene Symbole (12–16 px), kein Zahnrad für die Währung. Jedes HUD-Element bekommt einen Tooltip.
+
 ## Sektorkarte (Sprungkarte)
 
 - Knoten (Sprungziele) sind durch gestrichelte Linien verbunden. Grün markiert sind die Ziele, die vom aktuellen Standort erreichbar sind.
