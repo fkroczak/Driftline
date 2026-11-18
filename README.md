@@ -10,6 +10,10 @@ Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realist
 | [docs/fable-prompt.md](docs/fable-prompt.md) | Prompt für die Grafik-Erstellung (Crew-Sprites und 12 Schiffe) |
 | [art/](art/README.md) | Konzeptgrafiken, Pixel-Art-Proben und deren Quelldateien |
 | [tools/pixelize.py](tools/pixelize.py) | Wandelt eine SVG-Zeichnung in Pixel-Art um (Palette, Kontur, Schatten) |
+| [docs/art-styleguide.md](docs/art-styleguide.md) | Styleguide: Maßstab (Kachel 14 px, Crew 14 px an Bord / 40×44 Porträt), feste Palette, Pipeline, Raumsymbole |
+| [docs/referenz-notizen.md](docs/referenz-notizen.md) | Beobachtungen aus dem Genre-Vorbild: Screens, HUD, Tooltips, Touch-Umsetzung |
+| [docs/schiffe/](docs/schiffe/mensch-frachter.md) | Raumlisten der Schiffe |
+| [tools/artgen/](tools/artgen/build.py) | Sprite-Pipeline mit fester 62-Farben-Palette; `python3 tools/artgen/build.py` erzeugt `art/export`, `art/preview`, `art/palette` |
 
 ## Eckdaten
 

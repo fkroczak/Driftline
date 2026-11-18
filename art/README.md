@@ -43,3 +43,14 @@ Je zwei Schiffe pro Spezies, noch im einfacheren 16-Bit-Stil, aber mit den gült
 | Grau mit „+“ | leerer Erweiterungsraum |
 
 Diese Schiffe sollen im realistischen Pixel-Stil neu gezeichnet werden (siehe [docs/fable-prompt.md](../docs/fable-prompt.md)).
+
+## export/, preview/, palette/ – Sprites aus der festen Palette
+
+Erzeugt mit `python3 tools/artgen/build.py` (Pipeline in `tools/artgen/`, Details im [Styleguide](../docs/art-styleguide.md)). Diese Pipeline nutzt die feste Palette mit 62 Farben aus `palette/` und löst damit das oben genannte Problem verschmelzender Raumsymbole.
+
+| Pfad | Inhalt |
+| --- | --- |
+| `export/1x/`, `export/4x/` | Spielfertige PNGs (transparent): Crew Mensch groß 40×44 und klein 16×16 je 4 Richtungen, Mensch-Frachter 280×140 |
+| `preview/` | Vorschauen auf #07080F, u. a. Frachter mit Crew an Bord |
+| `palette/` | Palette als `.gpl`, `.hex`, `.png` |
+| `source/crew/`, `source/ships/` | SVG-Quellen dieser Sprites (werden vom Build überschrieben) |
