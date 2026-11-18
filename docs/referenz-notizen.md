@@ -42,7 +42,7 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Zähler mit Symbol und Zahl: Treibstoff, Raketen, Drohnenteile.
 - Ausweichen in Prozent und Sauerstoff in Prozent als kleine Balken.
 - Die Währung (Schrott) steht als eigener Zähler mit Zahnrad-Symbol. Ein Tooltip erklärt jedes Element („Aktuelle Schrottmenge.“).
-- Die Tooltips erklären auch die Regel dahinter. Treibstoff: Jeder Sprung kostet 1 Einheit. Raketen: Manche Waffen verbrauchen pro Schuss 1 Rakete.
+- Die Tooltips erklären auch die Regel dahinter. Treibstoff: Jeder Sprung kostet 1 Einheit. Raketen: Manche Waffen verbrauchen pro Schuss 1 Rakete. Drohnenteile: Jeder Drohnen-Einsatz verbraucht 1 Teil.
 - Sauerstoff: Prozentwert für das ganze Schiff. Die Lebenserhaltung hält ihn konstant, solange sie Energie hat.
 - Ausweichen: Chance in Prozent, dass ein Schuss das Schiff verfehlt. Hängt von der Energie im Antrieb ab.
 - Rechts davon der Sprungknopf: wird hervorgehoben, sobald der Sprungantrieb geladen ist.
