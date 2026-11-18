@@ -1,6 +1,6 @@
 # Driftline – Art-Styleguide
 
-Ergänzt den [Stil-Brief](art-brief.md) um die Entscheidungen aus der Stilprobe.
+Ergänzt den [Grafik-Prompt](fable-prompt.md) um die Entscheidungen aus der Stilprobe.
 
 ## Maßstab
 

@@ -1,39 +1,25 @@
 # Driftline
 
-Raumschiff-Roguelike für Android in Draufsicht. Glaubwürdige, funktionale Raumfahrttechnik in realistischer HD-Pixel-Art.
+Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realistischer Pixel-Art. Du führst ein Schiff mit Crew aus sechs Spezies durch prozedural erzeugte Universen: Energie verteilen, kämpfen, reparieren, ausbauen, Planeten erkunden. Arbeitstitel, Konzeptphase.
 
-![Mensch-Frachter mit Crew an Bord](art/preview/mensch_frachter_an_bord.png)
+## Inhalt
 
-## Stand
+| Pfad | Inhalt |
+| --- | --- |
+| [docs/GDD.md](docs/GDD.md) | Game-Design-Dokument: Kernschleife, Kampf, Energie, Spezies, Schiffe, Module, Spielmodi, Roadmap |
+| [docs/fable-prompt.md](docs/fable-prompt.md) | Prompt für die Grafik-Erstellung (Crew-Sprites und 12 Schiffe) |
+| [art/](art/README.md) | Konzeptgrafiken, Pixel-Art-Proben und deren Quelldateien |
+| [tools/pixelize.py](tools/pixelize.py) | Wandelt eine SVG-Zeichnung in Pixel-Art um (Palette, Kontur, Schatten) |
+| [docs/art-styleguide.md](docs/art-styleguide.md) | Styleguide: Maßstab (Kachel 14 px, Crew 14 px an Bord / 40×44 Porträt), feste Palette, Pipeline, Raumsymbole |
+| [docs/referenz-notizen.md](docs/referenz-notizen.md) | Beobachtungen aus dem Genre-Vorbild: Screens, HUD, Tooltips, Touch-Umsetzung |
+| [docs/schiffe/](docs/schiffe/mensch-frachter.md) | Raumlisten der Schiffe |
+| [tools/artgen/](tools/artgen/build.py) | Sprite-Pipeline mit fester 62-Farben-Palette; `python3 tools/artgen/build.py` erzeugt `art/export`, `art/preview`, `art/palette` |
 
-| Bereich | Status |
-|---|---|
-| Stil-Brief | [docs/art-brief.md](docs/art-brief.md) |
-| Styleguide und Entscheidungen | [docs/art-styleguide.md](docs/art-styleguide.md) |
-| Crew Mensch (groß 40×44, klein 16×16, je 4 Richtungen) | Stilprobe |
-| Schiff Mensch-Frachter | Stilprobe – [Raumliste](docs/schiffe/mensch-frachter.md) |
-| Weitere 5 Spezies, 11 Schiffe, Farbvarianten | offen |
+## Eckdaten
 
-## Ordner
+- **Engine:** Godot 4, Export als Android-App (Querformat)
+- **Spielmodi:** „Die Jagd“ (10 Sprünge pro Universum, Endboss) und „Endloses Universum“ (Fraktionen, Highscore)
+- **Ressourcen:** Treibstoff ist Währung und kostet 1 pro Sprung; Rohstoffe für Upgrades und Reparatur
+- **Stil:** realistische HD-Pixel-Art, Palette mit ca. 64 Farben, dunkle Konturen
 
-```
-art/
-  source/   SVG-Vorlagen (crew/, ships/)
-  export/1x Spielgrafiken in Originalauflösung (transparentes PNG)
-  export/4x dieselben Grafiken ×4 (Nearest Neighbor)
-  preview/  Vorschauen auf Weltraum-Hintergrund #07080F
-  palette/  Palette als .gpl (GIMP/Aseprite), .hex und .png
-docs/       Brief, Styleguide, Raumlisten der Schiffe
-tools/artgen/  Python-Pipeline, die alles unter art/ erzeugt
-```
-
-## Grafiken neu erzeugen
-
-Voraussetzungen: Python 3.10+, `rsvg-convert` (Paket `librsvg2-bin`).
-
-```bash
-pip install -r tools/artgen/requirements.txt
-python3 tools/artgen/build.py
-```
-
-Der Ordner `art/` wird dabei vollständig neu geschrieben. Änderungen also im Code unter `tools/artgen/` machen, nicht in den PNGs.
+Mechaniken sind frei nutzbar; Namen, Grafiken und Texte aus FTL, Star Wars oder Star Trek werden nicht übernommen.

@@ -1,3 +1,8 @@
+# Prompt für die Grafik-Erstellung (Fable)
+
+Diesen Prompt an Fable übergeben, um Crew-Sprites und Schiffe im Driftline-Stil erstellen zu lassen.
+
+````
 Du bist Pixel-Art-Designer für ein Android-Spiel. Erstelle Grafiken für "Driftline", ein Raumschiff-Roguelike in Draufsicht (inspiriert von FTL, aber mit komplett eigenen Designs). Wichtig: Keine Designs, Namen oder Symbole aus FTL, Star Wars oder Star Trek kopieren. Stimmung: glaubwürdige, funktionale Raumfahrttechnik.
 
 ## Stil
@@ -57,3 +62,4 @@ Pflicht-Räume (wo sinnvoll): Cockpit, Reaktor, Schilde, Waffen, Antrieb, Medbay
 1. Zuerst nur Mensch (Crew, alle 4 Richtungen) und Mensch Frachter als Stilprobe, dann auf mein Feedback warten
 2. Danach Crew-Spritesheet (6 Spezies × 4 Richtungen × 3 Varianten) und ein Bild pro Schiff
 3. Zu jedem Schiff eine kurze Liste der Räume und ihrer Position
+````
