@@ -35,6 +35,19 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - **Ausrüstung:** Waffen, Drohnen, Fracht, Ausbauten, jeweils mit Gegenstandsbild (etwa 48 × 32 px).
 - **HUD:** Hülle, Schilde, Treibstoff, Raketen, Drohnenteile, Währung, Energie, Waffenleiste, Sprungknopf.
 
+## Sektorkarte (Sprungkarte)
+
+- Knoten (Sprungziele) sind durch gestrichelte Linien verbunden. Grün markiert sind die Ziele, die vom aktuellen Standort erreichbar sind.
+- Das Schiff steht als kleines Symbol am aktuellen Knoten.
+- Bereits besuchte Knoten sehen anders aus als unbesuchte.
+- Knoten können ein Label tragen: Ausgang, Notruf, Auftrag.
+- Nebelgebiete liegen als farbige Wolken auf der Karte und wirken als Gefahrenzone.
+- Unten stehen Name und Typ des Sektors, dazu „Abbrechen“.
+- Der Hintergrund ist eine fotoartige Galaxie.
+  → Driftline: Hintergrund als Pixel-Art in der eigenen Palette, kein Foto.
+
+Für Driftline gebraucht: Karten-Hintergrund, Knoten-Symbole für die Zustände unbesucht, besucht, aktuell, erreichbar, Ausgang, Notruf, Auftrag und Händler, Verbindungslinien, Nebel-Overlay, Schiffsmarker und Label-Schilder.
+
 ## Abgrenzung
 
 - Keine Namen aus dem Vorbild, also kein „FTL-Antrieb“, keine Waffen- oder Spezies-Namen. Stattdessen etwa „Sprungantrieb“.
