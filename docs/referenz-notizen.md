@@ -58,6 +58,20 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 
 → Driftline: Systemsymbole in einer runden Plakette (etwa 16–24 px), segmentierte Energiesäulen, ein Besetzt-Symbol mit Stufenanzeige. Das Tooltip-Panel muss mehrere Absätze tragen.
 
+## Gesamtlayout des Kampfbildschirms
+
+- Oben links: Hülle, Schilde, Zähler, Ausweichen, Sauerstoff. Darunter die Crew-Liste.
+- Oben Mitte: Währung, Sprungknopf mit Ladeanzeige, dazu die Knöpfe Schiff/Upgrade und Optionen.
+- Mitte: das eigene Schiff mit Schildblase.
+- Unten links: Reaktor und Energiesäulen der Systeme.
+- Unten Mitte: Waffenleiste mit Ladebalken je Waffe (z. B. 6.4/6.4) und einem Schalter für Dauerfeuer. Daneben die Drohnenleiste.
+- Unten rechts: Subsysteme und ein Lupenknopf für „erweiterte Infos“. Der Schalter blendet zusätzliche Kurzinfos ein: zu Waffen, Drohnen, Ausbauten und Crew, außerdem Kartenverbindungen, Sauerstoff pro Raum und Reaktorenergie im Hangar. Auf dem PC liegt er zusätzlich auf einer Taste.
+
+→ Driftline (Android): Auf dem Touchscreen gibt es weder Mauszeiger noch Tastenkürzel.
+- Tooltips öffnen sich per langem Tippen.
+- Erweiterte Infos und Energie an/aus brauchen eigene Knöpfe bzw. Gesten.
+- Alle tippbaren Elemente brauchen mindestens 48 dp Trefferfläche. Das ist bei der Größe der Symbole einzuplanen.
+
 ## Sektorkarte (Sprungkarte)
 
 - Knoten (Sprungziele) sind durch gestrichelte Linien verbunden. Grün markiert sind die Ziele, die vom aktuellen Standort erreichbar sind.
