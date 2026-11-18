@@ -42,6 +42,7 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Zähler mit Symbol und Zahl: Treibstoff, Raketen, Drohnenteile.
 - Ausweichen in Prozent und Sauerstoff in Prozent als kleine Balken.
 - Die Währung (Schrott) steht als eigener Zähler mit Zahnrad-Symbol. Ein Tooltip erklärt jedes Element („Aktuelle Schrottmenge.“).
+- Die Tooltips erklären auch die Regel dahinter. Treibstoff: Jeder Sprung kostet 1 Einheit. Raketen: Manche Waffen verbrauchen pro Schuss 1 Rakete.
 - Rechts davon der Sprungknopf: wird hervorgehoben, sobald der Sprungantrieb geladen ist.
 
 → Driftline: segmentierter Hüllenbalken mit Farbstufen Grün, Orange, Rot aus der Palette. Für Schilde, Treibstoff, Raketen, Drohnenteile, Währung, Ausweichen und Sauerstoff jeweils eigene Symbole (12–16 px), kein Zahnrad für die Währung. Jedes HUD-Element bekommt einen Tooltip.
