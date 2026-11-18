@@ -6,6 +6,9 @@
 | --- | --- |
 | `species_pixel.png` | Die sechs Spezies in Draufsicht: Mensch, Kith'ra, Androide, Veyari, Ormok, Petrani |
 | `ships_pixel.png` | Schiffsentwürfe in C-Form (mit Shuttlebucht) und 7-Form (mit Geschützausleger) |
+| `sprungkarte_pixel.png` | Sprungkarte im Jagd-Modus: Nebel, Sprungziele, Jägerfront, Infofeld |
+| `hud_kampf_pixel.png` | Kampf-HUD im Querformat: eigenes Schiff, Gegner, Energie, Waffen, Crew |
+| `hud_ereignis_pixel.png` | Ereignis-Dialog mit Spezies-Option, Spiel pausiert |
 
 ## source/ – Quelldateien der Pixel-Art
 
@@ -15,6 +18,8 @@ Detaillierte SVG-Zeichnungen, aus denen die PNGs erzeugt werden:
 python3 tools/pixelize.py art/source/species_realistic.svg art/pixel/species_pixel.png 216 160 5 56 floor
 python3 tools/pixelize.py art/source/ships_c_7_form.svg art/pixel/ships_pixel.png 285 279 4 120 space
 ```
+
+Die UI-Mockups entstehen mit `art/source/ui/render.py` (Sprungkarte) und `art/source/ui/hud.py` (Kampf-HUD und Ereignis-Dialog); beide im Ordner `art/source/ui` ausführen, `hud.py` erwartet die gerenderten Schiffskonzepte `s1.png` und `s5.png`.
 
 Parameter: Quelle, Ziel, Breite und Höhe in Pixeln, Hochskalierung, Farbanzahl, Hintergrund (`floor` oder `space`). Benötigt `rsvg-convert` und Pillow.
 

@@ -265,6 +265,24 @@ Realistische Pixel-Art in hoher Auflösung: echte Proportionen, Materialien und 
 - **Grafik-Quellen:** zuerst Asset-Packs von itch.io als Platzhalter, später ein Artist für Schiffe, Crew und Bosse
 - **Musik:** Chiptune, ruhig auf der Karte, treibend im Kampf
 
+### Bildschirme (Querformat, Touch)
+
+Mockups: [Sprungkarte](../art/pixel/sprungkarte_pixel.png), [Kampf-HUD](../art/pixel/hud_kampf_pixel.png), [Ereignis-Dialog](../art/pixel/hud_ereignis_pixel.png)
+
+**Sprungkarte:** Nebel-Hintergrund, Sprungziele als Punkte mit gestrichelten Verbindungen. Besuchte Ziele grün, erreichbare gelb, unbekannte weiß. Markierungen für Notruf, Händler, Boss und Ausgang; die Jägerfront rückt als rote Fläche von links vor. Antippen zeigt ein Infofeld mit Treibstoffkosten, zweites Antippen springt.
+
+**Kampf-HUD:**
+
+- Oben links: Hülle, Schilde, Sauerstoff und Ausweichchance
+- Oben Mitte: Treibstoff, Rohstoffe, Raketen, Drohnenteile
+- Oben rechts: Sprung-Button mit Ladebalken, Karte, Pause
+- Links: Crew-Liste mit Lebenspunkten; Antippen wählt die Figur
+- Unten links: Reaktorbalken und Energiesäulen pro System; Antippen einer Säule gibt oder nimmt Energie
+- Unten Mitte: Waffen mit Ladebalken; Waffe antippen, dann Zielraum am Gegner antippen
+- Unten rechts: Drohnen, Türen (alle schließen) und Luftschleuse
+
+**Ereignis-Dialog:** pausiert das Spiel, links eine kleine Szenen-Illustration, rechts der Text, darunter die Optionen als große Touch-Flächen. Optionen, die eine Spezies oder ein Modul freischaltet, sind farbig markiert, z. B. „[Veyari] Signal aus dem Orbit analysieren“.
+
 Arbeitsweise für Grafiken und Prompt für die Erstellung: siehe [art/README.md](../art/README.md) und [docs/fable-prompt.md](fable-prompt.md).
 
 ## Technik und Roadmap
