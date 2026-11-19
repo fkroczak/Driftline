@@ -54,3 +54,13 @@ Erzeugt mit `python3 tools/artgen/build.py` (Pipeline in `tools/artgen/`, Detail
 | `preview/` | Vorschauen auf #07080F, u. a. Frachter mit Crew an Bord |
 | `palette/` | Palette als `.gpl`, `.hex`, `.png` |
 | `source/crew/`, `source/ships/` | SVG-Quellen dieser Sprites (werden vom Build überschrieben) |
+
+## ui/ – UI-Stilprobe Handy-Querformat
+
+Erzeugt mit `python3 tools/artgen/ui_kampf.py` (nach `build.py`). Raster und Regeln: [docs/ui-layout.md](../docs/ui-layout.md).
+
+| Datei | Inhalt |
+| --- | --- |
+| `kampf_hud_2400x1080.png` | Kampf-HUD in Zielauflösung (600×270 logisch, ×4) |
+| `kampf_hud_600x270.png` | dieselbe Grafik in 1× |
+| `kampf_hud_raster_2400x1080.png` | Prüfbild: Safe Areas und Trefferflächen (grün ≥ 48 dp, orange darunter) |
