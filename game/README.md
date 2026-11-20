@@ -2,7 +2,15 @@
 
 Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage ist, ob der Kampf per Touch Spaß macht.
 
-**Stand:** Der Mensch-Frachter mit drei Crewmitgliedern. Figur antippen, dann Zielraum antippen; die Figur läuft durch die Türen dorthin. Rechtsklick hebt die Auswahl auf.
+**Stand:** Der Mensch-Frachter mit drei Crewmitgliedern und einer Crew-Leiste links.
+
+- **Auswählen:** Figur im Schiff oder Porträt in der Leiste antippen
+- **Schicken:** danach die genaue Zielkachel antippen, auch eine besetzte; wer dort steht, weicht auf die nächste freie Kachel aus
+- **Abwählen:** die ausgewählte Figur erneut antippen oder neben das Schiff tippen
+- **Konsolen** (Antrieb, Schilde, Sensoren, Waffen, Cockpit; kleine Leiste an der Kachel, grün = besetzt):
+  1. Ist die Konsole frei, setzt sich die erfahrenste Person im Raum hin.
+  2. Sitzt dort jemand weniger Erfahrenes, tauschen beide, außer diese Person wurde ausdrücklich an die Konsole geschickt.
+  3. An der Konsole steigt die Erfahrung im System (1 Stufe pro Minute, höchstens 5). Die Punkte unter dem Porträt zeigen die Stufe im aktuellen Raum.
 
 ## Öffnen und starten
 
@@ -34,9 +42,9 @@ godot --headless --path game --script res://tests/run_tests.gd
 
 ## Darstellung
 
-Basisauflösung 480 × 270, ganzzahlig hochskaliert (1080p: 4×), Breite passt sich dem Seitenverhältnis an, Querformat, Pixel-Art ohne Filter. Renderer „Compatibility“ für ältere Android-Geräte.
+Basisauflösung 384 × 216, ganzzahlig hochskaliert (1080p: 5×), Breite passt sich dem Seitenverhältnis an, Querformat, Pixel-Art ohne Filter. Renderer „Compatibility“ für ältere Android-Geräte.
 
-Ein Raum ist bei 4× auf einem 1080p-Handy etwa 112 px bzw. 45 dp groß (GDD: mindestens 48 dp). Hintergrund: Sternenfeld in drei Ebenen (`scripts/view/starfield.gd`).
+Ein Raum ist bei 5× auf einem 1080p-Handy 140 px groß (ca. 56 dp, GDD: mindestens 48 dp), eine Kachel 70 px. Hintergrund: Sternenfeld in drei Ebenen (`scripts/view/starfield.gd`).
 
 ## Android-APK
 

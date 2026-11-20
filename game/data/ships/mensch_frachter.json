@@ -6,17 +6,17 @@
   "grid_origin": [70, 14],
   "grid_size": [11, 8],
   "rooms": [
-    {"id": "antrieb", "name": "Antrieb", "system": "antrieb", "pos": [0, 0]},
+    {"id": "antrieb", "name": "Antrieb", "system": "antrieb", "pos": [0, 0], "console": [0, 0]},
     {"id": "erweiterung_1", "name": "Erweiterung 1", "system": "", "pos": [2, 0]},
     {"id": "lebenserhaltung", "name": "Lebenserhaltung", "system": "lebenserhaltung", "pos": [4, 0]},
-    {"id": "schilde", "name": "Schilde", "system": "schilde", "pos": [6, 0]},
+    {"id": "schilde", "name": "Schilde", "system": "schilde", "pos": [6, 0], "console": [7, 0]},
     {"id": "reaktor", "name": "Reaktor", "system": "reaktor", "pos": [6, 2]},
-    {"id": "sensoren", "name": "Sensoren", "system": "sensoren", "pos": [6, 4]},
-    {"id": "waffen", "name": "Waffen", "system": "waffen", "pos": [6, 6]},
+    {"id": "sensoren", "name": "Sensoren", "system": "sensoren", "pos": [6, 4], "console": [6, 4]},
+    {"id": "waffen", "name": "Waffen", "system": "waffen", "pos": [6, 6], "console": [7, 7]},
     {"id": "erweiterung_3", "name": "Erweiterung 3", "system": "", "pos": [4, 6]},
     {"id": "medbay", "name": "Medbay", "system": "medbay", "pos": [2, 6]},
     {"id": "erweiterung_2", "name": "Erweiterung 2", "system": "", "pos": [0, 6]},
-    {"id": "cockpit", "name": "Cockpit", "system": "cockpit", "pos": [9, 3]},
+    {"id": "cockpit", "name": "Cockpit", "system": "cockpit", "pos": [9, 3], "console": [10, 3]},
     {"id": "korridor", "name": "Korridor", "system": "", "pos": [8, 1], "size": [1, 6]}
   ],
   "doors": [
