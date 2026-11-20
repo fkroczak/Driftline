@@ -34,9 +34,9 @@ godot --headless --path game --script res://tests/run_tests.gd
 
 ## Darstellung
 
-Basisauflösung 640 × 360, ganzzahlig hochskaliert (Full HD: 3×), Querformat, Pixel-Art ohne Filter. Renderer „Compatibility“ für ältere Android-Geräte.
+Basisauflösung 480 × 270, ganzzahlig hochskaliert (1080p: 4×), Breite passt sich dem Seitenverhältnis an, Querformat, Pixel-Art ohne Filter. Renderer „Compatibility“ für ältere Android-Geräte.
 
-Offen: Ein Raum ist bei 3× etwa 33 dp groß, das GDD verlangt mindestens 48 dp. Das klären wir beim ersten Test auf dem Handy.
+Ein Raum ist bei 4× auf einem 1080p-Handy etwa 112 px bzw. 45 dp groß (GDD: mindestens 48 dp). Hintergrund: Sternenfeld in drei Ebenen (`scripts/view/starfield.gd`).
 
 ## Android-APK
 

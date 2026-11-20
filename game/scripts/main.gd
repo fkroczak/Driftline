@@ -18,8 +18,17 @@ func _ready() -> void:
 	state.add_crew("Jonas Reil", "mensch", Vector2i(6, 6))
 	state.add_crew("Ilka Brandt", "mensch", Vector2i(6, 2))
 	ship_view.setup(state)
+	get_viewport().size_changed.connect(_layout)
+	_layout()
 	ship_view.selection_changed.connect(_on_selection_changed)
 	_on_selection_changed(null, -1)
+
+
+## Schiff mittig in der sichtbaren Fläche (sie ist je nach Handy unterschiedlich breit).
+## Mit Gegnerschiff rückt es später in die linke Hälfte.
+func _layout() -> void:
+	var view_size := get_viewport_rect().size
+	ship_view.position = ((view_size - ship_view.get_size()) / 2.0).floor()
 
 
 func _process(delta: float) -> void:

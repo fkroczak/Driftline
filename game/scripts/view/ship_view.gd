@@ -39,6 +39,10 @@ func setup(p_state: ShipState) -> void:
 	_sync_crew()
 
 
+func get_size() -> Vector2:
+	return _ship_texture.get_size() if _ship_texture else Vector2.ZERO
+
+
 func _process(_delta: float) -> void:
 	if state:
 		_sync_crew()
