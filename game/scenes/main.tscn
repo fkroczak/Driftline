@@ -1,29 +1,45 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/view/ship_view.gd" id="2_ship"]
+[ext_resource type="Script" path="res://scripts/view/starfield.gd" id="3_stars"]
+[ext_resource type="Script" path="res://scripts/view/crew_panel.gd" id="4_crew"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
 
+[node name="Starfield" type="Node2D" parent="."]
+script = ExtResource("3_stars")
+
 [node name="ShipView" type="Node2D" parent="."]
-position = Vector2(24, 110)
+position = Vector2(77, 44)
 script = ExtResource("2_ship")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="Title" type="Label" parent="HUD"]
-offset_left = 12.0
-offset_top = 8.0
+offset_left = 6.0
+offset_top = 2.0
 offset_right = 300.0
-offset_bottom = 24.0
-theme_override_font_sizes/font_size = 12
+offset_bottom = 18.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
 text = "Hullbound – Prototyp"
 
 [node name="Info" type="Label" parent="HUD"]
-offset_left = 12.0
-offset_top = 26.0
-offset_right = 400.0
-offset_bottom = 40.0
+offset_left = 6.0
+offset_top = 16.0
+offset_right = 380.0
+offset_bottom = 30.0
+mouse_filter = 2
 theme_override_colors/font_color = Color(0.666667, 0.701961, 0.752941, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
+
+[node name="CrewPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 6.0
+offset_top = 34.0
+offset_right = 50.0
+offset_bottom = 205.0
+script = ExtResource("4_crew")

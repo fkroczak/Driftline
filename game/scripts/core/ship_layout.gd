@@ -12,7 +12,7 @@ var tile_size: int = 14
 ## Pixelposition der oberen linken Rasterecke im Schiffs-Sprite.
 var grid_origin: Vector2i = Vector2i.ZERO
 var grid_size: Vector2i = Vector2i.ZERO
-## Jeder Raum: {id, name, system, pos: Vector2i, size: Vector2i}
+## Jeder Raum: {id, name, system, pos: Vector2i, size: Vector2i, console: Vector2i oder null}
 var rooms: Array[Dictionary] = []
 
 var _room_at: Dictionary = {}  # Vector2i -> Raumindex
@@ -47,6 +47,7 @@ static func from_dict(d: Dictionary) -> ShipLayout:
 			"system": r.get("system", ""),
 			"pos": _vec(r["pos"]),
 			"size": _vec(r.get("size", [2, 2])),
+			"console": _vec(r["console"]) if r.has("console") else null,
 		})
 		for t in layout.room_tiles(idx):
 			if layout._room_at.has(t):
@@ -68,9 +69,12 @@ func validate() -> PackedStringArray:
 		errors.append("Keine Räume")
 		return errors
 	var bounds := Rect2i(Vector2i.ZERO, grid_size)
-	for room in rooms:
+	for i in rooms.size():
+		var room := rooms[i]
 		if not bounds.encloses(Rect2i(room.pos, room.size)):
 			errors.append("Raum %s liegt außerhalb des Rasters" % room.id)
+		if room.console != null and room_index_at(room.console) != i:
+			errors.append("Konsole von %s liegt nicht im Raum" % room.id)
 	for t in _overlaps:
 		errors.append("Räume überlappen bei %s" % t)
 	for pair: Array in _doors.values():
@@ -108,6 +112,16 @@ func room_tiles(idx: int) -> Array[Vector2i]:
 		for x in room.size.x:
 			tiles.append(room.pos + Vector2i(x, y))
 	return tiles
+
+
+## Konsolenkachel des Raums oder null, wenn der Raum keine Konsole hat.
+func console_of(room_idx: int) -> Variant:
+	return rooms[room_idx].console
+
+
+func is_console(tile: Vector2i) -> bool:
+	var idx := room_index_at(tile)
+	return idx >= 0 and rooms[idx].console == tile
 
 
 func is_walkable(tile: Vector2i) -> bool:

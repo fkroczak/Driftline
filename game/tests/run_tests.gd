@@ -97,3 +97,73 @@ func test_redirect_mid_step() -> void:
 	for i in 300:
 		state.update(0.1)
 	check(state.layout.rooms[state.layout.room_index_at(member.tile)].id == "waffen", "Crew nicht im Waffenraum")
+
+
+func _settle(state: ShipState, seconds := 30.0) -> void:
+	for i in int(seconds * 10):
+		state.update(0.1)
+
+
+func test_exact_tile_placement() -> void:
+	var state := ShipState.new(_layout())
+	var member := state.add_crew("A", "mensch", Vector2i(8, 1))
+	check(state.order_move_to_tile(member, Vector2i(2, 7)), "Befehl abgelehnt")
+	_settle(state)
+	check(member.tile == Vector2i(2, 7), "Nicht auf der gewählten Kachel, sondern %s" % member.tile)
+
+
+func test_occupant_makes_room() -> void:
+	var state := ShipState.new(_layout())
+	var console: Vector2i = state.layout.console_of(state.layout.room_index_by_id("schilde"))
+	var sitter := state.add_crew("Sitzt", "mensch", console)
+	var newcomer := state.add_crew("Neu", "mensch", Vector2i(8, 4))
+	check(state.order_move_to_tile(newcomer, console), "Befehl abgelehnt")
+	check(sitter.destination() != console, "Sitzende Person macht keinen Platz")
+	check(state.layout.room_index_at(sitter.destination()) == state.layout.room_index_by_id("schilde"),
+		"Sitzende Person verlässt den Raum, obwohl Platz ist")
+	_settle(state)
+	check(newcomer.tile == console, "Neue Person sitzt nicht an der Konsole")
+	check(state.operator_of(state.layout.room_index_by_id("schilde")) == newcomer, "Falsche Person bedient")
+
+
+func test_free_console_gets_staffed() -> void:
+	var state := ShipState.new(_layout())
+	var waffen := state.layout.room_index_by_id("waffen")
+	var member := state.add_crew("A", "mensch", Vector2i(6, 6))
+	_settle(state, 5.0)
+	check(state.operator_of(waffen) == member, "Freie Konsole wird nicht besetzt")
+
+
+func test_most_experienced_takes_console() -> void:
+	var state := ShipState.new(_layout())
+	var waffen := state.layout.room_index_by_id("waffen")
+	var console: Vector2i = state.layout.console_of(waffen)
+	var rookie := state.add_crew("Neuling", "mensch", console, {"waffen": 0.0})
+	var veteran := state.add_crew("Profi", "mensch", Vector2i(8, 1), {"waffen": 3.0})
+	state.order_move(veteran, waffen)
+	_settle(state)
+	check(state.operator_of(waffen) == veteran, "Erfahrenere Person übernimmt nicht")
+	check(state.layout.room_index_at(rookie.tile) == waffen, "Neuling hat den Raum verlassen")
+
+
+func test_explicit_console_order_is_respected() -> void:
+	var state := ShipState.new(_layout())
+	var waffen := state.layout.room_index_by_id("waffen")
+	var console: Vector2i = state.layout.console_of(waffen)
+	var veteran := state.add_crew("Profi", "mensch", console, {"waffen": 3.0})
+	var rookie := state.add_crew("Neuling", "mensch", Vector2i(8, 1), {"waffen": 0.0})
+	state.order_move_to_tile(rookie, console)
+	_settle(state)
+	check(state.operator_of(waffen) == rookie, "Ausdrücklicher Befehl wurde überstimmt")
+	check(state.layout.room_index_at(veteran.tile) == waffen, "Profi hat den Raum verlassen")
+
+
+func test_console_builds_experience() -> void:
+	var state := ShipState.new(_layout())
+	var cockpit := state.layout.room_index_by_id("cockpit")
+	var member := state.add_crew("A", "mensch", state.layout.console_of(cockpit))
+	_settle(state, 61.0)
+	check(member.level("cockpit") == 1, "Nach einer Minute an der Konsole keine Stufe 1")
+	for i in 600:
+		state.update(1.0)
+	check(member.level("cockpit") == int(CrewMember.MAX_EXPERIENCE), "Erfahrung nicht gedeckelt")
