@@ -1,4 +1,4 @@
-"""Keelbreak Pixel-Pipeline: SVG -> Zielauflösung -> Palette -> Kontur -> Schatten -> x4."""
+"""Hullbound Pixel-Pipeline: SVG -> Zielauflösung -> Palette -> Kontur -> Schatten -> x4."""
 import subprocess, os, tempfile
 import numpy as np
 from PIL import Image
@@ -62,7 +62,7 @@ PAL_LAB = _lab(PAL)
 
 
 def render_svg(svg_text, w, h, scale, tmpdir=None):
-    tmpdir = tmpdir or tempfile.mkdtemp(prefix="keelbreak_")
+    tmpdir = tmpdir or tempfile.mkdtemp(prefix="hullbound_")
     os.makedirs(tmpdir, exist_ok=True)
     src = os.path.join(tmpdir, "src.svg")
     out = os.path.join(tmpdir, "hi.png")

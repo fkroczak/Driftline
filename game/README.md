@@ -1,4 +1,4 @@
-# Keelbreak – Godot-Projekt
+# Hullbound – Godot-Projekt
 
 Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage ist, ob der Kampf per Touch Spaß macht.
 
