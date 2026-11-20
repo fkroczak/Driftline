@@ -1,0 +1,5 @@
+# Godot-Cache und Exporte
+.godot/
+/android/
+*.apk
+*.aab
