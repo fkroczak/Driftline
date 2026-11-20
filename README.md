@@ -1,11 +1,12 @@
 # Keelbreak
 
-Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realistischer Pixel-Art. Du führst ein Schiff mit Crew aus sechs Spezies durch prozedural erzeugte Universen: Energie verteilen, kämpfen, reparieren, ausbauen, Planeten erkunden. Konzeptphase; früherer Arbeitstitel: Driftline.
+Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realistischer Pixel-Art. Du führst ein Schiff mit Crew aus sechs Spezies durch prozedural erzeugte Universen: Energie verteilen, kämpfen, reparieren, ausbauen, Planeten erkunden. Prototyp Phase 1 in Arbeit; früherer Arbeitstitel: Driftline.
 
 ## Inhalt
 
 | Pfad | Inhalt |
 | --- | --- |
+| [game/](game/README.md) | Godot-4-Projekt: Prototyp Phase 1 (Schiff, Crew, Bewegung) |
 | [docs/GDD.md](docs/GDD.md) | Game-Design-Dokument: Kernschleife, Kampf, Energie, Spezies, Schiffe, Module, Spielmodi, Roadmap |
 | [docs/fable-prompt.md](docs/fable-prompt.md) | Prompt für die Grafik-Erstellung (Crew-Sprites und 12 Schiffe) |
 | [art/](art/README.md) | Konzeptgrafiken, Pixel-Art-Proben und deren Quelldateien |
