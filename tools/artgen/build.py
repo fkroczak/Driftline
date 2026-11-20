@@ -77,10 +77,10 @@ def previews(crew, ship):
 
 
 def palette_files():
-    with open(path("palette", "driftline.hex"), "w") as f:
+    with open(path("palette", "keelbreak.hex"), "w") as f:
         f.write("\n".join(h.lstrip("#").lower() for h in P.PALETTE_HEX) + "\n")
-    with open(path("palette", "driftline.gpl"), "w") as f:
-        f.write("GIMP Palette\nName: Driftline\nColumns: 8\n#\n")
+    with open(path("palette", "keelbreak.gpl"), "w") as f:
+        f.write("GIMP Palette\nName: Keelbreak\nColumns: 8\n#\n")
         for h in P.PALETTE_HEX:
             r, g, b = P.hex2rgb(h)
             f.write(f"{r:3d} {g:3d} {b:3d}\t{h}\n")
@@ -88,7 +88,7 @@ def palette_files():
     img = Image.new("RGB", (8, (n + 7) // 8), P.hex2rgb(P.SPACE))
     for i, h in enumerate(P.PALETTE_HEX):
         img.putpixel((i % 8, i // 8), P.hex2rgb(h))
-    img.resize((img.width * 16, img.height * 16), Image.NEAREST).save(path("palette", "driftline.png"))
+    img.resize((img.width * 16, img.height * 16), Image.NEAREST).save(path("palette", "keelbreak.png"))
 
 
 if __name__ == "__main__":
