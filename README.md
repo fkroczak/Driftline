@@ -1,4 +1,4 @@
-# Keelbreak
+# Hullbound
 
 Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realistischer Pixel-Art. Du führst ein Schiff mit Crew aus sechs Spezies durch prozedural erzeugte Universen: Energie verteilen, kämpfen, reparieren, ausbauen, Planeten erkunden. Prototyp Phase 1 in Arbeit; früherer Arbeitstitel: Driftline.
 

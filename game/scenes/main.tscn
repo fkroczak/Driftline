@@ -18,7 +18,7 @@ offset_top = 8.0
 offset_right = 300.0
 offset_bottom = 24.0
 theme_override_font_sizes/font_size = 12
-text = "Keelbreak – Prototyp"
+text = "Hullbound – Prototyp"
 
 [node name="Info" type="Label" parent="HUD"]
 offset_left = 12.0

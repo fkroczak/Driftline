@@ -88,15 +88,15 @@ jobs:
       - name: APK exportieren
         run: |
           mkdir -p build
-          "$GODOT" --headless --path game --export-debug "Android" ../build/keelbreak-debug.apk
-          test -s build/keelbreak-debug.apk
-          name="keelbreak-$(git rev-parse --short HEAD)-debug.apk"
-          mv build/keelbreak-debug.apk "build/$name"
+          "$GODOT" --headless --path game --export-debug "Android" ../build/hullbound-debug.apk
+          test -s build/hullbound-debug.apk
+          name="hullbound-$(git rev-parse --short HEAD)-debug.apk"
+          mv build/hullbound-debug.apk "build/$name"
           echo "APK=build/$name" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: keelbreak-debug-apk
+          name: hullbound-debug-apk
           path: ${{ env.APK }}
           retention-days: 14
 
@@ -105,7 +105,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('apk-build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }}
-          name: Keelbreak Testversion ${{ github.ref_type == 'tag' && github.ref_name || format('#{0}', github.run_number) }}
+          name: Hullbound Testversion ${{ github.ref_type == 'tag' && github.ref_name || format('#{0}', github.run_number) }}
           prerelease: true
           files: ${{ env.APK }}
           body: |
