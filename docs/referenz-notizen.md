@@ -1,32 +1,32 @@
 # Referenz-Notizen (Genre-Vorbild)
 
-Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktionen, die Driftline braucht. **Optik, Namen und Symbole werden nicht übernommen**, siehe [Styleguide](art-styleguide.md). Die Screenshots selbst liegen bewusst nicht in der Repo.
+Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktionen, die Keelbreak braucht. **Optik, Namen und Symbole werden nicht übernommen**, siehe [Styleguide](art-styleguide.md). Die Screenshots selbst liegen bewusst nicht in der Repo.
 
 ## Schiffsansicht
 
 - Der Raumplan ist eine eigene Ebene über einem deutlich größeren Rumpf. Der Rumpf hat Volumen (Aufbauten, Gondeln), die Räume nehmen grob 60 % der Fläche ein.
-  → Driftline: Schiffe etwa 360 × 180 px, Kachel bleibt 14 px.
+  → Keelbreak: Schiffe etwa 360 × 180 px, Kachel bleibt 14 px.
 - Raumgrößen gemischt: 2×2 für Systeme, 1×2 bzw. 2×1 für Gänge und Nebenräume.
-  → Driftline: Systeme 2×2, zusätzlich 1×2-Räume erlauben.
+  → Keelbreak: Systeme 2×2, zusätzlich 1×2-Räume erlauben.
 - Waffen hängen sichtbar außen an Hardpoints. Die Schildblase ist ein eigener Effekt um das ganze Schiff.
-  → Driftline: eigene Schildoptik, kein Wabenmuster.
+  → Keelbreak: eigene Schildoptik, kein Wabenmuster.
 - Türen sind kleine Doppelbalken auf den Wänden.
 - Ein Raum unter der Maus oder ein ausgewählter Raum bekommt einen farbigen Rahmen.
 
 ## Crew an Bord
 
-- Eine Figur belegt etwa 1 Kachel, bis zu 4 Figuren passen in einen 2×2-Raum. In Driftline umgesetzt.
+- Eine Figur belegt etwa 1 Kachel, bis zu 4 Figuren passen in einen 2×2-Raum. In Keelbreak umgesetzt.
 - Eine ausgewählte Figur bekommt eine farbige Kontur.
-  → Driftline: Auswahlzustand automatisch aus der Pipeline, mit heller statt dunkler Kontur.
+  → Keelbreak: Auswahlzustand automatisch aus der Pipeline, mit heller statt dunkler Kontur.
 - Über verletzten oder ausgewählten Figuren steht ein Lebensbalken.
-  → Driftline: 1 px hoch über dem Kopf.
+  → Keelbreak: 1 px hoch über dem Kopf.
 - Tooltip auf einer Figur: voller Name, Spezies, Gesundheit, Eigenschaften der Spezies.
 
 ## Crew-Liste und Fähigkeiten
 
 - Liste am linken Rand: Mini-Porträt, Name, Lebensbalken, Hotkey.
 - Tooltip mit 6 Fähigkeiten und Balken: Steuern, Antrieb, Schilde, Waffen, Reparatur, Kampf. Der stärkste Wert ist hervorgehoben.
-  → Driftline: 6 eigene Fähigkeiten-Icons, 12 px groß.
+  → Keelbreak: 6 eigene Fähigkeiten-Icons, 12 px groß.
 
 ## Weitere Screens
 
@@ -47,7 +47,7 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Ausweichen: Chance in Prozent, dass ein Schuss das Schiff verfehlt. Hängt von der Energie im Antrieb ab.
 - Rechts davon der Sprungknopf: wird hervorgehoben, sobald der Sprungantrieb geladen ist.
 
-→ Driftline: segmentierter Hüllenbalken mit Farbstufen Grün, Orange, Rot aus der Palette. Für Schilde, Treibstoff, Raketen, Drohnenteile, Währung, Ausweichen und Sauerstoff jeweils eigene Symbole (12–16 px), kein Zahnrad für die Währung. Jedes HUD-Element bekommt einen Tooltip.
+→ Keelbreak: segmentierter Hüllenbalken mit Farbstufen Grün, Orange, Rot aus der Palette. Für Schilde, Treibstoff, Raketen, Drohnenteile, Währung, Ausweichen und Sauerstoff jeweils eigene Symbole (12–16 px), kein Zahnrad für die Währung. Jedes HUD-Element bekommt einen Tooltip.
 
 ## Energieleiste unten links
 
@@ -56,7 +56,7 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Über einer Säule zeigt ein kleines Figürchen an, dass der Raum besetzt ist. Sterne darüber stehen für die Fähigkeitsstufe der Person.
 - Tooltip auf einem System: Funktion, aktuelle Stufe und was sie bewirkt (z. B. „Stufe 8: Vier Schildbarrieren“), Bonus bei Besetzung (z. B. 30 % schnelleres Laden), Status (z. B. volle Energie) und Tastenkürzel für Energie an und aus.
 
-→ Driftline: Systemsymbole in einer runden Plakette (etwa 16–24 px), segmentierte Energiesäulen, ein Besetzt-Symbol mit Stufenanzeige. Das Tooltip-Panel muss mehrere Absätze tragen.
+→ Keelbreak: Systemsymbole in einer runden Plakette (etwa 16–24 px), segmentierte Energiesäulen, ein Besetzt-Symbol mit Stufenanzeige. Das Tooltip-Panel muss mehrere Absätze tragen.
 
 ## Gesamtlayout des Kampfbildschirms
 
@@ -67,7 +67,7 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Unten Mitte: Waffenleiste mit Ladebalken je Waffe (z. B. 6.4/6.4) und einem Schalter für Dauerfeuer. Daneben die Drohnenleiste.
 - Unten rechts: Subsysteme und ein Lupenknopf für „erweiterte Infos“. Der Schalter blendet zusätzliche Kurzinfos ein: zu Waffen, Drohnen, Ausbauten und Crew, außerdem Kartenverbindungen, Sauerstoff pro Raum und Reaktorenergie im Hangar. Auf dem PC liegt er zusätzlich auf einer Taste.
 
-→ Driftline (Android): Auf dem Touchscreen gibt es weder Mauszeiger noch Tastenkürzel.
+→ Keelbreak (Android): Auf dem Touchscreen gibt es weder Mauszeiger noch Tastenkürzel.
 - Tooltips öffnen sich per langem Tippen.
 - Erweiterte Infos und Energie an/aus brauchen eigene Knöpfe bzw. Gesten.
 - Alle tippbaren Elemente brauchen mindestens 48 dp Trefferfläche. Das ist bei der Größe der Symbole einzuplanen.
@@ -83,9 +83,9 @@ Beobachtungen aus Screenshots des Genre-Vorbilds. Gedacht als Liste der Funktion
 - Manche Knoten tragen einen großen, farbig leuchtenden Ring als Sondermarker.
 - Unten stehen Name und Typ des Sektors, dazu „Abbrechen“.
 - Der Hintergrund ist eine fotoartige Galaxie.
-  → Driftline: Hintergrund als Pixel-Art in der eigenen Palette, kein Foto.
+  → Keelbreak: Hintergrund als Pixel-Art in der eigenen Palette, kein Foto.
 
-Für Driftline gebraucht: Karten-Hintergrund, Knoten-Symbole für die Zustände unbesucht, besucht, aktuell, erreichbar, Ausgang, Notruf, Auftrag und Händler, Verbindungslinien, Nebel-Overlay, Schiffsmarker und Label-Schilder.
+Für Keelbreak gebraucht: Karten-Hintergrund, Knoten-Symbole für die Zustände unbesucht, besucht, aktuell, erreichbar, Ausgang, Notruf, Auftrag und Händler, Verbindungslinien, Nebel-Overlay, Schiffsmarker und Label-Schilder.
 
 ## Abgrenzung
 

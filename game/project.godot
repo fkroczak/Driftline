@@ -1,11 +1,11 @@
 ; Engine configuration file.
-; Driftline – Prototyp Phase 1 (Kampf mit einem Schiff).
+; Keelbreak – Prototyp Phase 1 (Kampf mit einem Schiff).
 
 config_version=5
 
 [application]
 
-config/name="Driftline"
+config/name="Keelbreak"
 config/description="Raumschiff-Roguelike – Prototyp Phase 1"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")

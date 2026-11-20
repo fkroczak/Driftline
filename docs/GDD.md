@@ -1,10 +1,10 @@
-# Driftline – Game-Design-Dokument
+# Keelbreak – Game-Design-Dokument
 
 Stand: 18.11.2026 · Autor: Filip Kroczak · Online-Fassung: [Claude Doc](https://claude.ai/artifact/FhYZsfLYM6pFQa2jdF4vUp)
 
 ## Vision und Eckdaten
 
-Driftline ist ein Raumschiff-Roguelike für Android in realistischer Pixel-Art: Du führst ein kleines Schiff samt Crew durch prozedural erzeugte Universen, kämpfst, handelst, reparierst und baust aus. Inspiration ist FTL, umgesetzt für Touch und kurze Sessions. „Driftline“ ist ein Arbeitstitel.
+Keelbreak ist ein Raumschiff-Roguelike für Android in realistischer Pixel-Art: Du führst ein kleines Schiff samt Crew durch prozedural erzeugte Universen, kämpfst, handelst, reparierst und baust aus. Inspiration ist FTL, umgesetzt für Touch und kurze Sessions. Der Titel ist „Keelbreak“; früherer Arbeitstitel war „Driftline“.
 
 **Einflüsse:** Star Wars und Star Trek als Stimmung, nicht als Vorlage.
 
