@@ -167,3 +167,18 @@ func test_console_builds_experience() -> void:
 	for i in 600:
 		state.update(1.0)
 	check(member.level("cockpit") == int(CrewMember.MAX_EXPERIENCE), "Erfahrung nicht gedeckelt")
+
+
+func test_crew_hit_is_forgiving() -> void:
+	var state := ShipState.new(_layout())
+	var member := state.add_crew("A", "mensch", Vector2i(9, 3))
+	check(state.crew_near(Vector2(9.6, 3.3), 0.75) == member, "Knapper Treffer neben der Figur zählt nicht")
+	check(state.crew_near(Vector2(10.5, 3.0), 0.75) == null, "Treffer zu weit entfernt zählt")
+
+
+func test_occupied_tile_needs_displace() -> void:
+	var state := ShipState.new(_layout())
+	var sitter := state.add_crew("Sitzt", "mensch", Vector2i(7, 7))
+	var other := state.add_crew("Neu", "mensch", Vector2i(8, 1))
+	check(not state.order_move_to_tile(other, Vector2i(7, 7), false), "Besetzte Kachel ohne Verdrängen angenommen")
+	check(sitter.destination() == Vector2i(7, 7) and not other.is_moving(), "Abgelehnter Befehl hat etwas verändert")

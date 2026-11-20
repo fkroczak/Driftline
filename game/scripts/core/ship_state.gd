@@ -44,6 +44,19 @@ func crew_at_tile(tile: Vector2i) -> CrewMember:
 	return null
 
 
+## Nächstes Crewmitglied innerhalb von `radius` Kacheln um eine Position (in Kacheln,
+## Kachelmitte = ganze Zahl). Großzügiger als crew_at_tile, damit knappe Treffer zählen.
+func crew_near(pos: Vector2, radius: float) -> CrewMember:
+	var best: CrewMember = null
+	var best_dist := radius
+	for member in crew:
+		var dist := member.tile_position().distance_to(pos)
+		if dist <= best_dist:
+			best = member
+			best_dist = dist
+	return best
+
+
 ## Crewmitglied, das gerade auf einer Konsole sitzt (nicht nur unterwegs dorthin).
 func operator_of(room_idx: int) -> CrewMember:
 	var console: Variant = layout.console_of(room_idx)
@@ -56,14 +69,17 @@ func operator_of(room_idx: int) -> CrewMember:
 
 
 ## Schickt ein Crewmitglied auf eine bestimmte Kachel. Steht dort schon jemand
-## (oder ist unterwegs dorthin), weicht diese Person auf die nächste freie Kachel aus.
-func order_move_to_tile(member: CrewMember, tile: Vector2i) -> bool:
+## (oder ist unterwegs dorthin), weicht diese Person auf die nächste freie Kachel aus,
+## sofern `displace` gesetzt ist; sonst wird der Befehl abgelehnt.
+func order_move_to_tile(member: CrewMember, tile: Vector2i, displace := true) -> bool:
 	if not layout.is_walkable(tile):
 		return false
 	var occupant: CrewMember = null
 	for other in crew:
 		if other != member and other.destination() == tile:
 			occupant = other
+	if occupant and not displace:
+		return false
 	if not _walk_to(member, tile):
 		return false
 	member.pinned = layout.is_console(tile)
