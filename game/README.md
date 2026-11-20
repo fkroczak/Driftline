@@ -38,6 +38,15 @@ Basisauflösung 640 × 360, ganzzahlig hochskaliert (Full HD: 3×), Querformat, 
 
 Offen: Ein Raum ist bei 3× etwa 33 dp groß, das GDD verlangt mindestens 48 dp. Das klären wir beim ersten Test auf dem Handy.
 
-## Android-Export (später)
+## Android-APK
 
-In Godot: Editor → Exportvorlagen verwalten → herunterladen; Android SDK und Debug-Keystore in den Editor-Einstellungen eintragen; Projekt → Exportieren → Android hinzufügen. Für schnelles Testen „Remote Debug“ mit per USB verbundenem Handy.
+Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Workflow `.github/workflows/android-apk.yml`):
+
+- **Tag pushen** (geht von jedem Branch): `git tag apk-0.2 && git push origin apk-0.2`
+- **Knopf auf GitHub:** Actions → „Android-APK bauen“ → „Run workflow“. Erscheint erst, wenn der Workflow auf `main` liegt.
+
+Nach etwa 5 Minuten liegt die APK unter **Releases** als Vorabversion; am Handy herunterladen und installieren.
+
+**Updates installieren:** Ohne festen Schlüssel wird jede APK neu signiert, dann muss die alte Version vorher deinstalliert werden. Abhilfe: einen Debug-Keystore als Base64 im Repository-Secret `ANDROID_DEBUG_KEYSTORE_BASE64` hinterlegen (Passwort `android`, Alias `androiddebugkey`).
+
+Lokal aus dem Editor: Exportvorlagen und Android SDK in Godot einrichten, Handy per USB anschließen, oben rechts auf das Android-Symbol klicken (Remote Debug).

@@ -1,0 +1,113 @@
+# Baut eine Android-Debug-APK – nur auf ausdrücklichen Wunsch:
+#  - Actions → „Android-APK bauen“ → „Run workflow“ (Branch wählbar)
+#  - oder ein Tag „apk-…“ pushen, z. B. git tag apk-0.1 && git push origin apk-0.1
+# Die APK landet als Vorabversion unter „Releases“ und lässt sich dort direkt am Handy laden.
+name: Android-APK bauen
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["apk-*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Godot-Exportvorlagen aus dem Cache
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-templates-${{ env.GODOT_VERSION }}
+
+      - name: Godot installieren
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -sSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
+          echo "GODOT=$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
+          if [ "${{ steps.templates.outputs.cache-hit }}" != "true" ]; then
+            curl -sSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+            unzip -q templates.tpz -d "$RUNNER_TEMP/tpl"
+            dest="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+            mkdir -p "$dest"
+            mv "$RUNNER_TEMP"/tpl/templates/android_* "$RUNNER_TEMP"/tpl/templates/version.txt "$dest/"
+          fi
+
+      - name: Android SDK und Keystore einrichten
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          ks="$RUNNER_TEMP/debug.keystore"
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$ks"
+          else
+            keytool -genkeypair -keystore "$ks" -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          {
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$ks"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android"
+          } >> "$GITHUB_ENV"
+          major_minor="${GODOT_VERSION%.*}"
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-${major_minor}.tres <<SETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_SDK_ROOT}"
+          export/android/java_sdk_path = "${JAVA_HOME}"
+          SETTINGS
+          sed -i 's/^ *//' ~/.config/godot/editor_settings-${major_minor}.tres
+
+      - name: Logiktests
+        run: |
+          "$GODOT" --headless --path game --import
+          "$GODOT" --headless --path game --script res://tests/run_tests.gd
+
+      - name: APK exportieren
+        run: |
+          mkdir -p build
+          "$GODOT" --headless --path game --export-debug "Android" ../build/driftline-debug.apk
+          test -s build/driftline-debug.apk
+          name="driftline-$(git rev-parse --short HEAD)-debug.apk"
+          mv build/driftline-debug.apk "build/$name"
+          echo "APK=build/$name" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: driftline-debug-apk
+          path: ${{ env.APK }}
+          retention-days: 14
+
+      - name: Als Vorabversion veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('apk-build-{0}', github.run_number) }}
+          target_commitish: ${{ github.sha }}
+          name: Driftline Testversion ${{ github.ref_type == 'tag' && github.ref_name || format('#{0}', github.run_number) }}
+          prerelease: true
+          files: ${{ env.APK }}
+          body: |
+            Debug-APK vom Branch `${{ github.ref_name }}`, Commit ${{ github.sha }}.
+            Auf dem Handy herunterladen und öffnen; beim ersten Mal „Aus dieser Quelle installieren“ erlauben.
