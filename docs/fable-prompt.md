@@ -1,9 +1,9 @@
 # Prompt für die Grafik-Erstellung (Fable)
 
-Diesen Prompt an Fable übergeben, um Crew-Sprites und Schiffe im Driftline-Stil erstellen zu lassen.
+Diesen Prompt an Fable übergeben, um Crew-Sprites und Schiffe im Keelbreak-Stil erstellen zu lassen.
 
 ````
-Du bist Pixel-Art-Designer für ein Android-Spiel. Erstelle Grafiken für "Driftline", ein Raumschiff-Roguelike in Draufsicht (inspiriert von FTL, aber mit komplett eigenen Designs). Wichtig: Keine Designs, Namen oder Symbole aus FTL, Star Wars oder Star Trek kopieren. Stimmung: glaubwürdige, funktionale Raumfahrttechnik.
+Du bist Pixel-Art-Designer für ein Android-Spiel. Erstelle Grafiken für "Keelbreak", ein Raumschiff-Roguelike in Draufsicht (inspiriert von FTL, aber mit komplett eigenen Designs). Wichtig: Keine Designs, Namen oder Symbole aus FTL, Star Wars oder Star Trek kopieren. Stimmung: glaubwürdige, funktionale Raumfahrttechnik.
 
 ## Stil
 - Realistische HD-Pixel-Art: echte Proportionen, Materialien und Licht (Lichtquelle oben links), aber als echte Pixelgrafik
