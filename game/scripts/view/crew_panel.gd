@@ -9,9 +9,10 @@ signal crew_selected(member: CrewMember)
 const PORTRAITS := {
 	"mensch": preload("res://assets/crew/mensch_gross_unten.png"),
 }
-## Ausschnitt aus dem 40×44-Porträt.
-const CROP := Rect2(6, 8, 28, 28)
-const SLOT := Vector2(32, 39)
+## Ausschnitt aus dem 40×44-Porträt (nur der Kopf; die Leiste ist Nebensache, Crew wird
+## meist direkt im Schiff angetippt).
+const CROP := Rect2(10, 10, 20, 20)
+const SLOT := Vector2(24, 30)
 const GAP := 3.0
 const COLOR_BG := Color("#161B2B")
 const COLOR_EDGE := Color("#363E58")
@@ -48,7 +49,7 @@ func _draw() -> void:
 		# Lebenspunkte
 		var ratio := member.hp / CrewMember.MAX_HP
 		var hp_color := Color("#5DCAA5") if ratio > 0.6 else (Color("#FAC775") if ratio > 0.3 else Color("#E24B4A"))
-		var hp_bar := Rect2(rect.position + Vector2(3, SLOT.y - 8), Vector2(SLOT.x - 6, 2))
+		var hp_bar := Rect2(rect.position + Vector2(2, SLOT.y - 8), Vector2(SLOT.x - 4, 2))
 		draw_rect(hp_bar, COLOR_XP_EMPTY)
 		draw_rect(Rect2(hp_bar.position, Vector2(roundf(hp_bar.size.x * ratio), 2)), hp_color)
 		# Erfahrung im aktuellen Raum: bis zu 5 Punkte
@@ -57,8 +58,8 @@ func _draw() -> void:
 		if system != "":
 			var level := member.level(system)
 			for dot in int(CrewMember.MAX_EXPERIENCE):
-				var p := rect.position + Vector2(4 + dot * 5, SLOT.y - 4)
-				draw_rect(Rect2(p, Vector2(4, 2)), COLOR_XP if dot < level else COLOR_XP_EMPTY)
+				var p := rect.position + Vector2(2 + dot * 4, SLOT.y - 4)
+				draw_rect(Rect2(p, Vector2(3, 2)), COLOR_XP if dot < level else COLOR_XP_EMPTY)
 
 
 func _gui_input(event: InputEvent) -> void:
