@@ -114,6 +114,11 @@ Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Wor
 
 Nach etwa 5 Minuten liegt die APK unter **Releases** als Vorabversion; am Handy herunterladen und installieren.
 
-**Updates installieren:** Ohne festen Schlüssel wird jede APK neu signiert, dann muss die alte Version vorher deinstalliert werden. Abhilfe: einen Debug-Keystore als Base64 im Repository-Secret `ANDROID_DEBUG_KEYSTORE_BASE64` hinterlegen (Passwort `android`, Alias `androiddebugkey`).
+**Updates:** Jede neue APK installiert sich als Update über die vorige, ohne Deinstallieren. Dafür sorgen zwei Dinge:
+
+- **Fester Schlüssel:** Alle Builds werden mit `tools/android/debug.keystore` signiert (Passwort `android`, Alias `androiddebugkey`). Diesen Schlüssel nicht austauschen, sonst muss jedes Handy einmal deinstallieren. Ein Repository-Secret `ANDROID_DEBUG_KEYSTORE_BASE64` hätte Vorrang. Der Schlüssel ist öffentlich und taugt nur für Testversionen; für den Play Store braucht es später einen eigenen, geheimen Release-Schlüssel.
+- **Versionsnummer:** `versionCode` ist die Laufnummer des Workflows und steigt mit jedem Build. Der Versionsname setzt sich aus `config/version` in `project.godot` (z. B. `0.2`) und dieser Nummer zusammen, etwa `0.2.17`. Er steht klein oben rechts auf der Sternenkarte, im Namen der APK und im Release. Für einen neuen Meilenstein nur `config/version` anheben.
+
+Einmalig: Builds vor dieser Umstellung hatten jeweils einen zufälligen Schlüssel. Die alte Version also ein letztes Mal deinstallieren (es gibt noch keine Spielstände, es geht nichts verloren).
 
 Lokal aus dem Editor: Exportvorlagen und Android SDK in Godot einrichten, Handy per USB anschließen, oben rechts auf das Android-Symbol klicken (Remote Debug).
