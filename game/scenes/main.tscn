@@ -109,7 +109,7 @@ script = ExtResource("10_help")
 [node name="JumpButton" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 338.0
+offset_left = 332.0
 offset_top = 184.0
 offset_right = 378.0
 offset_bottom = 214.0

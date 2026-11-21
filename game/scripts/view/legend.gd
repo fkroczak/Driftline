@@ -16,6 +16,7 @@ const CONTROLS := [
 	"Energie: Spalte antippen +1, gedrückt halten −1 · Waffenkarte halten: an/aus",
 	"Tür oder gelbe Schleuse antippen: auf/zu · offene Schleuse saugt Luft ab",
 	"Crew antippen, dann Ziel · Wer im Raum steht, löscht, flickt und repariert",
+	"SPRUNG lädt mit Antrieb und Pilot · voll geladen antippen = fliehen",
 ]
 
 var _icons := {}  # System-ID ("" = Erweiterung) -> AtlasTexture

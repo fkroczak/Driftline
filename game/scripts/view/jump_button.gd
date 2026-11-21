@@ -50,9 +50,9 @@ func _draw() -> void:
 	if ready:
 		reason = "bereit!"
 	elif state.level("antrieb") <= 0:
-		reason = "Antrieb aus"
+		reason = "Antrieb?"
 	elif state.operator_of_system("cockpit") == null:
-		reason = "kein Pilot"
+		reason = "Pilot?"
 	else:
 		reason = "%d %%" % floori(state.jump_charge * 100.0)
 	draw_string(font, rect.position + Vector2(3, 20), reason, HORIZONTAL_ALIGNMENT_LEFT, size.x - 6, 8,

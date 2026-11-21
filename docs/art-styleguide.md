@@ -46,11 +46,11 @@ Entschieden: Im Schiff laufen die kleinen Figuren, die große Fassung ist das Po
 | Reaktor | Orange `#EF9F27` | Energiekern mit Ring |
 | Schilde | Blau `#378ADD` | Kuppelbögen über Grundlinie |
 | Waffen | Rot `#E24B4A` | Fadenkreuz |
-| Antrieb | Koralle `#D85A30` | Doppelchevron |
+| Antrieb | Koralle `#D85A30` | Triebwerksdüse mit Flamme |
 | Cockpit | Türkis `#5DCAA5` | Steuerhorn |
 | Medbay | Grün `#639922` | Kreuz (bewusst grün, nicht rot) |
-| Sensoren | Violett `#7F77DD` | Signalbögen |
-| Lebenserhaltung | Hellblau `#85B7EB` | aufsteigende Blasen |
+| Sensoren | Violett `#7F77DD` | Auge |
+| Lebenserhaltung | Hellblau `#85B7EB` | „O2“ in einer Blase |
 | Vorinstalliertes Modul | Pink `#D4537E` | je Modul eigenes Symbol (offen) |
 | Leerer Erweiterungsraum | Dunkelgrau mit Schraffur | hellgraues „+“ |
 
