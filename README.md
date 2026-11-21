@@ -6,7 +6,7 @@ Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realist
 
 | Pfad | Inhalt |
 | --- | --- |
-| [game/](game/README.md) | Godot-4-Projekt: Prototyp Phase 1 (Schiff, Crew, Bewegung) |
+| [game/](game/README.md) | Godot-4-Projekt: Prototyp Phase 1 (Crew, Energie, Raumkampf gegen einen Piratenkutter) |
 | [docs/GDD.md](docs/GDD.md) | Game-Design-Dokument: Kernschleife, Kampf, Energie, Spezies, Schiffe, Module, Spielmodi, Roadmap |
 | [docs/fable-prompt.md](docs/fable-prompt.md) | Prompt für die Grafik-Erstellung (Crew-Sprites und 12 Schiffe) |
 | [art/](art/README.md) | Konzeptgrafiken, Pixel-Art-Proben und deren Quelldateien |

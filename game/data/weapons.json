@@ -1,0 +1,5 @@
+{
+  "pulslaser": {"name": "Pulslaser", "power": 1, "charge": 8.0, "shots": 2, "damage": 1},
+  "schwerer_laser": {"name": "Schwerer Laser", "power": 2, "charge": 11.0, "shots": 1, "damage": 2},
+  "bordkanone": {"name": "Bordkanone", "power": 1, "charge": 10.0, "shots": 1, "damage": 1}
+}

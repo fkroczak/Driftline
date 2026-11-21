@@ -182,3 +182,128 @@ func test_occupied_tile_needs_displace() -> void:
 	var other := state.add_crew("Neu", "mensch", Vector2i(8, 1))
 	check(not state.order_move_to_tile(other, Vector2i(7, 7), false), "Besetzte Kachel ohne Verdrängen angenommen")
 	check(sitter.destination() == Vector2i(7, 7) and not other.is_moving(), "Abgelehnter Befehl hat etwas verändert")
+
+
+# --- Energie, Schaden, Kampf ---
+
+const ENEMY_PATH := "res://data/ships/piraten_kutter.json"
+
+
+func _enemy_ship() -> ShipState:
+	var layout := ShipLayout.load_json(ENEMY_PATH)
+	var ship := ShipState.new(layout)
+	ship.add_crew("Pilot", "mensch", layout.console_of(layout.room_index_by_id("cockpit")))
+	ship.add_crew("Schütze", "mensch", layout.console_of(layout.room_index_by_id("waffen")))
+	ship.add_crew("Technik", "mensch", layout.console_of(layout.room_index_by_id("schilde")))
+	return ship
+
+
+func test_enemy_layout_is_valid() -> void:
+	var layout := ShipLayout.load_json(ENEMY_PATH)
+	var errors := layout.validate()
+	check(errors.is_empty(), "Layout-Fehler: %s" % ", ".join(errors))
+
+
+func test_start_power_fits_reactor() -> void:
+	var state := ShipState.new(_layout())
+	check(state.reactor_output() == 8, "Reaktor sollte 8 liefern, liefert %d" % state.reactor_output())
+	check(state.power_used() == 8, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
+	check(state.weapons[0].powered and state.weapons[1].powered, "Beide Waffen sollten Energie haben")
+	check(state.shield_layers == 1, "Eine Schildschicht erwartet")
+
+
+func test_power_is_limited() -> void:
+	var state := ShipState.new(_layout())
+	check(not state.add_power("sensoren"), "Mehr Energie verteilt, als der Reaktor hat")
+	check(state.remove_power("antrieb"), "Antrieb ließ sich nicht herunterfahren")
+	check(state.add_power("sensoren"), "Freie Energie nicht nutzbar")
+	check(not state.add_power("sensoren"), "Mehr Energie als Stufen im System")
+	check(state.power_free() == 0, "Rechnung stimmt nicht")
+
+
+func test_weapon_power_toggles_weapons() -> void:
+	var state := ShipState.new(_layout())
+	check(state.remove_power("waffen"), "Waffe ließ sich nicht abschalten")
+	check(state.weapons[0].powered and not state.weapons[1].powered, "Falsche Waffe abgeschaltet")
+	check(state.power_free() == 2, "Schwerer Laser sollte 2 Energie freigeben")
+	check(state.set_weapon_wanted(1, true), "Waffe ließ sich nicht wieder einschalten")
+
+
+func test_damage_cuts_power_and_repair_restores_it() -> void:
+	var state := ShipState.new(_layout())
+	var schilde := state.layout.room_index_by_id("schilde")
+	check(state.take_hit(schilde, 1) == 1, "Systemschaden fehlt")
+	check(state.get_system("schilde").power == 1, "Beschädigtes System behält volle Energie")
+	check(state.shield_layers == 0, "Schild hält trotz Schaden")
+	check(state.hull == state.max_hull - 1, "Hüllenschaden fehlt")
+	var member := state.add_crew("Technik", "mensch", Vector2i(6, 0))
+	_settle(state, 6.0)
+	check(state.get_system("schilde").damage == 0, "Crew im Raum repariert nicht")
+	check(state.get_system("schilde").power == 2, "Energie kehrt nach der Reparatur nicht zurück")
+	check(member != null, "")
+
+
+func test_reactor_damage_lowers_output() -> void:
+	var state := ShipState.new(_layout())
+	state.take_hit(state.layout.room_index_by_id("reaktor"), 2)
+	check(state.reactor_output() == 6, "Reaktorschaden senkt die Leistung nicht")
+	check(state.power_used() <= 6, "Systeme verbrauchen mehr als der Reaktor liefert")
+	check(state.level("lebenserhaltung") == 1 and state.level("schilde") == 2, "Wichtige Systeme zuerst versorgen")
+
+
+func test_shields_recharge() -> void:
+	var state := ShipState.new(_layout())
+	state.shield_layers = 0
+	_settle(state, 2.1)
+	check(state.shield_layers == 1, "Schild lädt nicht nach")
+
+
+func test_evasion_needs_pilot() -> void:
+	var state := ShipState.new(_layout())
+	check(state.evasion() == 0.0, "Ausweichen ohne Pilot")
+	state.add_crew("Pilot", "mensch", Vector2i(10, 3))
+	check(state.evasion() > 0.0, "Kein Ausweichen mit Pilot und Antrieb")
+
+
+func test_weapons_fire_and_damage_enemy() -> void:
+	var battle := Battle.new(ShipState.new(_layout()), _enemy_ship(), 42)
+	var target := battle.enemy.layout.room_index_by_id("waffen")
+	battle.set_player_target(target)
+	var seen := {}
+	for i in 200:  # 20 s
+		battle.update(0.1)
+		for e in battle.take_events():
+			seen[e.type] = true
+	check(seen.has("fire"), "Keine Schüsse")
+	check(seen.has("shield"), "Schild des Gegners hat nichts abgefangen")
+	check(battle.enemy.hull < battle.enemy.max_hull, "Gegner hat keinen Schaden")
+
+
+func test_no_target_no_fire() -> void:
+	var battle := Battle.new(ShipState.new(_layout()), _enemy_ship(), 1)
+	for i in 150:
+		battle.update(0.1)
+	for p in battle.projectiles:
+		check(not p.player, "Spieler feuert ohne Ziel")
+	check(battle.enemy.hull == battle.enemy.max_hull, "Gegner beschädigt ohne Ziel")
+
+
+func test_battle_ends_in_victory() -> void:
+	var player := ShipState.new(_layout())
+	player.add_crew("Mara", "mensch", Vector2i(7, 7), {"waffen": 3.0})
+	var battle := Battle.new(player, _enemy_ship(), 7)
+	battle.set_player_target(battle.enemy.layout.room_index_by_id("schilde"))
+	for i in 3000:
+		battle.update(0.1)
+		if battle.outcome != "":
+			break
+	check(battle.outcome == "sieg", "Kampf endet nicht mit Sieg, sondern '%s'" % battle.outcome)
+
+
+func test_enemy_crew_repairs() -> void:
+	var battle := Battle.new(ShipState.new(_layout()), _enemy_ship(), 3)
+	var antrieb := battle.enemy.layout.room_index_by_id("antrieb")
+	battle.enemy.take_hit(antrieb, 1)
+	for i in 150:
+		battle.update(0.1)
+	check(battle.enemy.get_system("antrieb").damage == 0, "Gegner-Crew repariert nicht")

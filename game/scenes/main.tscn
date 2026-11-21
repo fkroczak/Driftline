@@ -1,9 +1,16 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/view/ship_view.gd" id="2_ship"]
 [ext_resource type="Script" path="res://scripts/view/starfield.gd" id="3_stars"]
 [ext_resource type="Script" path="res://scripts/view/crew_panel.gd" id="4_crew"]
+[ext_resource type="Script" path="res://scripts/view/effects.gd" id="5_fx"]
+[ext_resource type="Script" path="res://scripts/view/power_panel.gd" id="6_power"]
+[ext_resource type="Script" path="res://scripts/view/weapon_panel.gd" id="7_weapons"]
+[ext_resource type="Script" path="res://scripts/view/status_bar.gd" id="8_status"]
+
+[sub_resource type="StyleBoxFlat" id="BannerBg"]
+bg_color = Color(0.027, 0.031, 0.059, 0.72)
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -11,11 +18,27 @@ script = ExtResource("1_main")
 [node name="Starfield" type="Node2D" parent="."]
 script = ExtResource("3_stars")
 
-[node name="ShipView" type="Node2D" parent="."]
-position = Vector2(77, 44)
+[node name="World" type="Node2D" parent="."]
+
+[node name="ShipView" type="Node2D" parent="World"]
+position = Vector2(17, 37)
 script = ExtResource("2_ship")
 
+[node name="EnemyView" type="Node2D" parent="World"]
+position = Vector2(300, 67)
+script = ExtResource("2_ship")
+hostile = true
+
+[node name="Effects" type="Node2D" parent="World"]
+script = ExtResource("5_fx")
+
 [node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="DamageFlash" type="ColorRect" parent="HUD"]
+offset_right = 384.0
+offset_bottom = 216.0
+mouse_filter = 2
+color = Color(0.89, 0.29, 0.29, 0)
 
 [node name="Title" type="Label" parent="HUD"]
 offset_left = 6.0
@@ -35,6 +58,15 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.666667, 0.701961, 0.752941, 1)
 theme_override_font_sizes/font_size = 9
 
+[node name="StatusBar" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 220.0
+offset_top = 4.0
+offset_right = 380.0
+offset_bottom = 26.0
+script = ExtResource("8_status")
+
 [node name="CrewPanel" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
@@ -43,3 +75,35 @@ offset_top = 34.0
 offset_right = 50.0
 offset_bottom = 205.0
 script = ExtResource("4_crew")
+
+[node name="PowerPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 56.0
+offset_top = 184.0
+offset_right = 192.0
+offset_bottom = 214.0
+script = ExtResource("6_power")
+
+[node name="WeaponPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 198.0
+offset_top = 184.0
+offset_right = 317.0
+offset_bottom = 214.0
+script = ExtResource("7_weapons")
+
+[node name="Banner" type="Label" parent="HUD"]
+visible = false
+offset_right = 384.0
+offset_bottom = 216.0
+mouse_filter = 0
+theme_override_colors/font_color = Color(0.992, 0.902, 0.749, 1)
+theme_override_colors/font_outline_color = Color(0.039, 0.043, 0.086, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("BannerBg")
+text = "Sieg"
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -14,6 +14,8 @@ var grid_origin: Vector2i = Vector2i.ZERO
 var grid_size: Vector2i = Vector2i.ZERO
 ## Jeder Raum: {id, name, system, pos: Vector2i, size: Vector2i, console: Vector2i oder null}
 var rooms: Array[Dictionary] = []
+## Übrige Schiffswerte aus der JSON-Datei (Hülle, Reaktor, Systeme, Waffen, Grafikpunkte).
+var stats: Dictionary = {}
 
 var _room_at: Dictionary = {}  # Vector2i -> Raumindex
 var _doors: Dictionary = {}  # Türschlüssel -> [Vector2i, Vector2i]
@@ -39,6 +41,7 @@ static func from_dict(d: Dictionary) -> ShipLayout:
 	layout.tile_size = int(d.get("tile_size", 14))
 	layout.grid_origin = _vec(d.get("grid_origin", [0, 0]))
 	layout.grid_size = _vec(d.get("grid_size", [0, 0]))
+	layout.stats = d
 	for r: Dictionary in d.get("rooms", []):
 		var idx := layout.rooms.size()
 		layout.rooms.append({
@@ -96,6 +99,14 @@ func validate() -> PackedStringArray:
 
 func room_index_at(tile: Vector2i) -> int:
 	return _room_at.get(tile, -1)
+
+
+## Raum, in dem ein System sitzt, oder -1.
+func room_of_system(system: String) -> int:
+	for i in rooms.size():
+		if rooms[i].system == system:
+			return i
+	return -1
 
 
 func room_index_by_id(room_id: String) -> int:
