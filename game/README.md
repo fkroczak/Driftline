@@ -4,8 +4,9 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 
 **Stand:** Der Mensch-Frachter mit drei Crewmitgliedern und einer Crew-Leiste links.
 
-- **Auswählen:** Figur im Schiff oder Porträt in der Leiste antippen
-- **Schicken:** danach die genaue Zielkachel antippen, auch eine besetzte; wer dort steht, weicht auf die nächste freie Kachel aus
+- **Auswählen:** Figur im Schiff (knapp daneben zählt auch) oder Porträt in der Leiste antippen; eine andere Figur antippen wechselt die Auswahl
+- **Schicken:** danach eine freie Kachel antippen; die Figur läuft genau dorthin, die Auswahl endet
+- **Verdrängen:** auf einer besetzten Kachel gedrückt halten; wer dort steht, weicht auf die nächste freie Kachel aus
 - **Abwählen:** die ausgewählte Figur erneut antippen oder neben das Schiff tippen
 - **Konsolen** (Antrieb, Schilde, Sensoren, Waffen, Cockpit; kleine Leiste an der Kachel, grün = besetzt):
   1. Ist die Konsole frei, setzt sich die erfahrenste Person im Raum hin.

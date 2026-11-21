@@ -57,8 +57,12 @@ func _on_selection_changed(member: CrewMember, _room_idx: int) -> void:
 func _update_info() -> void:
 	var member := ship_view.selected
 	if not member:
+		var ordered := ship_view.last_order
 		var room := ship_view.focused_room
-		info.text = state.layout.rooms[room].name if room >= 0 else "Crew antippen, dann Zielkachel antippen"
+		if ordered and ordered.is_moving():
+			info.text = "%s → %s" % [ordered.display_name, state.layout.rooms[state.layout.room_index_at(ordered.destination())].name]
+		else:
+			info.text = state.layout.rooms[room].name if room >= 0 else "Crew antippen, dann Ziel antippen"
 		return
 	var target_room := state.layout.room_index_at(member.destination())
 	var room_data: Dictionary = state.layout.rooms[target_room]
