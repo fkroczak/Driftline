@@ -4,7 +4,12 @@ extends Node2D
 ## Waffen feuern selbst; Feuer, Hüllenbrüche und Sauerstoff laufen in ShipState.
 
 const LAYOUT_PATH := "res://data/ships/mensch_frachter.json"
-const ENEMY_PATH := "res://data/ships/piraten_kutter.json"
+## Mögliche Gegner mit Gewicht. Jeder muss mit gutem Spiel schlagbar sein (kein No-win-Szenario);
+## der Sprung ist der Notausgang, nicht die einzige Lösung.
+const ENEMIES := [
+	["res://data/ships/piraten_kutter.json", 0.65],
+	["res://data/ships/piraten_kutter_schwer.json", 0.35],
+]
 const MARGIN := 6.0
 const TOP := 30.0
 const BOTTOM_PANEL_Y := 184.0
@@ -39,6 +44,9 @@ var _hint_until := 0.0
 @onready var info: Label = $HUD/Info
 @onready var damage_flash: ColorRect = $HUD/DamageFlash
 @onready var banner: Label = $HUD/Banner
+@onready var legend: Legend = $HUD/Legend
+@onready var help_button: HelpButton = $HUD/HelpButton
+@onready var jump_button: JumpButton = $HUD/JumpButton
 
 
 func _ready() -> void:
@@ -50,9 +58,10 @@ func _ready() -> void:
 	state.add_crew("Jonas Reil", "mensch", Vector2i(6, 6), {"waffen": 3.0, "schilde": 1.0})
 	state.add_crew("Ilka Brandt", "mensch", Vector2i(6, 0), {"schilde": 2.0, "antrieb": 2.0})
 
-	var enemy_layout := ShipLayout.load_json(ENEMY_PATH)
+	var enemy_path := _pick_enemy()
+	var enemy_layout := ShipLayout.load_json(enemy_path)
 	for error in enemy_layout.validate():
-		push_error("%s: %s" % [ENEMY_PATH, error])
+		push_error("%s: %s" % [enemy_path, error])
 	enemy = ShipState.new(enemy_layout)
 	for spec in [["Kapitänin", "cockpit"], ["Schütze", "waffen"], ["Mechaniker", "schilde"]]:
 		var console: Vector2i = enemy_layout.console_of(enemy_layout.room_index_by_id(spec[1]))
@@ -71,11 +80,52 @@ func _ready() -> void:
 	enemy_view.room_tapped.connect(_on_enemy_room)
 	weapon_panel.selection_changed.connect(func(idx: int) -> void: enemy_view.aim_selected = idx)
 	ship_view.hatch_toggled.connect(_on_hatch_toggled)
+	power_panel.system_tapped.connect(_on_system_tapped)
+	legend.setup(state.layout, load(state.layout.sprite_path))
+	help_button.pressed.connect(func() -> void: legend.visible = true)
+	jump_button.setup(state)
+	jump_button.jump_requested.connect(_on_jump_requested)
 	crew_panel.crew_selected.connect(_on_crew_selected)
 	banner.gui_input.connect(_on_banner_input)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_on_selection_changed(null, -1)
+
+
+func _pick_enemy() -> String:
+	var roll := randf()
+	for e: Array in ENEMIES:
+		roll -= e[1]
+		if roll <= 0.0:
+			return e[0]
+	return ENEMIES[0][0]
+
+
+func _on_jump_requested() -> void:
+	if not battle.player_jump():
+		jump_button.deny()
+		var reason := "Sprung lädt noch"
+		if state.level("antrieb") <= 0:
+			reason = "Sprung: Antrieb braucht Energie"
+		elif state.operator_of_system("cockpit") == null:
+			reason = "Sprung: Jemand muss ins Cockpit"
+		_show_hint(reason)
+
+
+## Fluchtsprung: Schiff blitzt auf, schießt mit Lichtstreifen nach rechts davon.
+func _on_jumped() -> void:
+	ship_view.selected = null
+	weapon_panel.select(-1)
+	var start := ship_view.position
+	for i in 14:
+		var y := start.y + randf_range(10, ship_view.get_size().y - 10)
+		effects.stray(Vector2(start.x + randf_range(40, 200), y), Vector2.RIGHT, Color("#D3E6F8"), 1.0)
+	var tween := create_tween()
+	tween.tween_property(ship_view, "modulate", Color(2.0, 2.0, 2.4, 1.0), 0.25)
+	tween.tween_property(ship_view, "position", start + Vector2(500, 0), 0.35).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func() -> void: ship_view.visible = false)
+	tween.tween_interval(0.4)
+	tween.tween_callback(_show_banner.bind(true, "jump"))
 
 
 ## Crew-Leiste links, eigenes Schiff direkt daneben, Gegner mittig im restlichen Platz.
@@ -97,12 +147,18 @@ func _layout() -> void:
 	power_panel.position = Vector2(left + 4.0, BOTTOM_PANEL_Y)
 	weapon_panel.position = Vector2(power_panel.position.x + power_panel.size.x + 6.0, BOTTOM_PANEL_Y)
 	status_bar.position = Vector2(view_size.x - status_bar.size.x - MARGIN, 4.0).floor()
+	var weapons_end := weapon_panel.position.x + weapon_panel.size.x
+	jump_button.position = Vector2(maxf(weapons_end + 4.0, view_size.x - jump_button.size.x - MARGIN), BOTTOM_PANEL_Y)
 	damage_flash.size = view_size
 	banner.size = view_size
+	legend.size = view_size
+	help_button.position = Vector2(status_bar.position.x - help_button.size.x - 6.0, 4.0).floor()
 
 
 func _process(delta: float) -> void:
 	_time += delta
+	if legend.visible:
+		return  # Legende offen: Kampf pausiert
 	battle.update(delta)
 	for e in battle.take_events():
 		_on_battle_event(e)
@@ -180,6 +236,8 @@ func _on_battle_event(e: Dictionary) -> void:
 					effects.float_text(pos, "REPARIERT", Color("#5DCAA5"))
 		"destroyed":
 			_on_destroyed(e.own_ship, e.reason)
+		"jumped":
+			_on_jumped()
 
 
 ## Weltposition einer Kachel aus einem Schiffs-Ereignis (tile, own_ship).
@@ -191,7 +249,7 @@ func _tile_pos(e: Dictionary) -> Vector2:
 ## Laufende Kleinsteffekte: Rauch über Feuer, Luft aus Lecks und offenen Schleusen.
 func _ambient_effects(view: ShipView, delta: float) -> void:
 	var ship := view.state
-	if ship.is_destroyed():
+	if ship.is_destroyed() or not view.visible or battle.outcome == "entkommen":
 		return
 	for t: Vector2i in ship.fires:
 		if randf() < delta * 4.0:
@@ -202,6 +260,26 @@ func _ambient_effects(view: ShipView, delta: float) -> void:
 		if randf() < delta * 10.0 * o:
 			var p := view.position + ship.layout.tile_center(Vector2(t))
 			effects.puff(p, Vector2.from_angle(randf() * TAU) * randf_range(8, 20), Color("#D3E6F8", 0.8), 0.5)
+	for member in ship.crew:
+		var pos := view.position + ship.layout.tile_center(member.tile_position())
+		match member.activity:
+			"loeschen":
+				# Löschschaum spritzt zum Feuer
+				if randf() < delta * 30.0:
+					var target := view.position + ship.layout.tile_center(Vector2(member.activity_tile))
+					var dir := (target - pos).normalized() if target != pos else Vector2.UP
+					var v := dir.rotated(randf_range(-0.35, 0.35)) * randf_range(30, 55)
+					effects.puff(pos + dir * 4.0, v, Color("#E6EAF0", 0.9), 0.35)
+			"reparieren", "flicken":
+				# Schweißfunken an der Arbeitsstelle
+				if randf() < delta * 14.0:
+					var spot := pos + Vector2(member.facing) * 6.0
+					var c := Color("#FDE6BF") if randf() < 0.5 else Color("#FAC775")
+					effects.puff(spot, Vector2(randf_range(-25, 25), randf_range(-35, -10)), c, 0.25)
+			"heilen":
+				# Grüne Funken steigen auf
+				if randf() < delta * 6.0:
+					effects.puff(pos + Vector2(randf_range(-5, 5), 2), Vector2(0, randf_range(-14, -8)), Color("#97C459"), 0.8)
 	for i in ship.airlock_open.size():
 		if not ship.airlock_open[i]:
 			continue
@@ -227,6 +305,14 @@ func _on_hatch_toggled(kind: String, open: bool) -> void:
 		_show_hint("Luftschleuse " + ("offen – Raum verliert Luft" if open else "geschlossen"))
 	else:
 		_show_hint("Tür " + ("offen" if open else "geschlossen"))
+
+
+func _on_system_tapped(system: String, changed: bool) -> void:
+	var sys := state.get_system(system)
+	var text := "%s: %s · Energie %d/%d" % [SystemInfo.display_name(system), SystemInfo.describe(system), sys.power, sys.usable()]
+	if not changed:
+		text += " · " + ("kein Reaktor frei" if state.power_free() <= 0 and sys.power < sys.usable() else "nichts zu ändern")
+	_show_hint(text)
 
 
 func _show_hint(text: String) -> void:
@@ -302,10 +388,13 @@ func _update_explosions(delta: float) -> void:
 
 func _show_banner(own_ship: bool, reason: String) -> void:
 	var text := ""
-	if own_ship:
+	if reason == "jump":
+		text = "Entkommen – Sprung geglückt"
+	elif own_ship:
 		text = "Schiff verloren" if reason == "hull" else "Die ganze Crew ist tot"
 	else:
-		text = "Sieg – Piratenkutter zerstört" if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
+		var name := enemy.layout.display_name
+		text = ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
 	banner.text = text + "\nTippen für neuen Kampf"
 	banner.visible = true
 	banner.modulate = Color(1, 1, 1, 0)
@@ -341,15 +430,23 @@ func _update_info() -> void:
 		if ordered and ordered.is_moving():
 			info.text = "%s → %s" % [ordered.display_name, state.layout.rooms[state.layout.room_index_at(ordered.destination())].name]
 		elif room >= 0:
+			var system: String = state.layout.rooms[room].system
 			info.text = state.layout.rooms[room].name
+			if SystemInfo.describe(system) != "" and system != "":
+				info.text += ": " + SystemInfo.describe(system)
+			elif system == "" and state.layout.rooms[room].size == Vector2i(2, 2):
+				info.text += ": " + SystemInfo.describe("")
 		elif not battle.player_has_target():
-			info.text = "Gegnerraum antippen = alle Waffen zielen · Waffe antippen = einzeln"
+			info.text = "Gegnerraum: alle Waffen zielen · Waffenkarte: einzeln"
 		else:
-			info.text = "Tür/Schleuse antippen: auf/zu · Energie: antippen +1, halten −1"
+			info.text = "Energie: antippen +1, halten −1 · ? = Symbole"
 		return
 	var target_room := state.layout.room_index_at(member.destination())
 	var room_data: Dictionary = state.layout.rooms[target_room]
 	var text := "%s → %s" % [member.display_name, room_data.name] if member.is_moving() else "%s · %s" % [member.display_name, room_data.name]
+	if member.activity != "":
+		text += " · " + ActivityIcons.NAMES.get(member.activity, "")
+	text += " · %d LP" % roundi(member.hp)
 	if room_data.system != "" and room_data.console != null:
 		text += " · Erfahrung %d" % member.level(room_data.system)
 		if not member.is_moving() and member.tile == room_data.console:

@@ -159,6 +159,13 @@ func _sync_crew() -> void:
 			continue
 		sprite.position = state.layout.tile_center(member.tile_position()).round()
 		sprite.frame = FRAME_BY_FACING.get(member.facing, 0)
+		# Arbeiten sichtbar machen: Hämmern wippt, Löschen zittert leicht
+		match member.activity:
+			"reparieren", "flicken":
+				if fmod(_time * 6.0, 1.0) < 0.5:
+					sprite.position += Vector2(member.facing)
+			"loeschen":
+				sprite.position.x += -1.0 if fmod(_time * 10.0, 1.0) < 0.5 else 0.0
 
 
 func _draw() -> void:
@@ -166,7 +173,7 @@ func _draw() -> void:
 		return
 	var layout := state.layout
 	_draw_engines()
-	draw_texture(_ship_texture, Vector2.ZERO)
+	draw_texture(_ship_texture, Vector2.ZERO, Color(state.layout.stats.get("tint", "#ffffff")))
 	_draw_oxygen()
 	_draw_doors()
 	_draw_airlocks()
@@ -212,7 +219,8 @@ func _draw_engines() -> void:
 	for e: Array in state.layout.stats.get("engines", []):
 		i += 1
 		var flicker := float((tick * 7 + i * 13) % 5) * 0.5
-		var length := roundf(3.0 + level * 3.0 + flicker)
+		# Ladender Sprungantrieb: Flammen werden länger und heller
+		var length := roundf(3.0 + level * 3.0 + flicker + state.jump_charge * 6.0)
 		var p := Vector2(e[0], e[1])
 		var outer := Rect2(p + Vector2(0 if dir > 0 else -length, -2), Vector2(length, 4))
 		var core_len := roundf(length * 0.55)
@@ -310,12 +318,15 @@ func _draw_fires() -> void:
 			draw_rect(Rect2(x + 1, base - roundf(h * 0.35), 1, roundf(h * 0.35)), FIRE_COLORS[2])
 
 
-## Kleine Lebensbalken über verletzten Figuren.
+## Über den Figuren: Tätigkeitssymbol und (wenn verletzt) ein kleiner Lebensbalken.
 func _draw_crew_health() -> void:
 	for member in state.crew:
+		var head := state.layout.tile_center(member.tile_position()).round()
+		if member.activity != "":
+			ActivityIcons.draw(self, head + Vector2(-3, -18 + (1 if fmod(_time * 2.0, 1.0) < 0.5 else 0)), member.activity)
 		if member.hp >= CrewMember.MAX_HP:
 			continue
-		var p := state.layout.tile_center(member.tile_position()).round() + Vector2(-5, -10)
+		var p := head + Vector2(-5, -10)
 		var ratio := member.hp / CrewMember.MAX_HP
 		var color := Color("#5DCAA5") if ratio > 0.6 else (Color("#FAC775") if ratio > 0.3 else COLOR_DAMAGE)
 		draw_rect(Rect2(p, Vector2(10, 2)), Color(0, 0, 0, 0.7))
@@ -407,22 +418,33 @@ func _draw_shield() -> void:
 			draw_line(pts[i], pts[i + 1], Color(COLOR_SHIELD, 0.3), 1.0)
 
 
-## Gegner: Hüllenbalken über dem Schiff; frisch verlorene Punkte leuchten kurz weiß nach.
+## Gegner: Hülle als Zahl und Balken über dem Schiff, darunter getrennt die Schildschichten.
+## Frisch verlorene Punkte glühen kurz rot nach (nie weiß, damit es nicht nach Heilung aussieht).
 func _draw_hull_bar() -> void:
-	var origin := Vector2(4, -12)
+	var font := ThemeDB.fallback_font
 	var ratio := float(state.hull) / maxf(state.max_hull, 1)
 	var color := Color("#5DCAA5") if ratio > 0.5 else (Color("#FAC775") if ratio > 0.25 else COLOR_DAMAGE)
+	var label := "%d/%d" % [state.hull, state.max_hull]
+	var text_pos := Vector2(4, -9)
+	var title: String = state.layout.display_name
+	draw_string(font, Vector2(5, -19), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0, 0, 0, 0.8))
+	draw_string(font, Vector2(4, -20), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("#F7C1C1"))
+	draw_string(font, text_pos + Vector2(1, 1), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0, 0, 0, 0.8))
+	draw_string(font, text_pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, color)
+	var origin := Vector2(6 + font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x, -15)
 	for i in state.max_hull:
-		var rect := Rect2(origin + Vector2(i * 3, 0), Vector2(2, 4))
+		var rect := Rect2(origin + Vector2(i * 3, 0), Vector2(2, 5))
 		if i < state.hull:
 			draw_rect(rect, color)
 		elif i < ceili(_ghost_hull):
-			draw_rect(rect, Color(1, 1, 1, 0.9))
+			draw_rect(rect, Color(COLOR_DAMAGE, 0.5 + 0.5 * sin(_time * 20.0)))
 		else:
 			draw_rect(rect, Color("#2A2F3A"))
 	for i in state.max_shield_layers():
-		var p := origin + Vector2(state.max_hull * 3 + 3 + i * 5, 0)
-		draw_rect(Rect2(p, Vector2(4, 4)), COLOR_SHIELD if i < state.shield_layers else Color("#2A2F3A"))
+		var p := origin + Vector2(i * 7, 7)
+		draw_rect(Rect2(p, Vector2(5, 3)), COLOR_SHIELD if i < state.shield_layers else Color("#2A2F3A"))
+		if i == state.shield_layers and state.shield_progress > 0.0:
+			draw_rect(Rect2(p, Vector2(roundf(5 * state.shield_progress), 3)), Color(COLOR_SHIELD, 0.4))
 
 
 ## Rahmen um eine Kachel; `corners_only` zeichnet nur die Ecken (Ziel-Markierung).

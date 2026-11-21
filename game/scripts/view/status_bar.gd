@@ -47,9 +47,10 @@ func _draw() -> void:
 		if i < state.hull:
 			draw_rect(rect, color)
 		elif i < ceili(_ghost):
-			draw_rect(rect, Color.WHITE)
+			draw_rect(rect, Color(COLOR_BAD, 0.5 + 0.5 * sin(_time * 20.0)))
 		else:
 			draw_rect(rect, COLOR_OFF)
+	draw_string(font, Vector2(x0 + state.max_hull * 3 + 3, 7), "%d/%d" % [state.hull, state.max_hull], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, color)
 	draw_string(font, Vector2(0, 19), "SCHILD", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, COLOR_TEXT)
 	for i in state.max_shield_layers():
 		var r := Rect2(Vector2(x0 + i * 8, 12), Vector2(6, 6))

@@ -219,16 +219,17 @@ func test_enemy_layout_is_valid() -> void:
 
 func test_start_power_fits_reactor() -> void:
 	var state := ShipState.new(_layout())
-	check(state.reactor_output() == 8, "Reaktor sollte 8 liefern, liefert %d" % state.reactor_output())
-	check(state.power_used() == 8, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
+	check(state.reactor_output() == 6, "Reaktor sollte 6 liefern, liefert %d" % state.reactor_output())
+	check(state.power_used() == 6, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
+	check(state.level("antrieb") == 0, "Antrieb sollte am Start aus sein (Energie ist knapp)")
 	check(state.weapons[0].powered and state.weapons[1].powered, "Beide Waffen sollten Energie haben")
 	check(state.shield_layers == 1, "Eine Schildschicht erwartet")
 
 
 func test_power_is_limited() -> void:
 	var state := ShipState.new(_layout())
-	check(not state.add_power("sensoren"), "Mehr Energie verteilt, als der Reaktor hat")
-	check(state.remove_power("antrieb"), "Antrieb ließ sich nicht herunterfahren")
+	check(not state.add_power("antrieb"), "Mehr Energie verteilt, als der Reaktor hat")
+	check(state.remove_power("schilde"), "Schilde ließen sich nicht herunterfahren")
 	check(state.add_power("sensoren"), "Freie Energie nicht nutzbar")
 	check(not state.add_power("sensoren"), "Mehr Energie als Stufen im System")
 	check(state.power_free() == 0, "Rechnung stimmt nicht")
@@ -261,8 +262,8 @@ func test_damage_cuts_power_and_repair_restores_it() -> void:
 func test_reactor_damage_lowers_output() -> void:
 	var state := ShipState.new(_layout())
 	state.take_hit(state.layout.room_index_by_id("reaktor"), 2)
-	check(state.reactor_output() == 6, "Reaktorschaden senkt die Leistung nicht")
-	check(state.power_used() <= 6, "Systeme verbrauchen mehr als der Reaktor liefert")
+	check(state.reactor_output() == 4, "Reaktorschaden senkt die Leistung nicht")
+	check(state.power_used() <= 4, "Systeme verbrauchen mehr als der Reaktor liefert")
 	check(state.level("lebenserhaltung") == 1 and state.level("schilde") == 2, "Wichtige Systeme zuerst versorgen")
 
 
@@ -275,6 +276,8 @@ func test_shields_recharge() -> void:
 
 func test_evasion_needs_pilot() -> void:
 	var state := ShipState.new(_layout())
+	state.remove_power("waffen")
+	state.add_power("antrieb")
 	check(state.evasion() == 0.0, "Ausweichen ohne Pilot")
 	state.add_crew("Pilot", "mensch", Vector2i(10, 3))
 	check(state.evasion() > 0.0, "Kein Ausweichen mit Pilot und Antrieb")
@@ -449,7 +452,7 @@ func test_suffocation_kills_and_reports() -> void:
 
 func test_medbay_heals() -> void:
 	var state := _quiet_state()
-	state.remove_power("antrieb")
+	state.remove_power("waffen")
 	check(state.add_power("medbay"), "Medbay bekommt keine Energie")
 	var member := state.add_crew("Patient", "mensch", Vector2i(2, 7))
 	member.hp = 40.0
@@ -476,3 +479,48 @@ func test_enemy_crew_wipe_is_victory() -> void:
 		if battle.outcome != "":
 			break
 	check(battle.outcome == "sieg", "Erstickte Gegner-Crew beendet den Kampf nicht: '%s'" % battle.outcome)
+
+
+func test_crew_shows_activity() -> void:
+	var state := _quiet_state()
+	var member := state.add_crew("Löscher", "mensch", Vector2i(7, 0))  # Schildkonsole
+	state.start_fire(Vector2i(6, 0))
+	state.update(0.1)
+	check(member.activity == "loeschen" and member.activity_tile == Vector2i(6, 0), "Löschen nicht als Tätigkeit sichtbar")
+	check(member.facing == Vector2i.LEFT, "Figur schaut nicht zum Feuer")
+	state.fires.clear()
+	state.take_hit(state.layout.room_index_by_id("schilde"), 1)
+	state.update(0.1)
+	check(member.activity == "reparieren", "Reparieren nicht als Tätigkeit sichtbar: '%s'" % member.activity)
+
+
+func test_jump_needs_engine_and_pilot() -> void:
+	var state := _quiet_state()
+	_settle(state, 5.0)
+	check(state.jump_charge == 0.0, "Sprung lädt ohne Antrieb")
+	state.remove_power("waffen")
+	state.add_power("antrieb")
+	_settle(state, 5.0)
+	check(state.jump_charge == 0.0, "Sprung lädt ohne Pilot")
+	state.add_crew("Pilot", "mensch", Vector2i(10, 3))
+	_settle(state, 10.0)
+	check(state.jump_charge > 0.0 and not state.jump_ready(), "Sprung lädt nicht oder ist zu schnell fertig")
+	_settle(state, 40.0)
+	check(state.jump_ready(), "Sprung nach 50 s mit 2 Balken Antrieb nicht bereit")
+
+
+func test_jump_ends_battle() -> void:
+	var player := ShipState.new(_layout())
+	player.add_crew("Pilot", "mensch", Vector2i(10, 3))
+	var battle := Battle.new(player, _enemy_ship(), 4)
+	check(not battle.player_jump(), "Sprung ohne Ladung möglich")
+	player.jump_charge = 1.0
+	check(battle.player_jump() and battle.outcome == "entkommen", "Geladener Sprung beendet den Kampf nicht")
+
+
+func test_heavy_enemy_layout_is_valid() -> void:
+	var layout := ShipLayout.load_json("res://data/ships/piraten_kutter_schwer.json")
+	check(layout.validate().is_empty(), "Schwerer Kutter: Layout-Fehler")
+	var ship := ShipState.new(layout)
+	check(ship.max_shield_layers() == 1, "Schwerer Kutter: eine Schildschicht (zwei sind mit 6 Reaktorbalken kaum zu knacken)")
+	check(ship.weapons.size() == 3 and ship.weapons.all(func(w: Weapon) -> bool: return w.powered), "Schwerer Kutter: drei Waffen mit Energie")

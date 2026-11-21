@@ -1,14 +1,17 @@
 class_name CrewPanel
 extends Control
-## Crew-Leiste: Porträt je Crewmitglied, Antippen wählt es aus.
-## Darunter Punkte für die Erfahrung im System des Raums, in dem die Figur gerade ist.
+## Crew-Leiste: kompaktes Porträt (Kopf und Schultern) je Crewmitglied, Antippen wählt es aus.
+## Darunter Lebensbalken und Punkte für die Erfahrung im System des aktuellen Raums,
+## oben rechts das Symbol der Tätigkeit (löschen, flicken, reparieren, geheilt werden).
 
 signal crew_selected(member: CrewMember)
 
 const PORTRAITS := {
 	"mensch": preload("res://assets/crew/mensch_gross_unten.png"),
 }
-const SLOT := Vector2(44, 54)
+## Ausschnitt aus dem 40×44-Porträt.
+const CROP := Rect2(6, 8, 28, 28)
+const SLOT := Vector2(32, 39)
 const GAP := 3.0
 const COLOR_BG := Color("#161B2B")
 const COLOR_EDGE := Color("#363E58")
@@ -40,11 +43,12 @@ func _draw() -> void:
 		draw_rect(rect, COLOR_BG)
 		draw_rect(rect.grow(-0.5), COLOR_SELECTED if member == selected else COLOR_EDGE, false, 1.0)
 		var portrait: Texture2D = PORTRAITS.get(member.species, PORTRAITS["mensch"])
-		draw_texture(portrait, rect.position + Vector2(2, 1))
+		draw_texture_rect_region(portrait, Rect2(rect.position + Vector2(2, 1), CROP.size), CROP)
+		ActivityIcons.draw(self, rect.position + Vector2(SLOT.x - 8, 1), member.activity)
 		# Lebenspunkte
 		var ratio := member.hp / CrewMember.MAX_HP
 		var hp_color := Color("#5DCAA5") if ratio > 0.6 else (Color("#FAC775") if ratio > 0.3 else Color("#E24B4A"))
-		var hp_bar := Rect2(rect.position + Vector2(4, SLOT.y - 9), Vector2(SLOT.x - 8, 2))
+		var hp_bar := Rect2(rect.position + Vector2(3, SLOT.y - 8), Vector2(SLOT.x - 6, 2))
 		draw_rect(hp_bar, COLOR_XP_EMPTY)
 		draw_rect(Rect2(hp_bar.position, Vector2(roundf(hp_bar.size.x * ratio), 2)), hp_color)
 		# Erfahrung im aktuellen Raum: bis zu 5 Punkte
@@ -53,8 +57,8 @@ func _draw() -> void:
 		if system != "":
 			var level := member.level(system)
 			for dot in int(CrewMember.MAX_EXPERIENCE):
-				var p := rect.position + Vector2(8 + dot * 6, SLOT.y - 6)
-				draw_rect(Rect2(p, Vector2(4, 3)), COLOR_XP if dot < level else COLOR_XP_EMPTY)
+				var p := rect.position + Vector2(4 + dot * 5, SLOT.y - 4)
+				draw_rect(Rect2(p, Vector2(4, 2)), COLOR_XP if dot < level else COLOR_XP_EMPTY)
 
 
 func _gui_input(event: InputEvent) -> void:
