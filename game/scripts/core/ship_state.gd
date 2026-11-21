@@ -70,8 +70,8 @@ var breaches: Dictionary = {}  # Kachel -> Reparaturfortschritt (0..1)
 var door_open: Dictionary = {}  # Türschlüssel -> true, fehlt = zu
 var airlock_open: Array[bool] = []
 ## Wahrscheinlichkeit für Feuer bzw. Hüllenbruch bei einem Treffer.
-var fire_chance := 0.35
-var breach_chance := 0.2
+var fire_chance := 0.3
+var breach_chance := 0.1
 var rng := RandomNumberGenerator.new()
 var had_crew := false
 var _fire_damage := {}  # System-ID -> Fortschritt bis zum nächsten Brandschaden

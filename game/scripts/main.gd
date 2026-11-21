@@ -39,6 +39,8 @@ var _hint_until := 0.0
 @onready var info: Label = $HUD/Info
 @onready var damage_flash: ColorRect = $HUD/DamageFlash
 @onready var banner: Label = $HUD/Banner
+@onready var legend: Legend = $HUD/Legend
+@onready var help_button: HelpButton = $HUD/HelpButton
 
 
 func _ready() -> void:
@@ -71,6 +73,9 @@ func _ready() -> void:
 	enemy_view.room_tapped.connect(_on_enemy_room)
 	weapon_panel.selection_changed.connect(func(idx: int) -> void: enemy_view.aim_selected = idx)
 	ship_view.hatch_toggled.connect(_on_hatch_toggled)
+	power_panel.system_tapped.connect(_on_system_tapped)
+	legend.setup(state.layout, load(state.layout.sprite_path))
+	help_button.pressed.connect(func() -> void: legend.visible = true)
 	crew_panel.crew_selected.connect(_on_crew_selected)
 	banner.gui_input.connect(_on_banner_input)
 	get_viewport().size_changed.connect(_layout)
@@ -99,10 +104,14 @@ func _layout() -> void:
 	status_bar.position = Vector2(view_size.x - status_bar.size.x - MARGIN, 4.0).floor()
 	damage_flash.size = view_size
 	banner.size = view_size
+	legend.size = view_size
+	help_button.position = Vector2(view_size.x - help_button.size.x - MARGIN, BOTTOM_PANEL_Y + 4.0).floor()
 
 
 func _process(delta: float) -> void:
 	_time += delta
+	if legend.visible:
+		return  # Legende offen: Kampf pausiert
 	battle.update(delta)
 	for e in battle.take_events():
 		_on_battle_event(e)
@@ -229,6 +238,14 @@ func _on_hatch_toggled(kind: String, open: bool) -> void:
 		_show_hint("Tür " + ("offen" if open else "geschlossen"))
 
 
+func _on_system_tapped(system: String, changed: bool) -> void:
+	var sys := state.get_system(system)
+	var text := "%s: %s · Energie %d/%d" % [SystemInfo.display_name(system), SystemInfo.describe(system), sys.power, sys.usable()]
+	if not changed:
+		text += " · " + ("kein Reaktor frei" if state.power_free() <= 0 and sys.power < sys.usable() else "nichts zu ändern")
+	_show_hint(text)
+
+
 func _show_hint(text: String) -> void:
 	_hint = text
 	_hint_until = _time + 2.0
@@ -341,7 +358,12 @@ func _update_info() -> void:
 		if ordered and ordered.is_moving():
 			info.text = "%s → %s" % [ordered.display_name, state.layout.rooms[state.layout.room_index_at(ordered.destination())].name]
 		elif room >= 0:
+			var system: String = state.layout.rooms[room].system
 			info.text = state.layout.rooms[room].name
+			if SystemInfo.describe(system) != "" and system != "":
+				info.text += ": " + SystemInfo.describe(system)
+			elif system == "" and state.layout.rooms[room].size == Vector2i(2, 2):
+				info.text += ": " + SystemInfo.describe("")
 		elif not battle.player_has_target():
 			info.text = "Gegnerraum antippen = alle Waffen zielen · Waffe antippen = einzeln"
 		else:

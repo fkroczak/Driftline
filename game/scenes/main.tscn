@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/view/ship_view.gd" id="2_ship"]
@@ -8,6 +8,8 @@
 [ext_resource type="Script" path="res://scripts/view/power_panel.gd" id="6_power"]
 [ext_resource type="Script" path="res://scripts/view/weapon_panel.gd" id="7_weapons"]
 [ext_resource type="Script" path="res://scripts/view/status_bar.gd" id="8_status"]
+[ext_resource type="Script" path="res://scripts/view/legend.gd" id="9_legend"]
+[ext_resource type="Script" path="res://scripts/view/help_button.gd" id="10_help"]
 
 [sub_resource type="StyleBoxFlat" id="BannerBg"]
 bg_color = Color(0.027, 0.031, 0.059, 0.72)
@@ -93,6 +95,22 @@ offset_top = 184.0
 offset_right = 317.0
 offset_bottom = 214.0
 script = ExtResource("7_weapons")
+
+[node name="HelpButton" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 356.0
+offset_top = 188.0
+offset_right = 378.0
+offset_bottom = 210.0
+script = ExtResource("10_help")
+
+[node name="Legend" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 384.0
+offset_bottom = 216.0
+script = ExtResource("9_legend")
 
 [node name="Banner" type="Label" parent="HUD"]
 visible = false

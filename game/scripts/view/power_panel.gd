@@ -20,6 +20,9 @@ const COLOR_BROKEN := Color("#E24B4A")
 const COLOR_REACTOR := Color("#FAC775")
 const LONG_PRESS_MS := 400
 
+## Bei jedem Antippen einer Spalte, damit die Infozeile erklären kann, was das System tut.
+signal system_tapped(system: String, changed: bool)
+
 var state: ShipState
 var _icons := {}  # System -> AtlasTexture (Raumsymbol aus dem Schiffs-Sprite)
 var _columns: Array[String] = []
@@ -117,6 +120,7 @@ func _gui_input(event: InputEvent) -> void:
 func _change(col: int, add: bool) -> void:
 	var id := _columns[col]
 	var ok := state.add_power(id) if add else state.remove_power(id)
+	system_tapped.emit(id, ok)
 	if ok:
 		if add:
 			_pop[id] = 0.2
