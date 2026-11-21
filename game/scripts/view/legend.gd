@@ -17,6 +17,7 @@ const CONTROLS := [
 	"Tür oder gelbe Schleuse antippen: auf/zu · offene Schleuse saugt Luft ab",
 	"Crew antippen, dann Ziel · Wer im Raum steht, löscht, flickt und repariert",
 	"SPRUNG lädt mit Antrieb und Pilot · voll geladen antippen = fliehen",
+	"Pause antippen (oder Leertaste) · halten: Auto-Pause an/aus (A)",
 ]
 
 var _icons := {}  # System-ID ("" = Erweiterung) -> AtlasTexture

@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/view/ship_view.gd" id="2_ship"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/view/legend.gd" id="9_legend"]
 [ext_resource type="Script" path="res://scripts/view/help_button.gd" id="10_help"]
 [ext_resource type="Script" path="res://scripts/view/jump_button.gd" id="11_jump"]
+[ext_resource type="Script" path="res://scripts/view/pause_button.gd" id="12_pause"]
 
 [sub_resource type="StyleBoxFlat" id="BannerBg"]
 bg_color = Color(0.027, 0.031, 0.059, 0.72)
@@ -43,6 +44,26 @@ offset_bottom = 216.0
 mouse_filter = 2
 color = Color(0.89, 0.29, 0.29, 0)
 
+[node name="PauseOverlay" type="ColorRect" parent="HUD"]
+visible = false
+offset_right = 384.0
+offset_bottom = 216.0
+mouse_filter = 2
+color = Color(0.027, 0.031, 0.059, 0.35)
+
+[node name="PauseLabel" type="Label" parent="HUD"]
+visible = false
+offset_top = 30.0
+offset_right = 384.0
+offset_bottom = 48.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.992, 0.902, 0.749, 1)
+theme_override_colors/font_outline_color = Color(0.039, 0.043, 0.086, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 12
+text = "PAUSE"
+horizontal_alignment = 1
+
 [node name="Title" type="Label" parent="HUD"]
 offset_left = 6.0
 offset_top = 2.0
@@ -60,6 +81,7 @@ offset_bottom = 30.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.666667, 0.701961, 0.752941, 1)
 theme_override_font_sizes/font_size = 9
+clip_text = true
 
 [node name="StatusBar" type="Control" parent="HUD"]
 layout_mode = 3
@@ -105,6 +127,15 @@ offset_top = 4.0
 offset_right = 218.0
 offset_bottom = 22.0
 script = ExtResource("10_help")
+
+[node name="PauseButton" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 176.0
+offset_top = 4.0
+offset_right = 194.0
+offset_bottom = 22.0
+script = ExtResource("12_pause")
 
 [node name="JumpButton" type="Control" parent="HUD"]
 layout_mode = 3

@@ -21,6 +21,9 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 
 ### Energie und Kampf
 
+- **Pause** (Knopf oben neben „?“, am Desktop auch die Leertaste): Der Kampf steht, alles bleibt bedienbar (Energie, Ziele, Crew, Türen, Schleusen). Antippen setzt fort.
+- **Auto-Pause** (am Start an, kleines „A“ am Pauseknopf; gedrückt halten schaltet um): Wer eine Crew-Figur oder Waffenkarte auswählt, hält den Kampf an. Mit dem Befehl oder beim Abwählen läuft er weiter. Eine selbst gesetzte Pause bleibt, bis man fortsetzt.
+
 - **Symbole:** Der „?“-Knopf unten rechts öffnet eine Legende (Kampf pausiert). Eine Energiespalte oder einen eigenen Raum antippen zeigt in der Infozeile, was das System tut.
 - **Hülle:** Zahl und Balken, oben rechts für das eigene Schiff, über dem Gegner für ihn. Frisch verlorene Punkte glühen kurz rot. Darunter getrennt die Schildschichten.
 
