@@ -6,7 +6,7 @@
   "tile_size": 14,
   "grid_origin": [18, 12],
   "grid_size": [6, 4],
-  "hull": 20,
+  "hull": 18,
   "reactor": 8,
   "oxygen_regen": 0.04,
   "systems": {"schilde": 2, "waffen": 3, "antrieb": 2, "cockpit": 1},

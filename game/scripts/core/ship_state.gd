@@ -32,7 +32,7 @@ extends RefCounted
 const XP_PER_SECOND := 1.0 / 60.0
 const POWER_PRIORITY := ["lebenserhaltung", "schilde", "waffen", "antrieb", "sensoren", "medbay"]
 ## Sekunden je Schildschicht ohne Besatzung an der Konsole.
-const SHIELD_RECHARGE := 2.0
+const SHIELD_RECHARGE := 3.0
 ## Bonus für eine besetzte Konsole und je Erfahrungsstufe (Ladezeit, Ausweichen).
 const OPERATOR_BONUS := 0.1
 const LEVEL_BONUS := 0.05

@@ -310,6 +310,11 @@ func _on_hatch_toggled(kind: String, open: bool) -> void:
 func _on_system_tapped(system: String, changed: bool) -> void:
 	var sys := state.get_system(system)
 	var text := "%s: %s · Energie %d/%d" % [SystemInfo.display_name(system), SystemInfo.describe(system), sys.power, sys.usable()]
+	if system == "schilde":
+		var layers := state.max_shield_layers()
+		text += " · %d Schicht%s" % [layers, "" if layers == 1 else "en"]
+		if sys.power % 2 == 1:
+			text += " (1 Balken fehlt zum Paar)"
 	if not changed:
 		text += " · " + ("kein Reaktor frei" if state.power_free() <= 0 and sys.power < sys.usable() else "nichts zu ändern")
 	_show_hint(text)
