@@ -5,7 +5,7 @@ extends RefCounted
 const ENTRIES := [
 	# System-ID, Name, was es tut (kurz, passt in eine Zeile)
 	["reaktor", "Reaktor", "liefert Energie (Leiste ganz links)"],
-	["schilde", "Schilde", "je 2 Balken eine Schicht gegen Treffer"],
+	["schilde", "Schilde", "2 Balken (Back- + Steuerbord) = 1 Schicht"],
 	["waffen", "Waffen", "Energie für die Waffen unten rechts"],
 	["antrieb", "Antrieb", "Ausweichen und Sprung (Pilot nötig)"],
 	["cockpit", "Cockpit", "Pilot hier = Ausweichen und Sprung"],

@@ -5,6 +5,8 @@ extends Control
 ## - Spalte antippen: ein Balken Energie mehr
 ## - Gedrückt halten (oder Rechtsklick): ein Balken weniger
 ## Balken: grün = versorgt, dunkel = frei, rot = beschädigt.
+## Schilde: je zwei Balken nebeneinander (Backbord, Steuerbord) ergeben eine Schicht.
+## Ein versorgter Balken ohne versorgten Partner ist gelb: Er bewirkt nichts.
 
 const SYSTEMS := ["schilde", "waffen", "antrieb", "sensoren", "medbay", "lebenserhaltung"]
 const REACTOR_W := 12
@@ -18,6 +20,7 @@ const COLOR_ON := Color("#5DCAA5")
 const COLOR_OFF := Color("#2A2F3A")
 const COLOR_BROKEN := Color("#E24B4A")
 const COLOR_REACTOR := Color("#FAC775")
+const COLOR_HALF := Color("#FAC775")
 const LONG_PRESS_MS := 400
 
 ## Bei jedem Antippen einer Spalte, damit die Infozeile erklären kann, was das System tut.
@@ -88,6 +91,9 @@ func _draw_column(c: int) -> void:
 	if icon:
 		var dim := 1.0 if sys.power > 0 else 0.45
 		draw_texture(icon, Vector2(x + 4, HEIGHT - 14), Color(dim, dim, dim))
+	if id == "schilde":
+		_draw_shield_pairs(sys, x)
+		return
 	for b in sys.capacity:
 		var color := COLOR_OFF
 		if b >= sys.usable():
@@ -97,6 +103,20 @@ func _draw_column(c: int) -> void:
 			if _pop.has(id) and b == sys.power - 1:
 				color = Color.WHITE
 		draw_rect(Rect2(Vector2(x + 4, HEIGHT - 17 - b * BAR_STEP), Vector2(12, BAR_H)), color)
+
+
+func _draw_shield_pairs(sys: ShipSystem, x: float) -> void:
+	for b in sys.capacity:
+		var row := b / 2
+		var side := b % 2
+		var color := COLOR_OFF
+		if b >= sys.usable():
+			color = COLOR_BROKEN
+		elif b < sys.power:
+			color = COLOR_ON if sys.power >= (row + 1) * 2 else COLOR_HALF
+			if _pop.has(sys.id) and b == sys.power - 1:
+				color = Color.WHITE
+		draw_rect(Rect2(Vector2(x + 4 + side * 7, HEIGHT - 17 - row * BAR_STEP), Vector2(5, BAR_H)), color)
 
 
 func _gui_input(event: InputEvent) -> void:

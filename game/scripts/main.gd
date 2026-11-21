@@ -47,6 +47,13 @@ var _hint_until := 0.0
 @onready var legend: Legend = $HUD/Legend
 @onready var help_button: HelpButton = $HUD/HelpButton
 @onready var jump_button: JumpButton = $HUD/JumpButton
+@onready var pause_button: PauseButton = $HUD/PauseButton
+@onready var pause_overlay: ColorRect = $HUD/PauseOverlay
+@onready var pause_label: Label = $HUD/PauseLabel
+
+## Selbst pausiert (bleibt, bis man fortsetzt) oder automatisch pausiert (endet mit dem Befehl).
+var _manual_pause := false
+var _auto_paused := false
 
 
 func _ready() -> void:
@@ -85,11 +92,64 @@ func _ready() -> void:
 	help_button.pressed.connect(func() -> void: legend.visible = true)
 	jump_button.setup(state)
 	jump_button.jump_requested.connect(_on_jump_requested)
+	pause_button.toggled_pause.connect(_toggle_pause)
+	pause_button.toggled_auto.connect(_toggle_auto_pause)
+	weapon_panel.selection_changed.connect(_on_order_selection)
 	crew_panel.crew_selected.connect(_on_crew_selected)
 	banner.gui_input.connect(_on_banner_input)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_on_selection_changed(null, -1)
+
+
+func is_paused() -> bool:
+	return _manual_pause or _auto_paused
+
+
+func _toggle_pause() -> void:
+	if is_paused():
+		_manual_pause = false
+		_auto_paused = false
+	else:
+		_manual_pause = true
+	_apply_pause()
+
+
+func _toggle_auto_pause() -> void:
+	pause_button.auto_pause = not pause_button.auto_pause
+	if not pause_button.auto_pause and _auto_paused:
+		_auto_paused = false
+		_apply_pause()
+	_show_hint("Auto-Pause " + ("an: Kampf hält beim Auswählen von Crew oder Waffe an" if pause_button.auto_pause else "aus"))
+
+
+## Auto-Pause: Auswahl einer Figur oder Waffe hält an, Befehl oder Abwählen läuft weiter.
+func _on_order_selection(idx: int) -> void:
+	if not pause_button.auto_pause or battle.outcome != "":
+		return
+	var selecting := idx >= 0 or ship_view.selected != null or weapon_panel.selected >= 0
+	if selecting and not _manual_pause and not _auto_paused:
+		_auto_paused = true
+		_apply_pause()
+	elif not selecting and _auto_paused:
+		_auto_paused = false
+		_apply_pause()
+
+
+func _apply_pause() -> void:
+	var paused := is_paused()
+	pause_button.paused = paused
+	pause_overlay.visible = paused
+	pause_label.visible = paused
+	pause_label.text = "PAUSE" if _manual_pause else "AUTO-PAUSE"
+	effects.set_process(not paused)
+	$Starfield.set_process(not paused)
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
+		_toggle_pause()
+		get_viewport().set_input_as_handled()
 
 
 func _pick_enemy() -> String:
@@ -114,6 +174,9 @@ func _on_jump_requested() -> void:
 
 ## Fluchtsprung: Schiff blitzt auf, schießt mit Lichtstreifen nach rechts davon.
 func _on_jumped() -> void:
+	_manual_pause = false
+	_auto_paused = false
+	_apply_pause()
 	ship_view.selected = null
 	weapon_panel.select(-1)
 	var start := ship_view.position
@@ -153,12 +216,17 @@ func _layout() -> void:
 	banner.size = view_size
 	legend.size = view_size
 	help_button.position = Vector2(status_bar.position.x - help_button.size.x - 6.0, 4.0).floor()
+	pause_button.position = help_button.position - Vector2(pause_button.size.x + 4.0, 0)
+	pause_overlay.size = view_size
+	info.size.x = pause_button.position.x - info.position.x - 4.0
+	pause_label.size.x = view_size.x
 
 
 func _process(delta: float) -> void:
 	_time += delta
-	if legend.visible:
-		return  # Legende offen: Kampf pausiert
+	if legend.visible or is_paused():
+		_update_info()
+		return  # Legende offen oder Pause: Kampf steht, Befehle gehen trotzdem
 	battle.update(delta)
 	for e in battle.take_events():
 		_on_battle_event(e)
@@ -310,6 +378,11 @@ func _on_hatch_toggled(kind: String, open: bool) -> void:
 func _on_system_tapped(system: String, changed: bool) -> void:
 	var sys := state.get_system(system)
 	var text := "%s: %s · Energie %d/%d" % [SystemInfo.display_name(system), SystemInfo.describe(system), sys.power, sys.usable()]
+	if system == "schilde":
+		var layers := state.max_shield_layers()
+		text += " · %d Schicht%s" % [layers, "" if layers == 1 else "en"]
+		if sys.power % 2 == 1:
+			text += " (1 Balken fehlt zum Paar)"
 	if not changed:
 		text += " · " + ("kein Reaktor frei" if state.power_free() <= 0 and sys.power < sys.usable() else "nichts zu ändern")
 	_show_hint(text)
@@ -358,6 +431,9 @@ func _ellipse_entry(from: Vector2, to: Vector2, center: Vector2, radius: Vector2
 
 ## Schiff zerstört: Explosionskette über alle Räume, danach ausblenden und Ergebnis zeigen.
 func _on_destroyed(own_ship: bool, reason: String) -> void:
+	_manual_pause = false
+	_auto_paused = false
+	_apply_pause()
 	ship_view.selected = null
 	weapon_panel.select(-1)
 	if reason == "crew":
@@ -413,12 +489,16 @@ func _on_crew_selected(member: CrewMember) -> void:
 
 func _on_selection_changed(member: CrewMember, _room_idx: int) -> void:
 	crew_panel.selected = member
+	_on_order_selection(0 if member else -1)
 	_update_info()
 
 
 func _update_info() -> void:
 	if _time < _hint_until:
 		info.text = _hint
+		return
+	if is_paused() and ship_view.selected == null and weapon_panel.selected < 0:
+		info.text = "Pause: Befehle geben, dann ▶ oder Leertaste"
 		return
 	if weapon_panel.selected >= 0:
 		info.text = "Waffe %d: Gegnerraum antippen (gleicher Raum = Ziel aufheben)" % (weapon_panel.selected + 1)

@@ -270,8 +270,19 @@ func test_reactor_damage_lowers_output() -> void:
 func test_shields_recharge() -> void:
 	var state := ShipState.new(_layout())
 	state.shield_layers = 0
-	_settle(state, 2.1)
+	_settle(state, 2.0)
+	check(state.shield_layers == 0, "Schildwand steht zu schnell wieder (unter 3 s)")
+	_settle(state, 1.1)
 	check(state.shield_layers == 1, "Schild lädt nicht nach")
+
+
+func test_half_shield_pair_gives_no_layer() -> void:
+	var state := _quiet_state()
+	state.remove_power("schilde")
+	check(state.get_system("schilde").power == 1 and state.max_shield_layers() == 0, "Ein Balken allein ergibt eine Schicht")
+	state.add_power("schilde")
+	state.take_hit(state.layout.room_index_by_id("schilde"), 1)
+	check(state.max_shield_layers() == 0, "Beschädigter Partnerbalken: Schicht hält trotzdem")
 
 
 func test_evasion_needs_pilot() -> void:

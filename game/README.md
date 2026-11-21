@@ -21,6 +21,9 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 
 ### Energie und Kampf
 
+- **Pause** (Knopf oben neben „?“, am Desktop auch die Leertaste): Der Kampf steht, alles bleibt bedienbar (Energie, Ziele, Crew, Türen, Schleusen). Antippen setzt fort.
+- **Auto-Pause** (am Start an, kleines „A“ am Pauseknopf; gedrückt halten schaltet um): Wer eine Crew-Figur oder Waffenkarte auswählt, hält den Kampf an. Mit dem Befehl oder beim Abwählen läuft er weiter. Eine selbst gesetzte Pause bleibt, bis man fortsetzt.
+
 - **Symbole:** Der „?“-Knopf unten rechts öffnet eine Legende (Kampf pausiert). Eine Energiespalte oder einen eigenen Raum antippen zeigt in der Infozeile, was das System tut.
 - **Hülle:** Zahl und Balken, oben rechts für das eigene Schiff, über dem Gegner für ihn. Frisch verlorene Punkte glühen kurz rot. Darunter getrennt die Schildschichten.
 
@@ -29,10 +32,10 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 - **Waffen** (Karten unten, nummeriert): Mit Energie lädt eine Waffe, ohne entlädt sie sich. Geladen feuert sie selbst auf ihr Ziel; ohne Ziel blinkt die Karte. Gedrückt halten oder Rechtsklick schaltet eine Waffe ein oder aus.
 - **Zielen, alle Waffen:** einen Gegnerraum antippen (knapp daneben zählt auch)
 - **Zielen, einzeln:** Waffenkarte antippen (rot umrandet), dann einen Gegnerraum. Den aktuellen Zielraum der Waffe erneut antippen hebt das Ziel auf. Fadenkreuze im Gegnerschiff tragen die Waffennummer.
-- **Einschlag:** Ausweichen (Antrieb + besetztes Cockpit), sonst fängt der Schild ab (2 Balken = 1 Schicht, lädt in 2 s nach), sonst Treffer: Hülle und System im Raum verlieren Balken
+- **Einschlag:** Ausweichen (Antrieb + besetztes Cockpit), sonst fängt der Schild ab (2 Balken = 1 Schicht: Backbord und Steuerbord, in der Energieleiste nebeneinander; ist einer beschädigt oder ohne Energie, fällt die Schicht weg und der übrige Balken leuchtet gelb; eine Schicht lädt in 3 s nach, mit besetzter Konsole schneller), sonst Treffer: Hülle und System im Raum verlieren Balken
 - **Reaktortreffer** senken die verfügbare Energie; dann werden Systeme in der Reihenfolge Lebenserhaltung, Schilde, Waffen, Antrieb, Sensoren, Medbay versorgt. Nach der Reparatur kommt die gewünschte Energie von selbst zurück.
-- **Gegner** (vor jedem Kampf ausgewürfelt): zu 65 % der **Piratenkutter** (Hülle 18, Reaktor 6, eine Schildschicht, Pulslaser und Bordkanone), zu 35 % der rötliche **Schwere Kutter** (Hülle 20, Reaktor 8, eine Schildschicht, Pulslaser und zwei Bordkanonen). Name steht über dem Hüllenbalken. Jede Waffe zielt alle paar Sekunden auf einen anderen Raum. Die Mechanikerin oder der Mechaniker löscht Feuer, flickt Lecks, repariert Systeme und kehrt danach zur Konsole zurück. Der Kutter hat keine Lebenserhaltung, aber eine eingebaute Luftaufbereitung (`oxygen_regen`).
-- **Balance:** In 20 simulierten Kämpfen ohne Eingreifen (Antrieb aus) gewinnt der Frachter gegen den Piratenkutter 17, im Schnitt nach rund 60 s. Gegen den Schweren Kutter gewinnt er passiv 15 von 30, schon mit einer einfachen Taktik (Lebenserhaltung aus, Antrieb an) 19 von 30.
+- **Gegner** (vor jedem Kampf ausgewürfelt): zu 65 % der **Piratenkutter** (Hülle 18, Reaktor 6, eine Schildschicht, Pulslaser und Bordkanone), zu 35 % der rötliche **Schwere Kutter** (Hülle 18, Reaktor 8, eine Schildschicht, Pulslaser und zwei Bordkanonen). Name steht über dem Hüllenbalken. Jede Waffe zielt alle paar Sekunden auf einen anderen Raum. Die Mechanikerin oder der Mechaniker löscht Feuer, flickt Lecks, repariert Systeme und kehrt danach zur Konsole zurück. Der Kutter hat keine Lebenserhaltung, aber eine eingebaute Luftaufbereitung (`oxygen_regen`).
+- **Balance:** In 20 simulierten Kämpfen ohne Eingreifen (Antrieb aus) gewinnt der Frachter gegen den Piratenkutter 17, im Schnitt nach rund 60 s. Gegen den Schweren Kutter gewinnt er passiv 14 von 30, schon mit einer einfachen Taktik (Lebenserhaltung aus, Antrieb an) 17 von 30.
 - **Regel: kein No-win-Szenario.** Jeder Gegner muss mit gutem Spiel schlagbar sein; der Sprung ist der Notausgang. Zwei Schildschichten beim Gegner sind mit 6 Reaktorbalken kaum zu knacken (auch Salven helfen nicht: 4 von 30) und bleiben späteren Gegnern vorbehalten, wenn das eigene Schiff ausgebaut werden kann. Zwei Schildschichten beim Gegner waren zu viel (nur 9–12 von 20, Test am Handy: mehrfach verloren).
 - **Treffer** können Feuer (30 %) und Hüllenbrüche (10 %) im Raum auslösen.
 - **Sauerstoff** je Raum: Die Lebenserhaltung füllt nach (4 %/s je Balken). Feuer verbraucht Luft, Hüllenbrüche und offene Schleusen lassen sie entweichen. Räume mit wenig Luft färben sich rosa; „Luft“ oben rechts ist der Schnitt über alle Räume.
