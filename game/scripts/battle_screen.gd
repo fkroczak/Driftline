@@ -1,15 +1,12 @@
 extends Node2D
-## Prototyp Phase 1: eigenes Schiff gegen einen Piratenkutter.
+## Kampfszene: eigenes Schiff gegen den Gegner am aktuellen Knoten der Sternenkarte.
 ## Crew bewegen, Energie verteilen, je Waffe ein Ziel wählen, Türen und Schleusen schalten.
 ## Waffen feuern selbst; Feuer, Hüllenbrüche und Sauerstoff laufen in ShipState.
+## Schiff und Gegner kommen aus dem laufenden Run (Autoload Game). Nach einem Sieg läuft die Zeit
+## an Bord weiter (Nachbereitung): Die Crew löscht, flickt und repariert, die Medbay heilt, bis
+## der Spieler „KARTE“ antippt. Was dann noch kaputt ist, bleibt kaputt. Nach einer Flucht geht
+## es direkt zur Karte, nach einer Niederlage oder dem Sieg über den Boss in einen neuen Run.
 
-const LAYOUT_PATH := "res://data/ships/mensch_frachter.json"
-## Mögliche Gegner mit Gewicht. Jeder muss mit gutem Spiel schlagbar sein (kein No-win-Szenario);
-## der Sprung ist der Notausgang, nicht die einzige Lösung.
-const ENEMIES := [
-	["res://data/ships/piraten_kutter.json", 0.65],
-	["res://data/ships/piraten_kutter_schwer.json", 0.35],
-]
 const MARGIN := 6.0
 const TOP := 30.0
 const BOTTOM_PANEL_Y := 184.0
@@ -54,25 +51,21 @@ var _hint_until := 0.0
 ## Selbst pausiert (bleibt, bis man fortsetzt) oder automatisch pausiert (endet mit dem Befehl).
 var _manual_pause := false
 var _auto_paused := false
+## Nach dem Sieg: Schiff läuft weiter, Gegner ist weg.
+var _aftermath := false
 
 
 func _ready() -> void:
-	var layout := ShipLayout.load_json(LAYOUT_PATH)
-	for error in layout.validate():
-		push_error("%s: %s" % [LAYOUT_PATH, error])
-	state = ShipState.new(layout)
-	state.add_crew("Mara Voss", "mensch", Vector2i(9, 3), {"cockpit": 3.0, "waffen": 1.0})
-	state.add_crew("Jonas Reil", "mensch", Vector2i(6, 6), {"waffen": 3.0, "schilde": 1.0})
-	state.add_crew("Ilka Brandt", "mensch", Vector2i(6, 0), {"schilde": 2.0, "antrieb": 2.0})
-
-	var enemy_path := _pick_enemy()
-	var enemy_layout := ShipLayout.load_json(enemy_path)
-	for error in enemy_layout.validate():
-		push_error("%s: %s" % [enemy_path, error])
-	enemy = ShipState.new(enemy_layout)
-	for spec in [["Kapitänin", "cockpit"], ["Schütze", "waffen"], ["Mechaniker", "schilde"]]:
-		var console: Vector2i = enemy_layout.console_of(enemy_layout.room_index_by_id(spec[1]))
-		enemy.add_crew(spec[0], "mensch", console, {spec[1]: 1.0})
+	var run := Game.ensure_run()
+	if not run.needs_battle():
+		# Szene direkt gestartet (F6): Probekampf am aktuellen System
+		run.dialog = {}
+		run.pending_battle[run.current] = {}
+	state = run.ship
+	enemy = run.create_enemy()
+	$HUD/Title.text = "Sprung %d/%d" % [run.jumps_done(), StarMap.JUMPS]
+	if run.node().type == "boss":
+		$HUD/Title.text += " · Boss"
 
 	battle = Battle.new(state, enemy)
 	ship_view.setup(state)
@@ -152,16 +145,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-func _pick_enemy() -> String:
-	var roll := randf()
-	for e: Array in ENEMIES:
-		roll -= e[1]
-		if roll <= 0.0:
-			return e[0]
-	return ENEMIES[0][0]
-
-
 func _on_jump_requested() -> void:
+	if _aftermath:
+		_leave_to_map()
+		return
 	if not battle.player_jump():
 		jump_button.deny()
 		var reason := "Sprung lädt noch"
@@ -227,6 +214,8 @@ func _process(delta: float) -> void:
 	if legend.visible or is_paused():
 		_update_info()
 		return  # Legende offen oder Pause: Kampf steht, Befehle gehen trotzdem
+	if _aftermath:
+		_update_aftermath(delta)
 	battle.update(delta)
 	for e in battle.take_events():
 		_on_battle_event(e)
@@ -462,25 +451,95 @@ func _update_explosions(delta: float) -> void:
 	_explosion_queue = _explosion_queue.filter(func(x): return x.delay > 0.0)
 
 
-func _show_banner(own_ship: bool, reason: String) -> void:
-	var text := ""
-	if reason == "jump":
-		text = "Entkommen – Sprung geglückt"
-	elif own_ship:
-		text = "Schiff verloren" if reason == "hull" else "Die ganze Crew ist tot"
-	else:
-		var name := enemy.layout.display_name
-		text = ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
-	banner.text = text + "\nTippen für neuen Kampf"
+## Nachbereitung: Nur das eigene Schiff läuft weiter (Reparatur, Löschen, Heilen, Luft).
+func _update_aftermath(delta: float) -> void:
+	state.update(delta)
+	for e in state.events:
+		e["own_ship"] = true
+		_on_battle_event(e)
+	state.events.clear()
+	if state.is_crew_dead() and Game.run.result == "":
+		Game.run.result = "verloren"
+		_aftermath = false
+		jump_button.map_mode = false
+		_show_end_banner("Die ganze Crew ist tot\nRun vorbei nach %d von %d Sprüngen" % [Game.run.jumps_done(), StarMap.JUMPS])
+
+
+func _start_aftermath() -> void:
+	_aftermath = true
+	jump_button.map_mode = true
+
+
+func _leave_to_map() -> void:
+	_aftermath = false
+	state.end_combat()
+	Game.to_map()
+
+
+func _show_end_banner(text: String) -> void:
+	banner.text = text + "\nTippen für neuen Run"
 	banner.visible = true
 	banner.modulate = Color(1, 1, 1, 0)
 	create_tween().tween_property(banner, "modulate", Color.WHITE, 0.4)
 	_can_restart_at = _time + 0.6
 
 
+func _show_banner(own_ship: bool, reason: String) -> void:
+	var run := Game.run
+	run.finish_battle(battle.outcome)
+	if battle.outcome == "sieg" and run.result == "":
+		_show_victory(reason, run.last_reward)
+		return
+	var text := ""
+	if reason == "jump":
+		text = "Entkommen – Sprung geglückt"
+		if run.node().type == "boss":
+			text += "\nDas Flaggschiff wartet weiter"
+	elif own_ship:
+		text = "Schiff verloren" if reason == "hull" else "Die ganze Crew ist tot"
+		text += "\nRun vorbei nach %d von %d Sprüngen" % [run.jumps_done(), StarMap.JUMPS]
+	else:
+		var name := enemy.layout.display_name
+		text = ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
+		if run.result == "geschafft":
+			text += "\nUniversum geschafft!"
+		elif run.last_reward != "":
+			text += "\nBeute: " + run.last_reward
+	banner.text = text + ("\nTippen für neuen Run" if run.result != "" else "\nTippen: zur Sternenkarte")
+	banner.visible = true
+	banner.modulate = Color(1, 1, 1, 0)
+	create_tween().tween_property(banner, "modulate", Color.WHITE, 0.4)
+	_can_restart_at = _time + 0.6
+
+
+## Sieg mitten im Run: kurzes Banner, danach Nachbereitung an Bord.
+func _show_victory(reason: String, reward: String) -> void:
+	var name := enemy.layout.display_name
+	var text := ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
+	if reward != "":
+		text += "\nBeute: " + reward
+	text += "\nRepariert, was ihr könnt – dann KARTE antippen"
+	banner.text = text
+	banner.visible = true
+	banner.modulate = Color(1, 1, 1, 0)
+	var tween := create_tween()
+	tween.tween_property(banner, "modulate", Color.WHITE, 0.4)
+	tween.tween_interval(2.6)
+	tween.tween_property(banner, "modulate", Color(1, 1, 1, 0), 0.5)
+	tween.tween_callback(func() -> void: banner.visible = false)
+	_can_restart_at = -1.0
+	_start_aftermath()
+
+
 func _on_banner_input(event: InputEvent) -> void:
+	if _aftermath and event is InputEventMouseButton and event.pressed:
+		banner.visible = false  # Banner wegtippen, weiter reparieren
+		return
 	if event is InputEventMouseButton and event.pressed and _can_restart_at >= 0.0 and _time >= _can_restart_at:
-		get_tree().reload_current_scene()
+		_can_restart_at = -1.0
+		if Game.run.result != "":
+			Game.new_run()
+		Game.to_map()
 
 
 func _on_crew_selected(member: CrewMember) -> void:
@@ -516,6 +575,9 @@ func _update_info() -> void:
 				info.text += ": " + SystemInfo.describe(system)
 			elif system == "" and state.layout.rooms[room].size == Vector2i(2, 2):
 				info.text += ": " + SystemInfo.describe("")
+		elif _aftermath:
+			var left := Game.run.ship_damage_count()
+			info.text = ("Noch %d %s · Crew reparieren lassen, dann KARTE" % [left, "Schaden" if left == 1 else "Schäden"]) if left > 0 else "Alles repariert · KARTE antippen"
 		elif not battle.player_has_target():
 			info.text = "Gegnerraum: alle Waffen zielen · Waffenkarte: einzeln"
 		else:

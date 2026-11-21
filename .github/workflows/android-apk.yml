@@ -83,7 +83,10 @@ jobs:
       - name: Logiktests
         run: |
           "$GODOT" --headless --path game --import
-          "$GODOT" --headless --path game --script res://tests/run_tests.gd
+          # Skriptfehler zählen nicht als Testfehler, darum zusätzlich die Ausgabe prüfen
+          set -o pipefail
+          "$GODOT" --headless --path game --script res://tests/run_tests.gd 2>&1 | tee test.log
+          if grep -q "SCRIPT ERROR" test.log; then echo "Skriptfehler in den Tests"; exit 1; fi
 
       - name: APK exportieren
         run: |

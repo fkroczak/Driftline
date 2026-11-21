@@ -14,6 +14,8 @@ const COLOR_TEXT := Color("#C4CAD3")
 const COLOR_TEXT_OFF := Color("#5A6370")
 
 var state: ShipState
+## Nach dem Sieg: Knopf führt zurück zur Sternenkarte.
+var map_mode := false
 var _time := 0.0
 var _deny := 0.0
 
@@ -39,6 +41,14 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var x := roundf(sin(_deny * 60.0) * 1.5) if _deny > 0.0 else 0.0
 	var rect := Rect2(Vector2(x, 0), size)
+	if map_mode:
+		var pulse := fmod(_time, 1.2) < 0.6
+		draw_rect(rect, COLOR_BG)
+		draw_rect(rect, Color(COLOR_READY, 0.25 if pulse else 0.12))
+		draw_rect(rect.grow(-0.5), COLOR_READY, false, 1.0)
+		draw_string(font, rect.position + Vector2(3, 10), "KARTE", HORIZONTAL_ALIGNMENT_LEFT, size.x - 6, 8, COLOR_READY)
+		draw_string(font, rect.position + Vector2(3, 20), "weiter", HORIZONTAL_ALIGNMENT_LEFT, size.x - 6, 8, COLOR_TEXT)
+		return
 	var ready := state.jump_ready()
 	draw_rect(rect, COLOR_BG)
 	if ready and fmod(_time, 0.6) < 0.3:

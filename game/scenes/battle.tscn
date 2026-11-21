@@ -1,6 +1,6 @@
 [gd_scene load_steps=14 format=3]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/battle_screen.gd" id="1_battle"]
 [ext_resource type="Script" path="res://scripts/view/ship_view.gd" id="2_ship"]
 [ext_resource type="Script" path="res://scripts/view/starfield.gd" id="3_stars"]
 [ext_resource type="Script" path="res://scripts/view/crew_panel.gd" id="4_crew"]
@@ -16,8 +16,8 @@
 [sub_resource type="StyleBoxFlat" id="BannerBg"]
 bg_color = Color(0.027, 0.031, 0.059, 0.72)
 
-[node name="Main" type="Node2D"]
-script = ExtResource("1_main")
+[node name="Battle" type="Node2D"]
+script = ExtResource("1_battle")
 
 [node name="Starfield" type="Node2D" parent="."]
 script = ExtResource("3_stars")

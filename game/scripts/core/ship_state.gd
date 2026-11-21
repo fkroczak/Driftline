@@ -441,6 +441,25 @@ func _update_crew_health(delta: float) -> void:
 			_hurt(member, damage * delta)
 
 
+## Verletzt ein Crewmitglied (z. B. bei einem Außeneinsatz); bei 0 LP stirbt es.
+func hurt(member: CrewMember, amount: float) -> void:
+	_hurt(member, amount)
+
+
+## Neue Crew auf die erste freie Kachel, bevorzugt in Räumen ohne System (Erweiterungen).
+## Falsch, wenn das Schiff voll ist.
+func add_crew_anywhere(p_name: String, species: String) -> CrewMember:
+	var reserved := _reserved_tiles(null)
+	for prefer_empty in [true, false]:
+		for room in layout.rooms.size():
+			if prefer_empty and layout.rooms[room].system != "":
+				continue
+			for t in layout.room_tiles(room):
+				if layout.is_walkable(t) and not reserved.has(t):
+					return add_crew(p_name, species, t)
+	return null
+
+
 func _hurt(member: CrewMember, amount: float) -> void:
 	member.hp -= amount
 	if member.hp <= 0.0 and crew.has(member):
@@ -495,6 +514,47 @@ func _update_combat(delta: float) -> void:
 	var speed := skill_factor("waffen")
 	for weapon in weapons:
 		weapon.update(delta, speed)
+
+
+## Kampfende bzw. Sprung: nur was zum Kampf selbst gehört, wird zurückgesetzt. Waffen sind
+## ungeladen und ohne Ziel, der Sprungantrieb ist leer, laufende Crew steht auf ihrem Ziel.
+## Nichts wird automatisch repariert oder aufgeladen: Hülle, Systemschäden, Lecks, Feuer, Luft,
+## Schilde, Türen, Schleusen und verletzte Crew bleiben, bis die Crew sie behebt (im Kampf oder
+## in der Zeit danach) oder eine Reparaturstation hilft.
+func end_combat() -> void:
+	jump_charge = 0.0
+	for weapon in weapons:
+		weapon.charge = 0.0
+		weapon.target = -1
+	for member in crew:
+		if member.is_moving():
+			member.tile = member.destination()
+			member.path.clear()
+		member.step_progress = 0.0
+		member.activity = ""
+	events.clear()
+	_rebalance()
+
+
+## Reparaturstation: alle Systeme heil, Lecks geflickt, Feuer gelöscht, Luft aufgefüllt.
+func repair_systems() -> void:
+	fires.clear()
+	breaches.clear()
+	_fire_damage.clear()
+	for sys: ShipSystem in systems.values():
+		sys.damage = 0
+		sys.repair_progress = 0.0
+	for r in oxygen.size():
+		oxygen[r] = 1.0
+	_rebalance()
+
+
+## Beschädigte Systembalken insgesamt.
+func system_damage() -> int:
+	var total := 0
+	for sys: ShipSystem in systems.values():
+		total += sys.damage
+	return total
 
 
 func add_crew(p_name: String, species: String, tile: Vector2i, experience := {}) -> CrewMember:

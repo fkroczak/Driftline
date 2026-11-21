@@ -535,3 +535,289 @@ func test_heavy_enemy_layout_is_valid() -> void:
 	var ship := ShipState.new(layout)
 	check(ship.max_shield_layers() == 1, "Schwerer Kutter: eine Schildschicht (zwei sind mit 6 Reaktorbalken kaum zu knacken)")
 	check(ship.weapons.size() == 3 and ship.weapons.all(func(w: Weapon) -> bool: return w.powered), "Schwerer Kutter: drei Waffen mit Energie")
+
+
+# --- Sternenkarte und Run ---
+
+
+func test_star_map_always_leads_to_boss() -> void:
+	for s in range(1, 60):
+		var map := StarMap.generate(s)
+		check(map.columns.size() == StarMap.JUMPS + 1, "Seed %d: falsche Spaltenzahl" % s)
+		check(map.node(map.boss_id()).type == "boss" and map.node(map.start_id()).type == "start", "Seed %d: Start oder Boss fehlt" % s)
+		for n in map.nodes:
+			if n.type != "boss":
+				check(not n.links.is_empty(), "Seed %d: Knoten %d ist eine Sackgasse" % [s, n.id])
+			if n.type != "start":
+				check(not map.incoming(n.id).is_empty(), "Seed %d: Knoten %d ist unerreichbar" % [s, n.id])
+			for to: int in n.links:
+				check(map.node(to).column == n.column + 1, "Seed %d: Verbindung überspringt eine Spalte" % s)
+		# Verbindungen zwischen zwei Spalten kreuzen sich nicht
+		for c in StarMap.JUMPS:
+			var pairs := []
+			for i in map.columns[c].size():
+				for to: int in map.node(map.columns[c][i]).links:
+					pairs.append([i, map.columns[c + 1].find(to)])
+			for p: Array in pairs:
+				for q: Array in pairs:
+					check(not (p[0] < q[0] and p[1] > q[1]), "Seed %d: Verbindungen kreuzen sich in Spalte %d" % [s, c])
+
+
+func test_star_map_is_deterministic() -> void:
+	var a := StarMap.generate(1234)
+	var b := StarMap.generate(1234)
+	check(a.nodes.size() == b.nodes.size(), "Gleicher Seed, andere Knotenzahl")
+	for i in a.nodes.size():
+		check(a.nodes[i].pos == b.nodes[i].pos and a.nodes[i].type == b.nodes[i].type and a.nodes[i].links == b.nodes[i].links,
+			"Gleicher Seed, anderer Knoten %d" % i)
+
+
+func test_run_jumps_only_along_links() -> void:
+	var run := RunState.new(77)
+	var linked: int = run.node().links[0]
+	var far: int = run.map.columns[2][0]
+	check(not run.jump_to(far), "Sprung über zwei Spalten möglich")
+	check(run.jump_to(linked) and run.current == linked and run.jumps_done() == 1, "Sprung zum verbundenen Knoten klappt nicht")
+	if run.needs_battle():
+		var next: int = run.node().links[0]
+		check(not run.jump_to(next), "Weiterspringen trotz wartendem Gegner")
+		run.finish_battle("sieg")
+		check(run.jump_to(next), "Nach dem Sieg geht es nicht weiter")
+
+
+func test_hull_and_dead_crew_persist_across_jumps() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	var shields := ship.layout.room_index_by_id("schilde")
+	ship.take_hit(shields, 2)
+	ship.start_fire(Vector2i(6, 0))
+	ship.start_breach(Vector2i(7, 1))
+	ship.toggle_airlock(0)
+	ship.crew[0].hp = 30.0
+	var victim := ship.crew[2]
+	ship._hurt(victim, 200.0)
+	ship.jump_charge = 0.7
+	var hull := ship.hull
+	check(hull == ship.max_hull - 2, "Treffer hat die Hülle nicht beschädigt")
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "kampf"  # leere Systeme flicken die Hülle
+	run.jump_to(next)
+	check(run.ship == ship, "Run hat ein neues Schiff gebaut")
+	check(ship.hull == hull, "Hüllenschaden ist nach dem Sprung weg")
+	check(ship.crew.size() == 2 and not ship.crew.has(victim), "Gefallene Crew ist wieder da")
+	check(ship.jump_charge == 0.0, "Sprungantrieb bleibt geladen")
+
+
+func test_nothing_repairs_itself_between_fights() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	ship.take_hit(ship.layout.room_index_by_id("medbay"), 1)  # dort steht niemand
+	ship.start_fire(Vector2i(6, 0))
+	ship.start_breach(ship.layout.room_tiles(ship.layout.room_index_by_id("medbay"))[1])  # niemand dort
+	ship.crew[0].hp = 30.0
+	var damage := ship.get_system("medbay").damage
+	check(damage > 0, "Treffer hat die Medbay nicht beschädigt")
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "kampf"
+	run.jump_to(next)
+	check(ship.get_system("medbay").damage == damage, "Systemschaden repariert sich beim Sprung von selbst")
+	check(not ship.breaches.is_empty(), "Leck verschwindet beim Sprung")
+	check(ship.crew[0].hp == 30.0, "Crew heilt beim Sprung von selbst")
+	run.finish_battle("sieg")
+	check(ship.get_system("medbay").damage == damage, "Systemschaden repariert sich nach dem Sieg von selbst")
+	# Nachbereitung: Wer im Raum steht, repariert, solange Zeit läuft
+	var medbay := ship.layout.room_index_by_id("medbay")
+	ship.order_move(ship.crew[1], medbay)
+	for i in 300:
+		ship.update(0.1)
+	check(ship.get_system("medbay").damage == 0, "Crew repariert in der Nachbereitung nicht")
+
+
+func test_energy_setting_survives_jump() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	ship.remove_power("waffen")
+	ship.add_power("antrieb")
+	var engine := ship.get_system("antrieb").power
+	ship.end_combat()
+	check(ship.get_system("antrieb").power == engine and engine > 0, "Energieverteilung geht beim Sprung verloren")
+
+
+func test_enemy_stages_follow_jump_number() -> void:
+	var run := RunState.new(9)
+	for id: int in run.map.columns[1]:
+		var spec := run.enemy_spec(id)
+		check(spec.ship.ends_with("piraten_kutter.json") and spec.hull_bonus == 0, "Sprung 1: nur der einfache Kutter")
+	var boss := run.create_enemy(run.map.boss_id())
+	check(boss.layout.display_name == "Piraten-Flaggschiff", "Boss heißt nicht Piraten-Flaggschiff")
+	check(boss.max_hull == 24 and boss.hull == 24, "Boss hat nicht 18 + 6 Hülle: %d" % boss.max_hull)
+	check(boss.crew.size() == 3, "Boss ohne Besatzung")
+	check(run.enemy_spec(run.map.columns[5][0]) == run.enemy_spec(run.map.columns[5][0]), "Gegner am Knoten ist nicht fest")
+
+
+func test_defeat_ends_run_and_boss_victory_wins() -> void:
+	var run := RunState.new(3)
+	run.jump_to(run.node().links[0])
+	run.finish_battle("niederlage")
+	check(run.result == "verloren", "Niederlage beendet den Run nicht")
+	check(not run.can_jump_to(run.node().links[0]), "Nach der Niederlage geht es weiter")
+	run = RunState.new(3)
+	run.current = run.map.boss_id()
+	check(run.needs_battle(), "Boss wartet nicht")
+	run.finish_battle("entkommen")
+	check(run.needs_battle() and run.result == "", "Nach der Flucht vor dem Boss ist der Boss weg")
+	run.finish_battle("sieg")
+	check(run.result == "geschafft", "Sieg über den Boss beendet den Run nicht")
+
+
+## Run mit offenem Ereignis (ohne Sprung), für Ereignistests.
+func _event_run(id: String) -> RunState:
+	var run := RunState.new(5)
+	run._open_event(id)
+	return run
+
+
+func test_stations_on_every_map() -> void:
+	for s in range(1, 40):
+		var map := StarMap.generate(s)
+		check(map.count_type("haendler") == 2 and map.count_type("reparatur") == 1, "Seed %d: nicht 2 Händler und 1 Reparaturstation" % s)
+		var run := RunState.new(s)
+		for n in map.nodes:
+			if n.type == "ereignis":
+				check(run.node_events.get(n.id, "") != "", "Seed %d: Ereignisknoten %d ohne Ereignis" % [s, n.id])
+
+
+func test_events_are_valid() -> void:
+	var book := EventBook.load_default()
+	check(book.validate().is_empty(), "Ereignisfehler: %s" % ", ".join(book.validate()))
+	check(book.ids_in_pool("ereignis").size() >= 10, "Zu wenige Ereignisse")
+	check(book.ids_in_pool("notsignal").size() >= 2, "Zu wenige Notsignal-Ereignisse")
+
+
+func test_jump_costs_fuel_and_distress_without_fuel() -> void:
+	var run := RunState.new(21)
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "leer"
+	var fuel := run.fuel
+	check(run.jump_to(next) and run.fuel == fuel - 1, "Sprung kostet keinen Treibstoff")
+	run.fuel = 0
+	check(not run.can_jump_to(run.node().links[0]), "Sprung ohne Treibstoff möglich")
+	check(run.can_send_distress() and run.send_distress(), "Kein Notsignal ohne Treibstoff")
+	check(not run.dialog.is_empty(), "Notsignal öffnet keinen Dialog")
+
+
+func test_event_choice_applies_effects() -> void:
+	var run := _event_run("wrack_frachter")
+	check(run.dialog.choices.size() == 3, "Wrack: 3 Optionen erwartet")
+	var fuel := run.fuel
+	check(run.choose(1), "Option nicht wählbar")
+	check(run.fuel == fuel + 2, "Tanks abzapfen bringt keine 2 Treibstoff")
+	check(run.dialog.choices.size() == 1 and "+2 Treibstoff" in run.dialog.text, "Ergebnis zeigt den Effekt nicht")
+	run.choose(0)
+	check(run.dialog.is_empty() and not run.needs_battle(), "Ergebnis schließt nicht")
+
+
+func test_event_costs_and_requirements() -> void:
+	var run := _event_run("kolonie_reaktor")
+	run.scrap = 3
+	run._open_event("kolonie_reaktor")
+	check(not run.dialog.choices[0].enabled and not run.choose(0), "Spende ohne genug Rohstoffe möglich")
+	run.scrap = 12
+	run._open_event("kolonie_reaktor")
+	check(run.choose(0) and run.scrap == 2 and run.flags.has("kolonie_dank"), "Spende kostet nicht 10 oder setzt kein Ansehen")
+	run = _event_run("notsignal_patrouille")
+	check(run.dialog.choices.size() == 1, "Gildenoption sichtbar ohne Gildenbrief")
+	run.flags["gilde_freund"] = true
+	run._open_event("notsignal_patrouille")
+	check(run.dialog.choices.size() == 2 and run.dialog.choices[0].special, "Gildenoption fehlt mit Gildenbrief")
+
+
+func test_event_battle_and_victory_reward() -> void:
+	var run := _event_run("piratenzoll")
+	run.choose(1)  # Kämpfen
+	check(not run.needs_battle(), "Kampf startet vor dem Weiter")
+	run.choose(0)
+	check(run.needs_battle(), "Ereignis löst keinen Kampf aus")
+	var scrap := run.scrap
+	run.finish_battle("sieg")
+	check(not run.needs_battle() and run.scrap >= scrap + 4, "Siegbeute fehlt: %d -> %d" % [scrap, run.scrap])
+	check(run.last_reward != "", "Beute nicht als Text")
+
+
+func test_shop_prices_and_guild_discount() -> void:
+	var run := RunState.new(8)
+	run._open_shop()
+	run.scrap = 20
+	run.fuel = 1
+	run._open_shop()
+	check(not run.dialog.choices[1].enabled, "Hüllenreparatur bei voller Hülle möglich")
+	check(run.choose(0) and run.fuel == 2 and run.scrap == 17, "Treibstoff kostet nicht 3 Rohstoffe")
+	run.flags["gilde_freund"] = true
+	run.ship.hull -= 10
+	run._open_shop()
+	check(run.choose(1) and run.scrap == 11 and run.ship.hull == run.ship.max_hull - 5, "Hülle +5 mit Rabatt kostet nicht 6")
+	check(run.choose(2) and run.fuel == 1 and run.ship.hull == run.ship.max_hull - 2, "Hülle gegen Treibstoff klappt nicht")
+	check(run.choose(run.dialog.choices.size() - 1) and run.dialog.is_empty(), "Ablegen schließt den Händler nicht")
+
+
+func test_repair_station_goodwill() -> void:
+	var run := RunState.new(8)
+	run.ship.hull = 10
+	run.scrap = 0
+	run.flags["kolonie_dank"] = true
+	run._open_repair()
+	check(run.dialog.choices[0].special and run.dialog.choices[0].enabled, "Gratisreparatur der Kolonie fehlt")
+	check(run.choose(0) and run.ship.hull == run.ship.max_hull, "Gratisreparatur repariert nicht komplett")
+	check(not run.flags.has("kolonie_dank"), "Gratisreparatur lässt sich mehrfach nutzen")
+	run.ship.hull = 20
+	run.scrap = 15
+	run._open_repair()
+	check(run.choose(0) and run.scrap == 5 and run.ship.hull == run.ship.max_hull, "Komplettreparatur kostet nicht 1 je Punkt")
+
+
+func test_repair_station_fixes_systems() -> void:
+	var run := RunState.new(8)
+	var ship := run.ship
+	ship.take_hit(ship.layout.room_index_by_id("waffen"), 2)
+	ship.fires.clear()
+	ship.breaches.clear()
+	ship.start_breach(Vector2i(7, 1))
+	var count := run.ship_damage_count()
+	check(count == ship.system_damage() + 1 and count >= 2, "Schäden falsch gezählt: %d" % count)
+	ship.hull = ship.max_hull
+	run.scrap = 20
+	run._open_repair()
+	check(run.dialog.choices[1].enabled and not run.dialog.choices[2].enabled, "Systemreparatur nicht wählbar oder Hüllenreparatur bei voller Hülle")
+	check(run.choose(1) and run.scrap == 20 - count * 2, "Systemreparatur kostet nicht 2 je Schaden")
+	check(run.ship_damage_count() == 0 and ship.breaches.is_empty(), "Station repariert Systeme oder Lecks nicht")
+
+
+func test_crew_join_and_loss_from_events() -> void:
+	var run := RunState.new(8)
+	run._apply({"crew_add": 1})
+	check(run.ship.crew.size() == 4, "Neue Crew kommt nicht an Bord")
+	var tiles := {}
+	for m in run.ship.crew:
+		tiles[m.tile] = true
+	check(tiles.size() == 4, "Neue Crew steht auf einer besetzten Kachel")
+	run._apply({"crew_lose": 1})
+	check(run.ship.crew.size() == 3 and run.result == "", "Crew-Verlust klappt nicht")
+	run._apply({"crew_lose": 3})
+	check(run.result == "verloren", "Ohne Crew ist der Run nicht verloren")
+
+
+
+func test_fire_keeps_burning_during_jump() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	var room := ship.layout.room_index_by_id("medbay")  # dort steht niemand
+	var tiles := ship.layout.room_tiles(room)
+	ship.start_fire(tiles[0])
+	ship.fires[tiles[0]] = 1.0
+	for t in tiles:
+		check(ship.crew.all(func(m: CrewMember) -> bool: return m.tile != t), "Testannahme: Medbay ist leer")
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "kampf"
+	run.jump_to(next)
+	check(ship.fires.has(tiles[0]), "Feuer geht beim Sprung von selbst aus")
+	check(ship.fires[tiles[0]] >= 1.0, "Feuer wird beim Sprung schwächer, obwohl niemand löscht")

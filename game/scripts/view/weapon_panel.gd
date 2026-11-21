@@ -6,7 +6,7 @@ extends Control
 ##   Danach einen Gegnerraum antippen: nur diese Waffe zielt dorthin.
 ##   Ihren aktuellen Zielraum erneut antippen: Ziel aufheben, die Waffe hält das Feuer.
 ## - Gedrückt halten oder Rechtsklick: Waffe ein- oder ausschalten.
-## Ohne ausgewählte Waffe zielt ein Gegnerraum für alle Waffen (siehe main.gd).
+## Ohne ausgewählte Waffe zielt ein Gegnerraum für alle Waffen (siehe battle_screen.gd).
 ## Geladene Waffen feuern selbst; ohne Ziel blinkt die Karte.
 
 signal selection_changed(idx: int)

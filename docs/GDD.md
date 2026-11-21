@@ -97,6 +97,15 @@ Sauerstoff ist eine eigene Ressource pro Raum; die Lebenserhaltung füllt ihn na
 - Crew im beschädigten Raum repariert über Zeit, kostenlos, aber die Person fehlt an ihrem Posten
 - Reparaturkit oder Werft: sofort, kostet Rohstoffe; die Hülle lässt sich nur so reparieren
 
+**Kein Automatismus nach dem Kampf:** Nach einem Sieg läuft die Zeit an Bord weiter, bis der Spieler zur Karte wechselt. Wer sich nicht um das Schiff kümmert, nimmt die Schäden mit: Systeme bleiben beschädigt, Lecks offen, verletzte Crew verletzt, und Brände breiten sich in andere Räume aus. Auch während eines Sprungs vergehen einige Sekunden an Bord. Erst die Reparaturstation setzt alles gegen Rohstoffe instand. Später übernehmen Reparaturbots einen Teil der Arbeit (siehe Droiden-Bay).
+
+**Droiden-Bay (später, nur mit ausgebautem Schiff):** Ein eigener Raum für bis zu 4 Bots, der nicht zur Grundausstattung gehört. Freigeschaltet wird er erst über Upgrades (Erweiterungsraum plus Reaktorleistung), etwa ab der Mitte eines Runs oder auf weiter ausgebauten Schiffen.
+
+- **Reparaturbots:** fliegen selbstständig in beschädigte Räume, löschen kleine Brände, flicken Lecks und reparieren Systeme, langsamer als Crew
+- **Abwehrbots:** verteidigen das Schiff gegen Enterkommandos, die sich herüberteleportieren, und halten Eindringlinge in Schach, bis die Crew da ist
+- **Belegung frei wählbar:** z. B. 4 Reparaturbots oder 2 Reparatur- und 2 Abwehrbots; jeder Bot braucht Energie aus der Droiden-Bay, zerstörte Bots werden beim Händler ersetzt (Drohnenteile)
+- **Reihenfolge im Spiel:** zuerst müssen Enterkommandos existieren, damit Abwehrbots einen Zweck haben
+
 **Crew:** benannte Figuren aus 6 Spezies mit je einer Stärke (z. B. schneller reparieren, feuerfest, stark im Nahkampf, Bonus an Systemen). Crew sammelt Erfahrung pro System und kann sterben; neue Crew kommt über Ereignisse und Stationen.
 
 ### Spezies
@@ -190,6 +199,7 @@ Jeder Schiffsstil hat ein eigenes Raumlayout und 1–3 leere Erweiterungsräume,
 | Kryokapseln | zusätzliche Crew eingefroren lagern, bei Bedarf auftauen |
 | Hacking | Drohne legt ein Gegnersystem zeitweise lahm |
 | Drohnensteuerung | Kampf-, Abwehr- oder Reparaturdrohnen einsetzen |
+| Droiden-Bay | bis zu 4 Bots an Bord: Reparaturbots und Abwehrbots gegen Enterer (erst mit ausgebautem Schiff) |
 | Tarnung | kurz unsichtbar: Gegner trifft nicht, eigene Waffen laden weiter |
 | Labor | Anomalien und Fundstücke analysieren, zusätzliche Optionen in Ereignissen |
 | Klonbank | gefallene Crew gegen Rohstoffe wiederherstellen, mit Erfahrungsverlust |
