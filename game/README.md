@@ -16,6 +16,7 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
   3. An der Konsole steigt die Erfahrung im System (1 Stufe pro Minute, höchstens 5). Die Punkte unter dem Porträt zeigen die Stufe im aktuellen Raum.
   4. Eine besetzte Konsole beschleunigt das System: +10 % plus 5 % je Erfahrungsstufe (Schilde laden, Waffen laden, Ausweichen).
 - **Arbeit im Raum** (automatisch, wer im Raum steht): erst Feuer löschen, dann Hüllenbrüche flicken (5 s), dann das System reparieren (1 Balken in 4 s). Mehrere Personen arbeiten schneller. Beschädigte Räume pulsieren rot, der gelbe Balken zeigt den Fortschritt.
+- **Tätigkeit sichtbar:** Symbol über dem Kopf und in der Crew-Leiste: Tropfen = löscht (Schaum spritzt zum Feuer), Hammer = flickt Leck, Schraubenschlüssel = repariert (Funken, Figur hämmert), grünes Plus = wird in der Medbay geheilt. Die Crew-Leiste zeigt kompakte Porträts mit Lebens- und Erfahrungsbalken.
 - **Lebenspunkte** (100): Balken unter dem Porträt und über verletzten Figuren. Schaden durch Treffer im Raum (15 je Schadenspunkt), Feuer (5/s auf der Kachel, 1,5/s im Raum) und Ersticken (6/s unter 10 % Luft). Die Medbay heilt mit Energie 6/s je Balken. Bei 0 stirbt die Figur.
 
 ### Energie und Kampf
@@ -24,14 +25,14 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 - **Hülle:** Zahl und Balken, oben rechts für das eigene Schiff, über dem Gegner für ihn. Frisch verlorene Punkte glühen kurz rot. Darunter getrennt die Schildschichten.
 
 - **Energie** (Leiste unten): Spalte antippen = 1 Balken mehr, gedrückt halten oder Rechtsklick = 1 Balken weniger. Ganz links der Reaktor: gelb = frei, rot = zerstört. Bei Systemen: grün = versorgt, rot = beschädigt.
-- **Startverteilung** (Reaktor 8): Lebenserhaltung 1, Schilde 2, Waffen 3, Antrieb 2. Sensoren und Medbay bleiben aus, bis du umschichtest.
+- **Startverteilung** (Reaktor 6, bewusst knapp): Lebenserhaltung 1, Schilde 2, Waffen 3. Antrieb, Sensoren und Medbay bleiben aus, bis du umschichtest, zum Beispiel den Schweren Laser ab, damit der Antrieb Ausweichen bringt oder die Medbay heilt.
 - **Waffen** (Karten unten, nummeriert): Mit Energie lädt eine Waffe, ohne entlädt sie sich. Geladen feuert sie selbst auf ihr Ziel; ohne Ziel blinkt die Karte. Gedrückt halten oder Rechtsklick schaltet eine Waffe ein oder aus.
 - **Zielen, alle Waffen:** einen Gegnerraum antippen (knapp daneben zählt auch)
 - **Zielen, einzeln:** Waffenkarte antippen (rot umrandet), dann einen Gegnerraum. Den aktuellen Zielraum der Waffe erneut antippen hebt das Ziel auf. Fadenkreuze im Gegnerschiff tragen die Waffennummer.
 - **Einschlag:** Ausweichen (Antrieb + besetztes Cockpit), sonst fängt der Schild ab (2 Balken = 1 Schicht, lädt in 2 s nach), sonst Treffer: Hülle und System im Raum verlieren Balken
 - **Reaktortreffer** senken die verfügbare Energie; dann werden Systeme in der Reihenfolge Lebenserhaltung, Schilde, Waffen, Antrieb, Sensoren, Medbay versorgt. Nach der Reparatur kommt die gewünschte Energie von selbst zurück.
 - **Gegner:** Hülle 18, Reaktor 6, eine Schildschicht, Pulslaser und Bordkanone. Jede Waffe zielt alle paar Sekunden auf einen anderen Raum. Die Mechanikerin oder der Mechaniker löscht Feuer, flickt Lecks, repariert Systeme und kehrt danach zur Konsole zurück. Der Kutter hat keine Lebenserhaltung, aber eine eingebaute Luftaufbereitung (`oxygen_regen`).
-- **Balance:** In 20 simulierten Kämpfen ohne Eingreifen gewinnt der Frachter 19, im Schnitt nach rund 50 s. Zwei Schildschichten beim Gegner waren zu viel (nur 9–12 von 20, Test am Handy: mehrfach verloren).
+- **Balance:** In 20 simulierten Kämpfen ohne Eingreifen (Antrieb aus) gewinnt der Frachter 17, im Schnitt nach rund 60 s. Zwei Schildschichten beim Gegner waren zu viel (nur 9–12 von 20, Test am Handy: mehrfach verloren).
 - **Treffer** können Feuer (30 %) und Hüllenbrüche (10 %) im Raum auslösen.
 - **Sauerstoff** je Raum: Die Lebenserhaltung füllt nach (4 %/s je Balken). Feuer verbraucht Luft, Hüllenbrüche und offene Schleusen lassen sie entweichen. Räume mit wenig Luft färben sich rosa; „Luft“ oben rechts ist der Schnitt über alle Räume.
 - **Feuer** (je Kachel): breitet sich bei mehr als 25 % Luft aus, im Raum und durch offene Türen; unter 12 % erlischt es. Es beschädigt das System im Raum.
