@@ -39,6 +39,9 @@ func _default_hint() -> String:
 		return "Das Flaggschiff wartet: Schiff antippen, um erneut anzugreifen"
 	if run.can_send_distress():
 		return "Kein Treibstoff mehr: Notsignal senden und hoffen, dass Freunde antworten"
+	var damage := run.ship_damage_count()
+	if damage > 0:
+		return "%d %s an Bord: Crew repariert im nächsten Kampf, oder die Reparaturstation" % [damage, "Schaden" if damage == 1 else "Schäden"]
 	if run.jumps_done() == 0:
 		return "Gelbes Ziel antippen, nochmal antippen springt · Boss rechts ist der Ausgang"
 	return "Gelbes Ziel antippen, nochmal antippen springt"

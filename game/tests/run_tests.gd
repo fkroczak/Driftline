@@ -605,11 +605,32 @@ func test_hull_and_dead_crew_persist_across_jumps() -> void:
 	check(run.ship == ship, "Run hat ein neues Schiff gebaut")
 	check(ship.hull == hull, "Hüllenschaden ist nach dem Sprung weg")
 	check(ship.crew.size() == 2 and not ship.crew.has(victim), "Gefallene Crew ist wieder da")
-	check(ship.get_system("schilde").damage == 0 and ship.shield_layers == 1, "Schilde nach dem Sprung nicht repariert")
-	check(ship.fires.is_empty() and ship.breaches.is_empty(), "Feuer oder Leck nach dem Sprung")
-	check(not ship.airlock_open[0] and ship.average_oxygen() == 1.0, "Schleuse offen oder Luft fehlt nach dem Sprung")
-	check(ship.crew[0].hp == CrewMember.MAX_HP, "Medbay heilt die Crew beim Sprung nicht")
 	check(ship.jump_charge == 0.0, "Sprungantrieb bleibt geladen")
+
+
+func test_nothing_repairs_itself_between_fights() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	ship.take_hit(ship.layout.room_index_by_id("medbay"), 1)  # dort steht niemand
+	ship.start_fire(Vector2i(6, 0))
+	ship.start_breach(ship.layout.room_tiles(ship.layout.room_index_by_id("medbay"))[1])  # niemand dort
+	ship.crew[0].hp = 30.0
+	var damage := ship.get_system("medbay").damage
+	check(damage > 0, "Treffer hat die Medbay nicht beschädigt")
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "kampf"
+	run.jump_to(next)
+	check(ship.get_system("medbay").damage == damage, "Systemschaden repariert sich beim Sprung von selbst")
+	check(not ship.breaches.is_empty(), "Leck verschwindet beim Sprung")
+	check(ship.crew[0].hp == 30.0, "Crew heilt beim Sprung von selbst")
+	run.finish_battle("sieg")
+	check(ship.get_system("medbay").damage == damage, "Systemschaden repariert sich nach dem Sieg von selbst")
+	# Nachbereitung: Wer im Raum steht, repariert, solange Zeit läuft
+	var medbay := ship.layout.room_index_by_id("medbay")
+	ship.order_move(ship.crew[1], medbay)
+	for i in 300:
+		ship.update(0.1)
+	check(ship.get_system("medbay").damage == 0, "Crew repariert in der Nachbereitung nicht")
 
 
 func test_energy_setting_survives_jump() -> void:
@@ -618,7 +639,7 @@ func test_energy_setting_survives_jump() -> void:
 	ship.remove_power("waffen")
 	ship.add_power("antrieb")
 	var engine := ship.get_system("antrieb").power
-	ship.after_jump()
+	ship.end_combat()
 	check(ship.get_system("antrieb").power == engine and engine > 0, "Energieverteilung geht beim Sprung verloren")
 
 
@@ -754,6 +775,23 @@ func test_repair_station_goodwill() -> void:
 	check(run.choose(0) and run.scrap == 5 and run.ship.hull == run.ship.max_hull, "Komplettreparatur kostet nicht 1 je Punkt")
 
 
+func test_repair_station_fixes_systems() -> void:
+	var run := RunState.new(8)
+	var ship := run.ship
+	ship.take_hit(ship.layout.room_index_by_id("waffen"), 2)
+	ship.fires.clear()
+	ship.breaches.clear()
+	ship.start_breach(Vector2i(7, 1))
+	var count := run.ship_damage_count()
+	check(count == ship.system_damage() + 1 and count >= 2, "Schäden falsch gezählt: %d" % count)
+	ship.hull = ship.max_hull
+	run.scrap = 20
+	run._open_repair()
+	check(run.dialog.choices[1].enabled and not run.dialog.choices[2].enabled, "Systemreparatur nicht wählbar oder Hüllenreparatur bei voller Hülle")
+	check(run.choose(1) and run.scrap == 20 - count * 2, "Systemreparatur kostet nicht 2 je Schaden")
+	check(run.ship_damage_count() == 0 and ship.breaches.is_empty(), "Station repariert Systeme oder Lecks nicht")
+
+
 func test_crew_join_and_loss_from_events() -> void:
 	var run := RunState.new(8)
 	run._apply({"crew_add": 1})
@@ -766,3 +804,20 @@ func test_crew_join_and_loss_from_events() -> void:
 	check(run.ship.crew.size() == 3 and run.result == "", "Crew-Verlust klappt nicht")
 	run._apply({"crew_lose": 3})
 	check(run.result == "verloren", "Ohne Crew ist der Run nicht verloren")
+
+
+
+func test_fire_keeps_burning_during_jump() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	var room := ship.layout.room_index_by_id("medbay")  # dort steht niemand
+	var tiles := ship.layout.room_tiles(room)
+	ship.start_fire(tiles[0])
+	ship.fires[tiles[0]] = 1.0
+	for t in tiles:
+		check(ship.crew.all(func(m: CrewMember) -> bool: return m.tile != t), "Testannahme: Medbay ist leer")
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "kampf"
+	run.jump_to(next)
+	check(ship.fires.has(tiles[0]), "Feuer geht beim Sprung von selbst aus")
+	check(ship.fires[tiles[0]] >= 1.0, "Feuer wird beim Sprung schwächer, obwohl niemand löscht")

@@ -4,9 +4,11 @@ extends RefCounted
 ## offene Dialoge (Ereignis, Händler, Reparaturstation). Reine Logik, keine Nodes.
 ##
 ## Das Schiff ist ein einziger ShipState, der von Kampf zu Kampf weitergereicht wird.
-## Bleibender Schaden: Hülle, gefallene Crew und Erfahrung. Nach dem Kampf bzw. beim Sprung
-## löscht und repariert die Crew alles andere (siehe ShipState.after_jump). Die Hülle lässt sich
-## nur beim Händler, in der Reparaturstation oder durch Ereignisse reparieren.
+## Nichts wird automatisch repariert (siehe ShipState.end_combat): Hülle, Systemschäden, Lecks,
+## Feuer und verletzte Crew bleiben. Während eines Sprungs vergehen JUMP_SHIP_TIME Sekunden an Bord:
+## Brände breiten sich aus, Lecks saugen Luft ab. Systeme repariert die Crew im Kampf oder in der Zeit nach
+## einem Sieg; die Hülle nur Händler, Reparaturstation oder Ereignisse. Die Reparaturstation
+## setzt auch Systeme und Lecks instand.
 ##
 ## Ressourcen: Jeder Sprung kostet Treibstoff. Ohne Treibstoff bleibt nur das Notsignal: Es löst
 ## ein Ereignis aus dem Pool "notsignal" aus (Händler, Piraten, Gildenpatrouille).
@@ -24,6 +26,9 @@ const ENEMIES_PATH := "res://data/enemies.json"
 const RUN_PATH := "res://data/run.json"
 const SHIPS_DIR := "res://data/ships/%s.json"
 const MAX_CREW := 8
+## Schiffszeit während eines Sprungs: Feuer breitet sich aus, Lecks lassen Luft entweichen,
+## Crew arbeitet nur dort, wo sie gerade steht.
+const JUMP_SHIP_TIME := 8.0
 const CREW_NAMES := ["Tess Okafor", "Ruben Lind", "Nia Sato", "Pavel Dorn", "Elin Marsh", "Kofi Brandt",
 	"Lena Vasquez", "Ivo Kern", "Suri Haldane", "Mats Ober"]
 
@@ -122,11 +127,23 @@ func jump_to(id: int) -> bool:
 	if not can_jump_to(id):
 		return false
 	fuel -= jump_cost()
-	ship.after_jump()
+	ship.end_combat()
+	_pass_ship_time(JUMP_SHIP_TIME)
 	current = id
 	visited[id] = true
 	_open_node_dialog()
 	return true
+
+
+## Lässt an Bord Zeit vergehen (ohne Kampf). Wer dabei stirbt, ist tot; ohne Crew ist der Run verloren.
+func _pass_ship_time(seconds: float) -> void:
+	var t := 0.0
+	while t < seconds:
+		ship.update(0.1)
+		t += 0.1
+	ship.events.clear()
+	if ship.is_crew_dead():
+		result = "verloren"
 
 
 func _open_node_dialog() -> void:
@@ -186,12 +203,12 @@ func finish_battle(outcome: String) -> void:
 			pending_battle.erase(current)
 			cleared[current] = outcome
 			last_reward = " · ".join(parts)
-			ship.after_jump()  # Crew räumt nach dem Kampf auf
+			ship.end_combat()
 		"entkommen":
 			pending_battle.erase(current)
 			if node().type != "boss":
 				cleared[current] = outcome
-			ship.after_jump()  # Flucht ist auch ein Sprung
+			ship.end_combat()
 
 
 # --- Dialoge ---
@@ -329,20 +346,39 @@ func _choose_shop(index: int) -> void:
 	_open_shop()
 
 
+## Schäden außer der Hülle: beschädigte Systembalken, Lecks und Brände.
+func ship_damage_count() -> int:
+	return ship.system_damage() + ship.breaches.size() + ship.fires.size()
+
+
+func _systems_price() -> int:
+	var r: Dictionary = rules.get("repair_station", {})
+	return ship_damage_count() * int(r.get("price_per_system", 2))
+
+
 func _repair_offers() -> Array[Dictionary]:
 	var r: Dictionary = rules.get("repair_station", {})
 	var missing := ship.max_hull - ship.hull
+	var broken := ship_damage_count() > 0
 	var offers: Array[Dictionary] = []
 	if flags.has("kolonie_dank"):
-		offers.append({"text": "[Kolonie] Komplettreparatur auf Kosten der Gilde", "cost": {}, "hull_full": true, "special": true, "flag_used": "kolonie_dank"})
-	offers.append({"text": "Komplettreparatur", "cost": {"scrap": maxi(1, missing * int(r.get("price_per_hull", 1)))}, "hull_full": true})
-	offers.append({"text": "Hülle +%d" % mini(int(r.get("patch_amount", 5)), missing), "cost": {"scrap": int(r.get("patch_price", 5))}, "hull": int(r.get("patch_amount", 5))})
-	offers.append({"text": "Hülle +%d gegen Treibstoff" % mini(int(r.get("hull_per_fuel", 4)), missing), "cost": {"fuel": 1}, "hull": int(r.get("hull_per_fuel", 4))})
+		offers.append({"text": "[Kolonie] Komplettreparatur auf Kosten der Gilde", "cost": {}, "hull_full": true, "systems": true,
+			"special": true, "flag_used": "kolonie_dank", "useful": missing > 0 or broken})
+	offers.append({"text": "Komplettreparatur", "cost": {"scrap": maxi(1, missing * int(r.get("price_per_hull", 1)) + _systems_price())},
+		"hull_full": true, "systems": true, "useful": missing > 0 or broken})
+	offers.append({"text": "Systeme und Lecks instand setzen", "cost": {"scrap": maxi(1, _systems_price())}, "systems": true, "useful": broken})
+	offers.append({"text": "Hülle +%d" % mini(int(r.get("patch_amount", 5)), missing), "cost": {"scrap": int(r.get("patch_price", 5))},
+		"hull": int(r.get("patch_amount", 5)), "useful": missing > 0})
+	offers.append({"text": "Hülle +%d gegen Treibstoff" % mini(int(r.get("hull_per_fuel", 4)), missing), "cost": {"fuel": 1},
+		"hull": int(r.get("hull_per_fuel", 4)), "useful": missing > 0})
 	return offers
 
 
 func _open_repair() -> void:
 	var text := "Eine Reparaturstation mit Werftdock. Die Techniker arbeiten schnell, aber nicht umsonst."
+	var broken := ship_damage_count()
+	if broken > 0:
+		text += " Schäden an Bord: %d." % broken
 	if flags.has("kolonie_dank"):
 		text += " Die Kolonie hat euch angekündigt: Eine Komplettreparatur geht aufs Haus."
 	if _shop_note != "":
@@ -352,7 +388,7 @@ func _open_repair() -> void:
 		var label: String = offer.text
 		if not offer.cost.is_empty():
 			label += " (%s)" % _cost_text(offer.cost)
-		choices.append({"text": label, "enabled": _can_pay(offer.cost) and ship.hull < ship.max_hull, "special": offer.get("special", false)})
+		choices.append({"text": label, "enabled": _can_pay(offer.cost) and offer.useful, "special": offer.get("special", false)})
 	choices.append({"text": "Ablegen", "enabled": true, "special": false})
 	dialog = {"title": "Reparaturstation", "text": text, "scene": "station", "choices": choices}
 	_ctx = {"kind": "repair"}
@@ -372,7 +408,11 @@ func _choose_repair(index: int) -> void:
 	for key in ["hull", "hull_full"]:
 		if offer.has(key):
 			effects[key] = offer[key]
-	_shop_note = "Repariert: " + " · ".join(_apply(effects))
+	var parts := _apply(effects)
+	if offer.get("systems", false) and ship_damage_count() > 0:
+		parts.append("%d Schäden behoben" % ship_damage_count())
+		ship.repair_systems()
+	_shop_note = "Repariert: " + " · ".join(parts)
 	_open_repair()
 
 

@@ -516,23 +516,12 @@ func _update_combat(delta: float) -> void:
 		weapon.update(delta, speed)
 
 
-## Nach einem Kampf bzw. beim Sprung: Die Crew löscht Brände, flickt Lecks und repariert alle
-## Systeme, die Lebenserhaltung füllt die Luft auf, Türen und Schleusen gehen zu, Schilde sind
-## voll, Waffen ungeladen und ohne Ziel, der Sprungantrieb leer. Hat das Schiff eine Medbay,
-## heilt sie die Crew vollständig.
-## Bleibt: Hülle, gefallene Crew, Erfahrung und die eingestellte Energieverteilung.
-func after_jump() -> void:
-	fires.clear()
-	breaches.clear()
-	_fire_damage.clear()
-	for sys: ShipSystem in systems.values():
-		sys.damage = 0
-		sys.repair_progress = 0.0
-	for r in oxygen.size():
-		oxygen[r] = 1.0
-	for i in airlock_open.size():
-		airlock_open[i] = false
-	door_open.clear()
+## Kampfende bzw. Sprung: nur was zum Kampf selbst gehört, wird zurückgesetzt. Waffen sind
+## ungeladen und ohne Ziel, der Sprungantrieb ist leer, laufende Crew steht auf ihrem Ziel.
+## Nichts wird automatisch repariert oder aufgeladen: Hülle, Systemschäden, Lecks, Feuer, Luft,
+## Schilde, Türen, Schleusen und verletzte Crew bleiben, bis die Crew sie behebt (im Kampf oder
+## in der Zeit danach) oder eine Reparaturstation hilft.
+func end_combat() -> void:
 	jump_charge = 0.0
 	for weapon in weapons:
 		weapon.charge = 0.0
@@ -543,12 +532,29 @@ func after_jump() -> void:
 			member.path.clear()
 		member.step_progress = 0.0
 		member.activity = ""
-		if systems.has("medbay"):
-			member.hp = CrewMember.MAX_HP
 	events.clear()
 	_rebalance()
-	shield_layers = max_shield_layers()
-	shield_progress = 0.0
+
+
+## Reparaturstation: alle Systeme heil, Lecks geflickt, Feuer gelöscht, Luft aufgefüllt.
+func repair_systems() -> void:
+	fires.clear()
+	breaches.clear()
+	_fire_damage.clear()
+	for sys: ShipSystem in systems.values():
+		sys.damage = 0
+		sys.repair_progress = 0.0
+	for r in oxygen.size():
+		oxygen[r] = 1.0
+	_rebalance()
+
+
+## Beschädigte Systembalken insgesamt.
+func system_damage() -> int:
+	var total := 0
+	for sys: ShipSystem in systems.values():
+		total += sys.damage
+	return total
 
 
 func add_crew(p_name: String, species: String, tile: Vector2i, experience := {}) -> CrewMember:
