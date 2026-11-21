@@ -73,6 +73,12 @@ func sparkle(pos: Vector2, color: Color) -> void:
 		_spark(pos, Vector2(_rng.randf_range(-15, 15), _rng.randf_range(-35, -10)), color, 0.5)
 
 
+## Einzelnes Teilchen, z. B. Rauch über Feuer oder entweichende Luft.
+func puff(pos: Vector2, vel: Vector2, color: Color, life: float, grow := 0.0) -> void:
+	_particles.append({"pos": pos, "vel": vel, "life": life, "max": life, "color": color,
+		"size": 1.0, "grow": grow, "drag": 0.8})
+
+
 func float_text(pos: Vector2, text: String, color: Color) -> void:
 	_texts.append({"pos": pos, "text": text, "color": color, "life": 0.9, "max": 0.9})
 

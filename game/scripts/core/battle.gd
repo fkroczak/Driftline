@@ -2,15 +2,17 @@ class_name Battle
 extends RefCounted
 ## Raumkampf zwischen eigenem Schiff und einem Gegner. Reine Logik, keine Nodes.
 ##
-## Ablauf eines Schusses: Eine geladene Waffe feuert auf den Zielraum (Spieler: angetippter
-## Raum, Gegner: zufälliger Raum mit System). Das Geschoss fliegt FLIGHT_TIME Sekunden.
+## Ablauf eines Schusses: Eine geladene Waffe feuert auf ihren eigenen Zielraum (Spieler:
+## je Waffe angetippt, Gegner: je Waffe zufällig ein Raum mit System). Das Geschoss fliegt FLIGHT_TIME Sekunden.
 ## Beim Einschlag wird entschieden: Ausweichen (Antrieb + besetztes Cockpit), sonst
 ## Schild (eine Schicht fällt), sonst Treffer (Hülle und System im Raum).
 ##
 ## Alles, was die Darstellung animieren soll, landet in `events`:
 ## - fire, miss, shield, hit: from_player (Spieler hat geschossen), projectile, room
 ## - repaired, destroyed: own_ship (betrifft das Schiff des Spielers)
-## - target: room
+## - target: weapon, room (Zielwechsel einer Spielerwaffe)
+## - fire_started, extinguished, breach, breach_fixed, crew_died: own_ship, tile, room
+## Kampfende: Hülle auf 0 oder ganze Besatzung tot (destroyed mit reason "hull"/"crew").
 
 const FLIGHT_TIME := 0.9
 ## Abstand zwischen den Schüssen einer Salve.
@@ -20,15 +22,12 @@ const ENEMY_RETARGET := 6.0
 
 var player: ShipState
 var enemy: ShipState
-## Zielraum des Spielers im Gegnerschiff, -1 = kein Ziel.
-var player_target := -1
 var projectiles: Array[Dictionary] = []
 var events: Array[Dictionary] = []
 ## "" solange gekämpft wird, sonst "sieg" oder "niederlage".
 var outcome := ""
 
 var _rng := RandomNumberGenerator.new()
-var _enemy_target := -1
 var _enemy_retarget := 0.0
 var _id_counter := 0
 
@@ -40,11 +39,29 @@ func _init(p_player: ShipState, p_enemy: ShipState, rng_seed := 0) -> void:
 		_rng.seed = rng_seed
 	else:
 		_rng.randomize()
+	player.rng.seed = _rng.randi()
+	enemy.rng.seed = _rng.randi()
 
 
-func set_player_target(room_idx: int) -> void:
-	player_target = room_idx
-	_emit({"type": "target", "room": room_idx})
+## Ziel einer einzelnen Spielerwaffe; -1 hebt das Ziel auf (Waffe hält das Feuer).
+func set_weapon_target(weapon_idx: int, room_idx: int) -> void:
+	if weapon_idx < 0 or weapon_idx >= player.weapons.size():
+		return
+	player.weapons[weapon_idx].target = room_idx
+	_emit({"type": "target", "weapon": weapon_idx, "room": room_idx})
+
+
+## Alle Spielerwaffen auf denselben Raum.
+func set_all_targets(room_idx: int) -> void:
+	for i in player.weapons.size():
+		set_weapon_target(i, room_idx)
+
+
+func player_has_target() -> bool:
+	for w in player.weapons:
+		if w.target >= 0:
+			return true
+	return false
 
 
 func update(delta: float) -> void:
@@ -55,15 +72,15 @@ func update(delta: float) -> void:
 	_collect_ship_events(player, true)
 	_collect_ship_events(enemy, false)
 	_enemy_ai(delta)
-	_fire_ready(player, true, player_target)
-	_fire_ready(enemy, false, _enemy_target)
+	_fire_ready(player, true)
+	_fire_ready(enemy, false)
 	_move_projectiles(delta)
-	if enemy.is_destroyed():
+	if enemy.is_destroyed() or enemy.is_crew_dead():
 		outcome = "sieg"
-		_emit({"type": "destroyed", "own_ship": false})
-	elif player.is_destroyed():
+		_emit({"type": "destroyed", "own_ship": false, "reason": "hull" if enemy.is_destroyed() else "crew"})
+	elif player.is_destroyed() or player.is_crew_dead():
 		outcome = "niederlage"
-		_emit({"type": "destroyed", "own_ship": true})
+		_emit({"type": "destroyed", "own_ship": true, "reason": "hull" if player.is_destroyed() else "crew"})
 
 
 ## Holt alle Ereignisse ab und leert die Liste.
@@ -84,12 +101,11 @@ func _collect_ship_events(ship: ShipState, is_player: bool) -> void:
 	ship.events.clear()
 
 
-func _fire_ready(ship: ShipState, is_player: bool, target_room: int) -> void:
-	if target_room < 0:
-		return
+func _fire_ready(ship: ShipState, is_player: bool) -> void:
 	for i in ship.weapons.size():
 		var weapon := ship.weapons[i]
-		if not weapon.is_ready():
+		var target_room := weapon.target
+		if target_room < 0 or not weapon.is_ready():
 			continue
 		weapon.charge = 0.0
 		for shot in weapon.shots:
@@ -143,12 +159,14 @@ func _resolve(p: Dictionary) -> void:
 ## danach an ihre Konsole zurück.
 func _enemy_ai(delta: float) -> void:
 	_enemy_retarget -= delta
-	if _enemy_target < 0 or (_enemy_retarget <= 0.0 and _no_enemy_shots_pending()):
+	var untargeted := enemy.weapons.any(func(w: Weapon) -> bool: return w.target < 0)
+	if untargeted or (_enemy_retarget <= 0.0 and _no_enemy_shots_pending()):
 		var rooms := []
 		for i in player.layout.rooms.size():
 			if player.systems.has(player.layout.rooms[i].system):
 				rooms.append(i)
-		_enemy_target = rooms[_rng.randi() % rooms.size()] if not rooms.is_empty() else -1
+		for w in enemy.weapons:
+			w.target = rooms[_rng.randi() % rooms.size()] if not rooms.is_empty() else -1
 		_enemy_retarget = ENEMY_RETARGET
 	_enemy_crew()
 
@@ -160,12 +178,20 @@ func _no_enemy_shots_pending() -> bool:
 	return true
 
 
-func _enemy_crew() -> void:
-	var damaged := -1
+## Wichtigster Einsatzort für die Gegner-Crew: Feuer, dann Hüllenbruch, dann Systemschaden.
+func _enemy_trouble_room() -> int:
+	for t: Vector2i in enemy.fires:
+		return enemy.layout.room_index_at(t)
+	for t: Vector2i in enemy.breaches:
+		return enemy.layout.room_index_at(t)
 	for sys: ShipSystem in enemy.systems.values():
 		if sys.damage > 0:
-			damaged = enemy.layout.room_of_system(sys.id)
-			break
+			return enemy.layout.room_of_system(sys.id)
+	return -1
+
+
+func _enemy_crew() -> void:
+	var damaged := _enemy_trouble_room()
 	# Die Person an der unwichtigsten Konsole (letzte im Crew-Array) repariert.
 	if enemy.crew.is_empty():
 		return

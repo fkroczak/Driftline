@@ -18,6 +18,8 @@ var charge := 0.0
 ## Vom Spieler eingeschaltet; ob sie wirklich Energie hat, steht in `powered`.
 var wanted := false
 var powered := false
+## Zielraum im gegnerischen Schiff, -1 = kein Ziel (feuert nicht).
+var target := -1
 
 
 static func create(weapon_id: String) -> Weapon:

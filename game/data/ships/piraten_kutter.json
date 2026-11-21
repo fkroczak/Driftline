@@ -7,6 +7,7 @@
   "grid_size": [6, 4],
   "hull": 12,
   "reactor": 6,
+  "oxygen_regen": 0.04,
   "systems": {"schilde": 2, "waffen": 2, "antrieb": 2, "cockpit": 1},
   "power": {"schilde": 2, "antrieb": 2},
   "weapons": ["pulslaser", "bordkanone"],

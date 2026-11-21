@@ -8,11 +8,14 @@ extends Node2D
 ## - Danach eine freie Kachel antippen: Die Figur läuft genau dorthin, die Auswahl endet.
 ## - Auf einer besetzten Kachel gedrückt halten: Die Figur geht dorthin, wer dort steht, weicht aus.
 ## - Die ausgewählte Figur erneut antippen oder neben das Schiff tippen hebt die Auswahl auf.
+## - Tür oder Luftschleuse antippen öffnet bzw. schließt sie.
 ##
 ## Gegnerschiff (hostile = true): Einen Raum antippen meldet room_tapped (Ziel wählen).
+## Fadenkreuze zeigen die Ziele der eigenen Waffen mit ihrer Nummer.
 
 signal selection_changed(member: CrewMember, room_idx: int)
 signal room_tapped(room_idx: int)
+signal hatch_toggled(kind: String, open: bool)
 
 const CREW_SHEETS := {
 	"mensch": preload("res://assets/crew/mensch_klein_sheet.png"),
@@ -40,6 +43,14 @@ const FLAME_ENEMY := [Color("#D85A30"), Color("#FDE6BF")]
 const SHIELD_SEGMENTS := 56
 ## Trefferradius für Figuren in Kacheln (0,5 wäre genau die Kachel).
 const HIT_RADIUS := 0.75
+## Trefferradius für Türen und Luftschleusen in Pixeln.
+const DOOR_HIT := 4.5
+const AIRLOCK_HIT := 6.0
+const COLOR_DOOR := Color("#C4CAD3")
+const COLOR_DOOR_EDGE := Color("#5A6370")
+const COLOR_FLOOR := Color("#20263A")
+const COLOR_LOW_O2 := Color("#D4537E")
+const FIRE_COLORS := [Color("#D85A30"), Color("#EF9F27"), Color("#FDE6BF")]
 ## Ab dieser Dauer zählt ein Antippen als Gedrückthalten.
 const LONG_PRESS_MS := 400
 
@@ -50,15 +61,16 @@ var selected: CrewMember
 var focused_room := -1
 ## Zuletzt losgeschickte Figur, für die Statuszeile.
 var last_order: CrewMember
-## Gegnerschiff: angepeilter Raum.
-var target_room := -1
+## Gegnerschiff: Waffen des Spielers (für die Fadenkreuze) und gerade gewählte Waffe.
+var aim_weapons: Array[Weapon] = []
+var aim_selected := -1
 
 var _press_pos := Vector2.ZERO
 var _press_time := 0
 var _ship_texture: Texture2D
 var _crew_sprites := {}  # CrewMember -> Sprite2D
 var _time := 0.0
-var _target_anim := 0.0
+var _target_anim := {}  # Waffenindex -> 1..0 (Fadenkreuz zieht sich zusammen)
 var _room_flash := {}  # Raumindex -> verbleibende Sekunden
 var _shield_flash := 0.0
 var _ghost_hull := 0.0
@@ -87,9 +99,8 @@ func select(member: CrewMember) -> void:
 	_set_selection(member, -1)
 
 
-func set_target(room: int) -> void:
-	target_room = room
-	_target_anim = 1.0
+func on_target_changed(weapon_idx: int) -> void:
+	_target_anim[weapon_idx] = 1.0
 
 
 func flash_room(room: int) -> void:
@@ -119,7 +130,8 @@ func _process(delta: float) -> void:
 	if not state:
 		return
 	_time += delta
-	_target_anim = maxf(_target_anim - delta * 4.0, 0.0)
+	for k in _target_anim.keys():
+		_target_anim[k] = maxf(_target_anim[k] - delta * 4.0, 0.0)
 	_shield_flash = maxf(_shield_flash - delta * 3.0, 0.0)
 	_ghost_hull = move_toward(_ghost_hull, state.hull, delta * 4.0) if _ghost_hull > state.hull else float(state.hull)
 	for room in _room_flash.keys():
@@ -131,8 +143,20 @@ func _process(delta: float) -> void:
 
 
 func _sync_crew() -> void:
-	for member: CrewMember in _crew_sprites:
+	for member: CrewMember in _crew_sprites.keys():
 		var sprite: Sprite2D = _crew_sprites[member]
+		if not state.crew.has(member):
+			# Gestorben: kurz rot aufleuchten, dann ausblenden
+			_crew_sprites.erase(member)
+			var tween := create_tween()
+			tween.tween_property(sprite, "modulate", Color(1, 0.3, 0.3, 1), 0.1)
+			tween.tween_property(sprite, "modulate", Color(1, 0.3, 0.3, 0), 0.6)
+			tween.tween_callback(sprite.queue_free)
+			if member == selected:
+				_set_selection(null, -1)
+			if member == last_order:
+				last_order = null
+			continue
 		sprite.position = state.layout.tile_center(member.tile_position()).round()
 		sprite.frame = FRAME_BY_FACING.get(member.facing, 0)
 
@@ -143,8 +167,12 @@ func _draw() -> void:
 	var layout := state.layout
 	_draw_engines()
 	draw_texture(_ship_texture, Vector2.ZERO)
+	_draw_oxygen()
+	_draw_doors()
 	_draw_airlocks()
 	_draw_damage()
+	_draw_breaches()
+	_draw_fires()
 	if focused_room >= 0:
 		var rect := layout.room_rect(focused_room).grow(-1)
 		draw_rect(rect, COLOR_ROOM, true)
@@ -164,8 +192,9 @@ func _draw() -> void:
 			_draw_tile_frame(layout.tile_center(Vector2(member.destination())), color, true)
 	if selected:
 		_draw_tile_frame(layout.tile_center(selected.tile_position()).round(), COLOR_SELECTED, false)
-	if hostile and target_room >= 0:
-		_draw_aim()
+	if hostile:
+		_draw_aims()
+	_draw_crew_health()
 	_draw_shield()
 	if hostile:
 		_draw_hull_bar()
@@ -192,19 +221,105 @@ func _draw_engines() -> void:
 		draw_rect(core, colors[1])
 
 
-## Luftschleusen: Luke mit gelbem Warnstreifen auf der Außenwand.
+## Luftschleusen: Luke mit gelbem Warnstreifen; offen schwarz mit rot blinkendem Rand.
 func _draw_airlocks() -> void:
 	var layout := state.layout
-	for lock in layout.airlocks:
+	for i in layout.airlocks.size():
+		var lock: Dictionary = layout.airlocks[i]
+		var edge := airlock_point(i)
 		var dir: Vector2 = Vector2(lock.dir)
-		var edge := layout.tile_center(Vector2(lock.tile)) + dir * (layout.tile_size / 2.0)
 		var along := Vector2(absf(dir.y), absf(dir.x))  # entlang der Wand
 		var size := along * 7.0 + Vector2(absf(dir.x), absf(dir.y)) * 3.0
 		var rect := Rect2((edge - size / 2.0).round(), size)
-		draw_rect(rect, Color("#2A2F3A"))
-		draw_rect(rect, Color("#0A0B16"), false, 1.0)
 		var stripe := along * 5.0 + Vector2(absf(dir.x), absf(dir.y))
-		draw_rect(Rect2((edge - stripe / 2.0).round(), stripe), Color("#FAC775"))
+		if state.airlock_open[i]:
+			draw_rect(rect, Color("#07080F"))
+			var blink := 1.0 if fmod(_time, 0.5) < 0.25 else 0.4
+			draw_rect(rect, Color(COLOR_DAMAGE, blink), false, 1.0)
+		else:
+			draw_rect(rect, Color("#2A2F3A"))
+			draw_rect(rect, Color("#0A0B16"), false, 1.0)
+			draw_rect(Rect2((edge - stripe / 2.0).round(), stripe), Color("#FAC775"))
+
+
+## Mitte der Luke auf der Außenwand.
+func airlock_point(i: int) -> Vector2:
+	var lock: Dictionary = state.layout.airlocks[i]
+	var dir: Vector2 = Vector2(lock.dir)
+	return state.layout.tile_center(Vector2(lock.tile)) + dir * (state.layout.tile_size / 2.0)
+
+
+func door_point(pair: Array) -> Vector2:
+	return (state.layout.tile_center(Vector2(pair[0])) + state.layout.tile_center(Vector2(pair[1]))) / 2.0
+
+
+## Türen: zu = helle Platte, offen = Durchgang mit eingefahrenen Flügeln.
+func _draw_doors() -> void:
+	for pair: Array in state.layout.door_list():
+		var c := door_point(pair)
+		var vertical: bool = pair[0].x != pair[1].x  # Wand senkrecht
+		var size := Vector2(2, 6) if vertical else Vector2(6, 2)
+		var rect := Rect2((c - size / 2.0).round(), size)
+		if state.is_door_open(pair[0], pair[1]):
+			draw_rect(rect, COLOR_FLOOR)
+			var stub := Vector2(2, 1) if vertical else Vector2(1, 2)
+			draw_rect(Rect2(rect.position, stub), COLOR_DOOR_EDGE)
+			draw_rect(Rect2(rect.end - stub, stub), COLOR_DOOR_EDGE)
+		else:
+			draw_rect(rect, COLOR_DOOR)
+			var mid := Rect2(rect.position + (Vector2(0, 2) if vertical else Vector2(2, 0)), Vector2(2, 2))
+			draw_rect(mid, COLOR_DOOR_EDGE)
+
+
+## Wenig Sauerstoff: Raum färbt sich rosa, fast leer blinkt er.
+func _draw_oxygen() -> void:
+	for room in state.layout.rooms.size():
+		var o: float = state.oxygen[room]
+		if o >= 0.75:
+			continue
+		var alpha := (0.75 - o) / 0.75 * 0.35
+		if o < ShipState.O2_LOW:
+			alpha += 0.1 * sin(_time * 8.0)
+		draw_rect(state.layout.room_rect(room).grow(-1), Color(COLOR_LOW_O2, alpha))
+
+
+## Hüllenbruch: dunkles Loch mit hellem Rand.
+func _draw_breaches() -> void:
+	for t: Vector2i in state.breaches:
+		var c := state.layout.tile_center(Vector2(t)).round()
+		draw_rect(Rect2(c + Vector2(-3, -2), Vector2(6, 4)), Color("#8E97A4"))
+		draw_rect(Rect2(c + Vector2(-2, -3), Vector2(4, 6)), Color("#8E97A4"))
+		draw_rect(Rect2(c + Vector2(-2, -1), Vector2(4, 2)), Color("#07080F"))
+		draw_rect(Rect2(c + Vector2(-1, -2), Vector2(2, 4)), Color("#07080F"))
+
+
+## Feuer: drei flackernde Flammenzungen je Kachel, Größe nach Stärke.
+func _draw_fires() -> void:
+	for t: Vector2i in state.fires:
+		var strength: float = state.fires[t]
+		var c := state.layout.tile_center(Vector2(t)).round()
+		draw_rect(Rect2(c - Vector2(7, 7), Vector2(14, 14)), Color(FIRE_COLORS[0], 0.15 + 0.1 * strength))
+		var phase := float(t.x * 7 + t.y * 13)
+		for k in 3:
+			var x := c.x - 5.0 + k * 4.0
+			var wobble := 0.6 + 0.4 * sin(_time * 9.0 + phase + k * 2.1)
+			var h := roundf((3.0 + 6.0 * strength) * wobble)
+			var base := c.y + 5.0
+			draw_rect(Rect2(x, base - h, 3, h), FIRE_COLORS[0])
+			draw_rect(Rect2(x + 1, base - roundf(h * 0.7), 1, roundf(h * 0.7)), FIRE_COLORS[1])
+			draw_rect(Rect2(x + 1, base - roundf(h * 0.35), 1, roundf(h * 0.35)), FIRE_COLORS[2])
+
+
+## Kleine Lebensbalken über verletzten Figuren.
+func _draw_crew_health() -> void:
+	for member in state.crew:
+		if member.hp >= CrewMember.MAX_HP:
+			continue
+		var p := state.layout.tile_center(member.tile_position()).round() + Vector2(-5, -10)
+		var ratio := member.hp / CrewMember.MAX_HP
+		var color := Color("#5DCAA5") if ratio > 0.6 else (Color("#FAC775") if ratio > 0.3 else COLOR_DAMAGE)
+		draw_rect(Rect2(p, Vector2(10, 2)), Color(0, 0, 0, 0.7))
+		draw_rect(Rect2(p, Vector2(roundf(10 * ratio), 2)), color)
 
 
 ## Beschädigte Systeme: rot pulsierender Raum, gelber Balken für den Reparaturfortschritt.
@@ -229,19 +344,44 @@ func _draw_damage() -> void:
 			draw_rect(rect, Color(1, 1, 1, 0.55 * t) if t > 0.6 else Color(COLOR_DAMAGE, 0.5 * t))
 
 
-## Fadenkreuz-Ecken um den Zielraum; beim Anvisieren ziehen sie sich zusammen.
-func _draw_aim() -> void:
-	var grow := 1.0 + roundf(_target_anim * 6.0)
-	var rect := state.layout.room_rect(target_room).grow(grow)
-	var color := Color(COLOR_AIM, 0.75 + 0.25 * sin(_time * 8.0))
-	var p := rect.position
-	var s := rect.size
-	var l := 5.0
-	for c: Vector2 in [p, p + Vector2(s.x, 0), p + Vector2(0, s.y), p + s]:
-		var dx := 1.0 if c.x == p.x else -1.0
-		var dy := 1.0 if c.y == p.y else -1.0
-		draw_rect(Rect2(c.x if dx > 0 else c.x - l, c.y if dy > 0 else c.y - 1, l, 1), color)
-		draw_rect(Rect2(c.x if dx > 0 else c.x - 1, c.y if dy > 0 else c.y - l, 1, l), color)
+## Fadenkreuze der eigenen Waffen: Ecken um den Zielraum, daneben die Waffennummern.
+## Beim Anvisieren ziehen sich die Ecken zusammen; die gerade gewählte Waffe blinkt.
+func _draw_aims() -> void:
+	var by_room := {}  # Raum -> [Waffenindex]
+	for i in aim_weapons.size():
+		var room := aim_weapons[i].target
+		if room >= 0:
+			if not by_room.has(room):
+				by_room[room] = []
+			by_room[room].append(i)
+	var font := ThemeDB.fallback_font
+	for room: int in by_room:
+		var anim := 0.0
+		var highlighted := false
+		for i: int in by_room[room]:
+			anim = maxf(anim, _target_anim.get(i, 0.0))
+			highlighted = highlighted or i == aim_selected
+		var rect := state.layout.room_rect(room).grow(1.0 + roundf(anim * 6.0))
+		var alpha := 0.75 + 0.25 * sin(_time * 8.0)
+		if highlighted:
+			alpha = 1.0 if fmod(_time, 0.4) < 0.2 else 0.35
+		var color := Color(COLOR_AIM, alpha)
+		var p := rect.position
+		var s := rect.size
+		var l := 5.0
+		for c: Vector2 in [p, p + Vector2(s.x, 0), p + Vector2(0, s.y), p + s]:
+			var dx := 1.0 if c.x == p.x else -1.0
+			var dy := 1.0 if c.y == p.y else -1.0
+			draw_rect(Rect2(c.x if dx > 0 else c.x - l, c.y if dy > 0 else c.y - 1, l, 1), color)
+			draw_rect(Rect2(c.x if dx > 0 else c.x - 1, c.y if dy > 0 else c.y - l, 1, l), color)
+		var labels := PackedStringArray()
+		for i: int in by_room[room]:
+			labels.append(str(i + 1))
+		var text := " ".join(labels)
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+		var box := Rect2(p + Vector2(-1, -9), Vector2(w + 4, 8))
+		draw_rect(box, Color(COLOR_AIM, 0.85))
+		draw_string(font, box.position + Vector2(2, 7), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color.WHITE)
 
 
 ## Schildblase: schimmernde Ellipse je nach Schichtzahl, Aufladen als wachsender Bogen.
@@ -358,12 +498,33 @@ func tap(local_pos: Vector2, long_press := false) -> void:
 	if near:
 		_set_selection(null if near == selected else near, -1)
 		return
+	if _toggle_hatch(local_pos):
+		return
 	if selected and room >= 0:
 		# Kachel nur reserviert (jemand ist unterwegs dorthin): freie Kachel im Raum nehmen
 		if state.order_move_to_tile(selected, tile, false) or state.order_move(selected, room):
 			_finish_order(room)
 		return
 	_set_selection(null, room)
+
+
+## Tür oder Luftschleuse in der Nähe umschalten. Wahr, wenn etwas getroffen wurde.
+func _toggle_hatch(local_pos: Vector2) -> bool:
+	for i in state.layout.airlocks.size():
+		if airlock_point(i).distance_to(local_pos) <= AIRLOCK_HIT:
+			hatch_toggled.emit("airlock", state.toggle_airlock(i))
+			return true
+	var best: Array = []
+	var best_dist := DOOR_HIT
+	for pair: Array in state.layout.door_list():
+		var d := door_point(pair).distance_to(local_pos)
+		if d <= best_dist:
+			best = pair
+			best_dist = d
+	if not best.is_empty():
+		hatch_toggled.emit("door", state.toggle_door(best[0], best[1]))
+		return true
+	return false
 
 
 func _finish_order(room: int) -> void:

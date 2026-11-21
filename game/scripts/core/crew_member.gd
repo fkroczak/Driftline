@@ -4,6 +4,7 @@ extends RefCounted
 
 const DEFAULT_SPEED := 2.5  # Kacheln pro Sekunde
 const MAX_EXPERIENCE := 5.0
+const MAX_HP := 100.0
 
 var display_name: String
 var species: String
@@ -19,6 +20,7 @@ var experience: Dictionary = {}
 var pinned := false
 ## Stammplatz (z. B. die eigene Konsole), zu dem die Gegner-KI nach Reparaturen zurückkehrt.
 var home_tile := Vector2i(-1, -1)
+var hp := MAX_HP
 
 
 func _init(p_name: String, p_species: String, p_tile: Vector2i) -> void:
@@ -26,6 +28,11 @@ func _init(p_name: String, p_species: String, p_tile: Vector2i) -> void:
 	species = p_species
 	tile = p_tile
 	home_tile = p_tile
+
+
+## Kachel, auf der die Figur gerade überwiegend steht.
+func current_tile() -> Vector2i:
+	return Vector2i(tile_position().round())
 
 
 func level(system: String) -> int:
