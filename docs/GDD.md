@@ -78,6 +78,8 @@ Sauerstoff ist eine eigene Ressource pro Raum; die Lebenserhaltung füllt ihn na
 - Jeder Raum hat einen Sauerstoffwert; Hüllenbrüche lassen ihn entweichen, ohne Sauerstoff verliert Crew Lebenspunkte
 - Türen sind ein eigenes System: geschlossen bremsen sie Feuer und Enterer, aufgerüstet halten sie länger
 - Luftschleusen öffnen gezielt Räume ins All: ersticken Brände und schwächen Enterkommandos, gefährden aber eigene Crew
+- Eine Schleuse saugt zuerst ihren eigenen Raum leer, über offene Türen auch die Nachbarräume; wer Türen schließt, begrenzt den Sog
+- Jedes Schiffslayout hat mindestens eine Schleuse in einem Außenraum (Feld `airlocks` in `game/data/ships/*.json`)
 - Androiden und Petrani brauchen keinen Sauerstoff und sind damit ideale Verteidiger in gefluteten Räumen
 
 **Enterkommandos:** Gegner können per Teleporter eigene Crew auf dein Schiff schicken; deine Crew kämpft im Raum, Nahkampfwerte und Spezies entscheiden.
@@ -296,7 +298,7 @@ Godot 4 mit GDScript, Export als Android-App (AAB für den Play Store); alle Inh
 
 | Phase | Inhalt | Meilenstein danach |
 | --- | --- | --- |
-| 1: Prototyp (4–6 Wochen) | Kampf mit einem Schiff, Energie und Brände | Kampf macht auf dem Handy Spaß |
+| 1: Prototyp (4–6 Wochen) | Kampf mit einem Schiff, Energie, Brände, Sauerstoff und Luftschleusen | Kampf macht auf dem Handy Spaß |
 | 2: Ein Run | Sprungkarte, Events, Händler, Upgrades, Jagd-Modus mit Boss | Run komplett spielbar |
 | 3: Inhalte | Waffen, Gegner, Events, Balancing, zweites Schiff | Testspieler zufrieden |
 | 4: Release | Endlos-Modus, Speicherstände, Play Store | – |

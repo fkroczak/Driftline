@@ -17,12 +17,15 @@ var facing := Vector2i.DOWN
 var experience: Dictionary = {}
 ## Ausdrücklich an eine Konsole geschickt: wird nicht automatisch verdrängt.
 var pinned := false
+## Stammplatz (z. B. die eigene Konsole), zu dem die Gegner-KI nach Reparaturen zurückkehrt.
+var home_tile := Vector2i(-1, -1)
 
 
 func _init(p_name: String, p_species: String, p_tile: Vector2i) -> void:
 	display_name = p_name
 	species = p_species
 	tile = p_tile
+	home_tile = p_tile
 
 
 func level(system: String) -> int:

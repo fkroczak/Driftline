@@ -14,6 +14,12 @@ var grid_origin: Vector2i = Vector2i.ZERO
 var grid_size: Vector2i = Vector2i.ZERO
 ## Jeder Raum: {id, name, system, pos: Vector2i, size: Vector2i, console: Vector2i oder null}
 var rooms: Array[Dictionary] = []
+## Übrige Schiffswerte aus der JSON-Datei (Hülle, Reaktor, Systeme, Waffen, Grafikpunkte).
+var stats: Dictionary = {}
+## Luftschleusen nach draußen: {tile: Vector2i, dir: Vector2i}. `dir` zeigt aus dem Schiff.
+## Später: Schleuse öffnen lässt den Sauerstoff des Raums ins All entweichen (Feuer und
+## Enterkommandos ersticken), über offene Türen auch den der Nachbarräume.
+var airlocks: Array[Dictionary] = []
 
 var _room_at: Dictionary = {}  # Vector2i -> Raumindex
 var _doors: Dictionary = {}  # Türschlüssel -> [Vector2i, Vector2i]
@@ -39,6 +45,7 @@ static func from_dict(d: Dictionary) -> ShipLayout:
 	layout.tile_size = int(d.get("tile_size", 14))
 	layout.grid_origin = _vec(d.get("grid_origin", [0, 0]))
 	layout.grid_size = _vec(d.get("grid_size", [0, 0]))
+	layout.stats = d
 	for r: Dictionary in d.get("rooms", []):
 		var idx := layout.rooms.size()
 		layout.rooms.append({
@@ -53,6 +60,8 @@ static func from_dict(d: Dictionary) -> ShipLayout:
 			if layout._room_at.has(t):
 				layout._overlaps.append(t)
 			layout._room_at[t] = idx
+	for lock: Array in d.get("airlocks", []):
+		layout.airlocks.append({"tile": _vec(lock[0]), "dir": _vec(lock[1])})
 	for door: Array in d.get("doors", []):
 		var a := _vec(door[0])
 		var b := _vec(door[1])
@@ -86,6 +95,15 @@ func validate() -> PackedStringArray:
 			errors.append("Tür %s–%s führt ins Leere" % [a, b])
 		elif room_index_at(a) == room_index_at(b):
 			errors.append("Tür %s–%s liegt innerhalb eines Raums" % [a, b])
+	for lock in airlocks:
+		var t: Vector2i = lock.tile
+		var dir: Vector2i = lock.dir
+		if room_index_at(t) < 0:
+			errors.append("Luftschleuse %s liegt in keinem Raum" % t)
+		elif absi(dir.x) + absi(dir.y) != 1:
+			errors.append("Luftschleuse %s braucht eine Richtung nach oben, unten, links oder rechts" % t)
+		elif room_index_at(t + dir) >= 0:
+			errors.append("Luftschleuse %s führt in einen Raum statt nach draußen" % t)
 	var start: Vector2i = rooms[0].pos
 	for i in rooms.size():
 		var target: Vector2i = rooms[i].pos
@@ -96,6 +114,24 @@ func validate() -> PackedStringArray:
 
 func room_index_at(tile: Vector2i) -> int:
 	return _room_at.get(tile, -1)
+
+
+## Raum, in dem ein System sitzt, oder -1.
+func room_of_system(system: String) -> int:
+	for i in rooms.size():
+		if rooms[i].system == system:
+			return i
+	return -1
+
+
+## Räume mit eigener Luftschleuse.
+func rooms_with_airlock() -> Array[int]:
+	var result: Array[int] = []
+	for lock in airlocks:
+		var room := room_index_at(lock.tile)
+		if room >= 0 and not result.has(room):
+			result.append(room)
+	return result
 
 
 func room_index_by_id(room_id: String) -> int:

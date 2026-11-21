@@ -5,6 +5,7 @@ from PIL import Image
 import pipeline as P
 import crew_human as CH
 import ship_human_freighter as FR
+import ship_pirate_cutter as PC
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 ART = os.path.join(ROOT, "art")
@@ -54,6 +55,16 @@ def build_freighter():
     return img
 
 
+def build_cutter():
+    svg = PC.build_svg()
+    with open(path("source", "ships", "piraten_kutter.svg"), "w") as f:
+        f.write(svg)
+    img = P.process(svg, PC.W, PC.H, 3)
+    save_sprite(img, "ships/piraten_kutter.png")
+    P.on_space(P.upscale(img), 40).save(path("preview", "piraten_kutter.png"))
+    return img
+
+
 # Besatzung an Bord für die Vorschau: (Kachel-Spalte, Kachel-Zeile, Blickrichtung)
 ON_BOARD = [(10, 3, "rechts"), (7, 7, "rechts"), (1, 0, "unten"), (6, 3, "oben"),
             (8, 4, "unten"), (2, 7, "rechts"), (5, 1, "links")]
@@ -95,5 +106,6 @@ if __name__ == "__main__":
     palette_files()
     crew = build_crew()
     ship = build_freighter()
+    build_cutter()
     previews(crew, ship)
     print("fertig:", ART)

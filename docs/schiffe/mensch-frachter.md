@@ -27,6 +27,8 @@ Koordinaten in Kacheln (Spalte, Zeile) der oberen linken Ecke. Jeder Raum belegt
 | Cockpit | (9, 3) | Nase, mit Kanzel |
 | Korridor | (8, 1)–(8, 6), 1 × 6 | verbindet alle Bugräume |
 
+Luftschleusen: oben in Erweiterung 1 (Kachel 3, 0) und unten in Erweiterung 2 (Kachel 1, 7). Beide liegen in Außenräumen am Heck, weit weg von Cockpit und Medbay, damit ein Ablassen die Brücke nicht gefährdet.
+
 Shuttlebucht: Spalten 0–5, Zeilen 2–5, außerhalb des Druckrumpfs, Shuttle in Klammern.
 
 ## Türen
