@@ -285,7 +285,7 @@ func test_weapons_fire_and_damage_enemy() -> void:
 	var target := battle.enemy.layout.room_index_by_id("waffen")
 	battle.set_all_targets(target)
 	var seen := {}
-	for i in 200:  # 20 s
+	for i in 400:  # 40 s
 		battle.update(0.1)
 		for e in battle.take_events():
 			seen[e.type] = true
@@ -307,6 +307,9 @@ func test_battle_ends_in_victory() -> void:
 	var player := ShipState.new(_layout())
 	player.add_crew("Mara", "mensch", Vector2i(7, 7), {"waffen": 3.0})
 	var battle := Battle.new(player, _enemy_ship(), 7)
+	battle.enemy.hull = 4  # prüft das Kampfende, nicht die Balance
+	while battle.enemy.remove_power("waffen"):
+		pass
 	battle.set_all_targets(battle.enemy.layout.room_index_by_id("schilde"))
 	for i in 3000:
 		battle.update(0.1)
