@@ -7,12 +7,17 @@ extends RefCounted
 ## Die Verbindungen zwischen zwei Spalten kreuzen sich nicht, und jeder Knoten hat mindestens
 ## einen Vorgänger und einen Nachfolger: Von jedem Knoten aus ist der Boss erreichbar.
 ##
-## Knotentypen: "start", "kampf", "leer", "boss".
+## Knotentypen: "start", "boss", "kampf", "ereignis" (Textentscheidung), "leer",
+## "haendler" und "reparatur" (Reparaturstation). Je Karte gibt es zwei Händler (einer in den
+## Sprüngen 2–4, einer in 6–8) und eine Reparaturstation (Sprung 4–8); sie sind auf der Karte sichtbar.
 
 const JUMPS := 10
 const MIN_PER_COLUMN := 2
 const MAX_PER_COLUMN := 3
-const EMPTY_CHANCE := 0.35
+## Anteile der übrigen Systeme.
+const TYPE_WEIGHTS := {"kampf": 0.45, "ereignis": 0.42, "leer": 0.13}
+## Feste Stationen: [Typ, erste Spalte, letzte Spalte]
+const STATIONS := [["haendler", 2, 4], ["haendler", 6, 8], ["reparatur", 4, 8]]
 
 ## Jeder Knoten: {id, column, pos: Vector2 (0..1 in beiden Achsen), type, links: Array[int]}
 var nodes: Array[Dictionary] = []
@@ -40,14 +45,38 @@ static func generate(p_seed: int) -> StarMap:
 				type = "start"
 			elif c == JUMPS:
 				type = "boss"
-			elif rng.randf() < EMPTY_CHANCE:
-				type = "leer"
+			else:
+				type = _roll_type(rng)
 			ids.append(map.nodes.size())
 			map.nodes.append({"id": map.nodes.size(), "column": c, "pos": Vector2(x, y), "type": type, "links": [] as Array[int]})
 		map.columns.append(ids)
 	for c in JUMPS:
 		map._link_columns(map.columns[c], map.columns[c + 1], rng)
+	map._place_stations(rng)
 	return map
+
+
+static func _roll_type(rng: RandomNumberGenerator) -> String:
+	var roll := rng.randf()
+	for type: String in TYPE_WEIGHTS:
+		roll -= TYPE_WEIGHTS[type]
+		if roll <= 0.0:
+			return type
+	return "kampf"
+
+
+## Händler und Reparaturstation auf zufällige Knoten ihres Spaltenbereichs, nie zwei auf denselben.
+func _place_stations(rng: RandomNumberGenerator) -> void:
+	var taken := {}
+	for station: Array in STATIONS:
+		var options: Array[int] = []
+		for c in range(station[1], station[2] + 1):
+			for id: int in columns[c]:
+				if not taken.has(id):
+					options.append(id)
+		var id: int = options[rng.randi() % options.size()]
+		nodes[id].type = station[0]
+		taken[id] = true
 
 
 ## Treppe von oben nach unten: Beide Spalten werden gleichzeitig abgelaufen, immer der
@@ -78,6 +107,10 @@ func _link_columns(a: Array, b: Array, rng: RandomNumberGenerator) -> void:
 func _link(from: int, to: int) -> void:
 	if not nodes[from].links.has(to):
 		nodes[from].links.append(to)
+
+
+func count_type(type: String) -> int:
+	return nodes.filter(func(n: Dictionary) -> bool: return n.type == type).size()
 
 
 func node(id: int) -> Dictionary:

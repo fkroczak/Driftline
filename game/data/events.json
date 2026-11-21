@@ -1,0 +1,211 @@
+{
+  "_doc": "Ereignisse der Sternenkarte. pool: ereignis (normale Systeme), notsignal (Notsignal ohne Treibstoff). beacon: auf der Karte als NOTRUF sichtbar. scene: Bild links (wrack, planet, notruf, station, schiff, asteroiden, nebel). Choice: text, cost {fuel, scrap} wird vorher abgezogen und ist Bedingung, requires {flag, crew_min} blendet die Option sonst aus (flag) bzw. graut sie aus. Outcome: weight, text, effects {scrap, fuel, hull, hull_full, crew_hp, crew_lose, crew_add, flag}, battle (danach Kampf), victory (Effekte nach dem Sieg), next (Folgeereignis).",
+  "events": [
+    {
+      "id": "wrack_frachter", "pool": "ereignis", "scene": "wrack",
+      "title": "Treibendes Wrack",
+      "text": "Ein ausgebrannter Frachter treibt quer zur Flugbahn. Die Ladeluken stehen offen, die Notbeleuchtung flackert noch.",
+      "choices": [
+        {"text": "Wrack durchsuchen", "outcomes": [
+          {"weight": 0.65, "text": "Im Frachtraum liegen unbeschädigte Ersatzteile und zwei volle Tankzellen.", "effects": {"scrap": 12, "fuel": 1}},
+          {"weight": 0.35, "text": "Eine Sprengfalle der Piraten geht hoch, als die Crew die Luke aufstemmt. Ein paar Teile kann sie trotzdem retten.", "effects": {"hull": -3, "scrap": 6}}
+        ]},
+        {"text": "Nur die Tanks abzapfen", "outcomes": [
+          {"text": "Die Crew zapft die Resttanks ab. Sicher, aber wenig.", "effects": {"fuel": 2}}
+        ]},
+        {"text": "Weiterfliegen", "outcomes": [{"text": "Ihr lasst das Wrack hinter euch.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "rettungskapsel", "pool": "ereignis", "scene": "notruf", "beacon": true,
+      "title": "Rettungskapsel",
+      "text": "Ein schwaches Notsignal: eine einzelne Rettungskapsel, die Lebenserhaltung im roten Bereich.",
+      "choices": [
+        {"text": "Kapsel an Bord holen", "outcomes": [
+          {"weight": 0.6, "text": "Eine erschöpfte Technikerin klettert heraus. Sie will bleiben und mit anpacken.", "effects": {"crew_add": 1}},
+          {"weight": 0.25, "text": "Die Kapsel ist leer, der Insasse war schon fort. Ihre Bauteile sind noch brauchbar.", "effects": {"scrap": 8}},
+          {"weight": 0.15, "text": "Ein Köder! Kaum ist die Kapsel an Bord, fällt ein Piratenkutter aus dem Sprung.", "battle": true, "victory": {"scrap": 5}}
+        ]},
+        {"text": "Signal ignorieren", "outcomes": [{"text": "Das Signal wird hinter euch schwächer.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "eismond_station", "pool": "ereignis", "scene": "planet",
+      "title": "Forschungsstation auf dem Eismond",
+      "text": "Die Sensoren erfassen eine verlassene Forschungsstation auf einem Eismond. Die Schleusen sind zugefroren, im Inneren brennt noch Licht.",
+      "choices": [
+        {"text": "Außenteam landen lassen", "requires": {"crew_min": 2}, "outcomes": [
+          {"weight": 0.5, "text": "Das Labor ist voller Geräte, die niemand vermisst. Das Team schleppt alles zum Shuttle.", "effects": {"scrap": 16}},
+          {"weight": 0.3, "text": "Ein Gang bricht unter dem Eis ein. Das Team kommt verletzt, aber mit Beute zurück.", "effects": {"scrap": 9, "crew_hp": -50}},
+          {"weight": 0.2, "text": "Im Tanklager stehen noch Fässer mit Fusionsbrennstoff.", "effects": {"fuel": 3}}
+        ]},
+        {"text": "Nur aus dem Orbit scannen", "outcomes": [
+          {"text": "Die Scans zeigen eine alte Sonde im Orbit. Ihr fangt sie ein und zerlegt sie.", "effects": {"scrap": 4}}
+        ]},
+        {"text": "Weiterfliegen", "outcomes": [{"text": "Der Mond bleibt still hinter euch zurück.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "kolonie_reaktor", "pool": "ereignis", "scene": "planet", "beacon": true,
+      "title": "Kolonie in Not",
+      "text": "Eine kleine Bergbaukolonie funkt um Hilfe: Ihr Reaktor fällt aus, die Heizung hält nur noch Stunden. Sie gehört zur Händlergilde.",
+      "choices": [
+        {"text": "Ersatzteile spenden", "cost": {"scrap": 10}, "outcomes": [
+          {"text": "Die Kolonisten bekommen den Reaktor wieder ans Netz. Die Verwalterin verspricht, die nächste Gildenwerft zu informieren: Dort repariert man euch umsonst.", "effects": {"flag": "kolonie_dank"}}
+        ]},
+        {"text": "Außenteam repariert den Reaktor", "requires": {"crew_min": 2}, "outcomes": [
+          {"weight": 0.7, "text": "Eure Leute flicken den Reaktor. Aus Dank überholen die Kolonie-Mechaniker euren Rumpf.", "effects": {"hull": 8, "flag": "kolonie_dank"}},
+          {"weight": 0.3, "text": "Eine Dampfleitung platzt, ein Crewmitglied wird verbrüht. Der Reaktor läuft trotzdem, und die Kolonie dankt es euch.", "effects": {"crew_hp": -60, "hull": 5, "flag": "kolonie_dank"}}
+        ]},
+        {"text": "Keine Zeit", "outcomes": [{"text": "Die Funksprüche der Kolonie werden leiser.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "havarierter_frachter", "pool": "ereignis", "scene": "schiff",
+      "title": "Havarierter Gildenfrachter",
+      "text": "Ein Frachter der Händlergilde treibt mit ausgefallenem Antrieb. Die Kapitänin bittet um eine Starthilfe aus eurem Reaktor.",
+      "choices": [
+        {"text": "Starthilfe geben", "cost": {"fuel": 1}, "outcomes": [
+          {"text": "Der Antrieb springt an. Die Kapitänin schickt ihre Mechaniker herüber und gibt euch einen Gildenbrief: Händler machen euch künftig bessere Preise.", "effects": {"hull": 6, "flag": "gilde_freund"}}
+        ]},
+        {"text": "Starthilfe nur gegen Bezahlung", "cost": {"fuel": 1}, "outcomes": [
+          {"text": "Sie zahlt mit Ersatzteilen, aber sie wird sich an euch erinnern.", "effects": {"scrap": 10}}
+        ]},
+        {"text": "Weiterfliegen", "outcomes": [{"text": "Der Frachter bleibt allein zurück.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "asteroiden_erz", "pool": "ereignis", "scene": "asteroiden",
+      "title": "Erzreiches Asteroidenfeld",
+      "text": "Ein dichtes Asteroidenfeld mit hohem Metallgehalt. Mit etwas Geschick lässt sich hier Erz abbauen.",
+      "choices": [
+        {"text": "Erz abbauen", "outcomes": [
+          {"weight": 0.7, "text": "Die Crew füllt den Laderaum mit Erz.", "effects": {"scrap": 11}},
+          {"weight": 0.3, "text": "Ein Brocken streift den Rumpf. Das Erz ist trotzdem an Bord.", "effects": {"scrap": 8, "hull": -2}}
+        ]},
+        {"text": "Feld umfliegen", "outcomes": [{"text": "Ihr fliegt einen weiten Bogen.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "piratenzoll", "pool": "ereignis", "scene": "schiff",
+      "title": "Piratenzoll",
+      "text": "Ein Kutter bremst neben euch ab. Auf allen Kanälen: „Zoll für die Durchreise. Zahlt, oder wir holen ihn uns.“",
+      "choices": [
+        {"text": "Zoll zahlen", "cost": {"scrap": 8}, "outcomes": [
+          {"text": "Die Piraten nehmen die Teile und ziehen ab.", "effects": {}}
+        ]},
+        {"text": "Kämpfen", "outcomes": [
+          {"text": "Die Waffen laden. Der Kutter dreht bei.", "battle": true, "victory": {"scrap": 4}}
+        ]},
+        {"text": "Durchbrechen", "outcomes": [
+          {"weight": 0.5, "text": "Volle Schubkraft: Ihr seid weg, bevor sie zielen können.", "effects": {}},
+          {"weight": 0.5, "text": "Zu langsam. Der Kutter eröffnet das Feuer.", "battle": true}
+        ]}
+      ]
+    },
+    {
+      "id": "schmuggler", "pool": "ereignis", "scene": "schiff",
+      "title": "Schmuggler",
+      "text": "Ein nervöser Pilot bietet Treibstoff aus unklarer Quelle an, günstig und ohne Fragen.",
+      "choices": [
+        {"text": "3 Treibstoff kaufen", "cost": {"scrap": 6}, "outcomes": [
+          {"weight": 0.85, "text": "Der Treibstoff ist sauber. Ein guter Handel.", "effects": {"fuel": 3}},
+          {"weight": 0.15, "text": "Verunreinigt: Der Tank läuft halb leer, bevor ihr es merkt.", "effects": {"fuel": 1}}
+        ]},
+        {"text": "Ablehnen", "outcomes": [{"text": "Der Schmuggler verschwindet im Sprung.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "ionensturm", "pool": "ereignis", "scene": "nebel",
+      "title": "Ionensturm",
+      "text": "Vor euch tobt ein Ionensturm. Hindurch geht es schneller, aber die Entladungen setzen dem Rumpf zu.",
+      "choices": [
+        {"text": "Mitten hindurch", "outcomes": [
+          {"weight": 0.6, "text": "Es knistert und kracht, der Rumpf hält. Im Sturm treibt Wrackgut.", "effects": {"hull": -2, "scrap": 7}},
+          {"weight": 0.4, "text": "Der Sturm ist ruhiger als befürchtet.", "effects": {"scrap": 4}}
+        ]},
+        {"text": "Umfliegen", "cost": {"fuel": 1}, "outcomes": [
+          {"text": "Der Umweg kostet Treibstoff, aber niemand kommt zu Schaden.", "effects": {}}
+        ]}
+      ]
+    },
+    {
+      "id": "wuestenmine", "pool": "ereignis", "scene": "planet",
+      "title": "Stillgelegte Mine",
+      "text": "Auf einem Wüstenplaneten steht eine stillgelegte Mine. Die Förderbänder sind voll, der Stollen wirkt instabil.",
+      "choices": [
+        {"text": "Außenteam in den Stollen", "requires": {"crew_min": 2}, "outcomes": [
+          {"weight": 0.55, "text": "Volle Erzloren und ein Tank Brennstoff für die Bohrer.", "effects": {"scrap": 14, "fuel": 1}},
+          {"weight": 0.35, "text": "Der Stollen gibt nach. Das Team gräbt sich frei, verletzt.", "effects": {"scrap": 6, "crew_hp": -55}},
+          {"weight": 0.1, "text": "Der Stollen stürzt ein. Nicht alle kommen zurück.", "effects": {"crew_lose": 1, "scrap": 6}}
+        ]},
+        {"text": "Nur die Förderbänder plündern", "outcomes": [
+          {"text": "Ein paar Kisten Erz vom Eingang, ohne Risiko.", "effects": {"scrap": 6}}
+        ]},
+        {"text": "Weiterfliegen", "outcomes": [{"text": "Der Sand verweht eure Landespuren.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "faehre_dschungel", "pool": "ereignis", "scene": "planet", "beacon": true,
+      "title": "Abgestürzte Fähre",
+      "text": "Eine Passagierfähre ist auf einem Dschungelplaneten notgelandet. Überlebende senden in Schleifen ihren Standort.",
+      "choices": [
+        {"text": "Landen und retten", "requires": {"crew_min": 2}, "outcomes": [
+          {"weight": 0.55, "text": "Ihr bringt alle Überlebenden an Bord. Ein Pilot will bei euch anheuern, die anderen bezahlen mit dem, was sie haben.", "effects": {"crew_add": 1, "scrap": 5}},
+          {"weight": 0.45, "text": "Die Rettung gelingt, doch die Fauna wehrt sich. Die Geretteten zahlen mit Bordtreibstoff.", "effects": {"crew_hp": -45, "fuel": 2}}
+        ]},
+        {"text": "Position an die Gilde melden", "outcomes": [
+          {"text": "Die Gilde schickt ein Rettungsschiff und bedankt sich mit einem Gildenbrief.", "effects": {"flag": "gilde_freund"}}
+        ]}
+      ]
+    },
+    {
+      "id": "geleitschutz", "pool": "ereignis", "scene": "schiff", "beacon": true,
+      "title": "Geleitschutz",
+      "text": "Eine Frachterkapitänin der Gilde wird von Piraten verfolgt und bittet euch, sie zu decken.",
+      "choices": [
+        {"text": "Den Piraten entgegenfliegen", "outcomes": [
+          {"text": "Ihr stellt euch zwischen Frachter und Kutter.", "battle": true, "victory": {"fuel": 3, "flag": "gilde_freund"}}
+        ]},
+        {"text": "Nicht eure Sache", "outcomes": [{"text": "Der Frachter flieht allein weiter.", "effects": {}}]}
+      ]
+    },
+
+    {
+      "id": "notsignal_haendler", "pool": "notsignal", "weight": 0.4, "scene": "schiff",
+      "title": "Ein Händler antwortet",
+      "text": "Ein kleiner Händler hat euer Notsignal aufgefangen. Treibstoff hat er, umsonst gibt es nichts.",
+      "choices": [
+        {"text": "3 Treibstoff kaufen", "cost": {"scrap": 9}, "outcomes": [
+          {"text": "Er pumpt den Treibstoff herüber.", "effects": {"fuel": 3}}
+        ]},
+        {"text": "Rumpfplatten als Bezahlung geben", "outcomes": [
+          {"text": "Er schraubt sich ab, was er brauchen kann. Der Rumpf ist danach dünner.", "effects": {"fuel": 2, "hull": -4}}
+        ]}
+      ]
+    },
+    {
+      "id": "notsignal_piraten", "pool": "notsignal", "weight": 0.4, "scene": "schiff",
+      "title": "Piraten antworten",
+      "text": "Auf euer Notsignal antwortet nicht die Gilde, sondern ein Piratenkutter mit vollen Tanks.",
+      "choices": [
+        {"text": "Kämpfen und die Tanks erbeuten", "outcomes": [
+          {"text": "Die Piraten greifen an.", "battle": true, "victory": {"fuel": 3}}
+        ]}
+      ]
+    },
+    {
+      "id": "notsignal_patrouille", "pool": "notsignal", "weight": 0.2, "scene": "station",
+      "title": "Gildenpatrouille",
+      "text": "Eine Patrouille der Händlergilde schwenkt auf euer Signal ein.",
+      "choices": [
+        {"text": "[Gildenbrief] Hilfe erbitten", "requires": {"flag": "gilde_freund"}, "outcomes": [
+          {"text": "Für Freunde der Gilde ist das selbstverständlich: volle Tanks.", "effects": {"fuel": 4}}
+        ]},
+        {"text": "Um Treibstoff bitten", "outcomes": [
+          {"text": "Sie geben euch das Nötigste, mit einem strengen Blick.", "effects": {"fuel": 1}}
+        ]}
+      ]
+    }
+  ]
+}

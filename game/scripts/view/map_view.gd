@@ -2,10 +2,14 @@ class_name MapView
 extends Control
 ## Sternenkarte: Nebel, Sprungziele mit gestrichelten Verbindungen und das eigene Schiff.
 ## Oben eine Leiste mit Sprüngen, Hülle und Crew, unten eine Infozeile.
-## Besucht = grün, erreichbar = gelb (pulsiert), unbekannt = weiß, Boss = roter Rhombus.
+## Besucht = grün, erreichbar = gelb (pulsiert), unbekannt = weiß, Boss = roter Rhombus,
+## Händler = oranges, Reparaturstation = blaues Quadrat (immer sichtbar), Notruf = roter Ring
+## (nur in Sensorreichweite, SENSOR_RANGE Sprünge voraus).
+## Ohne Treibstoff erscheint unten rechts der Knopf „NOTSIGNAL“.
 
 signal node_tapped(id: int)
 signal background_tapped
+signal distress_pressed
 
 const TOP_BAR := 14.0
 const MAP_TOP := 34.0
@@ -13,6 +17,8 @@ const MAP_BOTTOM := 190.0
 const SIDE := 24.0
 ## Großzügig, damit auch knapp daneben trifft (12 px = 60 px auf einem 1080p-Handy).
 const TAP_RADIUS := 12.0
+## So viele Sprünge voraus sind Notrufe zu sehen (später abhängig vom Sensorsystem).
+const SENSOR_RANGE := 2
 const FONT_SIZE := 8
 
 const COLOR_BAR := Color("#0A0B16", 0.92)
@@ -25,7 +31,10 @@ const COLOR_REACH := Color("#FAC775")
 const COLOR_UNKNOWN := Color("#C4CAD3")
 const COLOR_BOSS := Color("#E24B4A")
 const COLOR_JUMPS := Color("#F09595")
-const COLOR_SECTOR := Color("#85B7EB")
+const COLOR_FUEL := Color("#EF9F27")
+const COLOR_SCRAP := Color("#A9B0BB")
+const COLOR_SHOP := Color("#EF9F27")
+const COLOR_REPAIR := Color("#85B7EB")
 const COLOR_WARN := Color("#FAC775")
 const COLOR_BOX := Color("#0A0B16", 0.9)
 const COLOR_SHIP := Color("#E6EAF0")
@@ -85,8 +94,17 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## Knopf für das Notsignal (nur ohne Treibstoff sichtbar).
+func distress_rect() -> Rect2:
+	return Rect2(size.x - 66.0, size.y - 30.0, 60.0, 16.0)
+
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if run.can_send_distress() and distress_rect().grow(3.0).has_point(event.position):
+			distress_pressed.emit()
+			accept_event()
+			return
 		var id := node_at(event.position)
 		if id >= 0:
 			node_tapped.emit(id)
@@ -108,6 +126,8 @@ func _draw() -> void:
 		_draw_info_box(selected)
 	_draw_top_bar()
 	_draw_hint()
+	if run.can_send_distress():
+		_draw_distress()
 
 
 ## Weiche Nebel aus mehreren übereinanderliegenden Ellipsen.
@@ -152,6 +172,13 @@ func _draw_node(n: Dictionary) -> void:
 		draw_colored_polygon(pts, COLOR_BOSS)
 		draw_rect(Rect2(p - Vector2(1, 1), Vector2(2, 2)), Color("#F7C1C1"))
 		return
+	if (n.type == "haendler" or n.type == "reparatur") and not run.visited.has(n.id):
+		var c := COLOR_SHOP if n.type == "haendler" else COLOR_REPAIR
+		draw_rect(Rect2(p - Vector2(4, 4), Vector2(8, 8)), COLOR_OUTLINE)
+		draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), c)
+		return
+	if _beacon_visible(n.id):
+		draw_arc(p, 4.5, 0.0, TAU, 14, COLOR_BOSS, 1.0)
 	var color := COLOR_UNKNOWN
 	var radius := 2.0
 	if run.visited.has(n.id):
@@ -187,6 +214,20 @@ func _draw_labels() -> void:
 	var boss := run.map.boss_id()
 	_draw_tag(node_screen_pos(boss) + Vector2(0, -16), "BOSS", COLOR_BOSS, true)
 	_draw_tag(node_screen_pos(run.map.start_id()) + Vector2(0, 8), "START", COLOR_VISITED, true)
+	for n in run.map.nodes:
+		if run.visited.has(n.id):
+			continue
+		var below := node_screen_pos(n.id) + Vector2(0, 6)
+		if n.type == "haendler":
+			_draw_tag(below, "HÄNDLER", COLOR_SHOP, true)
+		elif n.type == "reparatur":
+			_draw_tag(below, "REPARATUR", COLOR_REPAIR, true)
+		elif _beacon_visible(n.id):
+			_draw_tag(below, "NOTRUF", COLOR_BOSS, true)
+
+
+func _beacon_visible(id: int) -> bool:
+	return run.is_beacon(id) and not run.visited.has(id) and run.map.node(id).column <= run.jumps_done() + SENSOR_RANGE
 
 
 ## Beschriftung mit Rahmen; `centered` richtet sie mittig über/unter dem Punkt aus.
@@ -205,9 +246,16 @@ func _draw_tag(pos: Vector2, text: String, color: Color, centered: bool) -> void
 func _draw_info_box(id: int) -> void:
 	var n := run.map.node(id)
 	var title := "Unerforschtes System"
-	if n.type == "boss":
-		title = "Flaggschiff der Piraten"
-	var line := "1 Sprung · nochmal antippen"
+	match n.type:
+		"boss":
+			title = "Flaggschiff der Piraten"
+		"haendler":
+			title = "Händler: Treibstoff, Reparatur"
+		"reparatur":
+			title = "Reparaturstation"
+	if _beacon_visible(id):
+		title = "Notruf empfangen"
+	var line := "%d Treibstoff · nochmal antippen" % run.jump_cost()
 	var font := ThemeDB.fallback_font
 	var w := maxf(font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
 		font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x)
@@ -230,18 +278,34 @@ func _draw_top_bar() -> void:
 	var ship := run.ship
 	var ratio := float(ship.hull) / maxf(ship.max_hull, 1)
 	var hull_color := COLOR_VISITED if ratio > 0.5 else (COLOR_WARN if ratio > 0.25 else COLOR_BOSS)
+	var fuel_color := COLOR_BOSS if run.fuel < run.jump_cost() else (COLOR_WARN if run.fuel <= 2 else COLOR_FUEL)
 	var items := [
-		["SPRÜNGE %d/%d" % [run.jumps_done(), StarMap.JUMPS], COLOR_JUMPS],
+		["TREIBSTOFF %d" % run.fuel, fuel_color],
+		["ROHSTOFFE %d" % run.scrap, COLOR_SCRAP],
 		["HÜLLE %d/%d" % [ship.hull, ship.max_hull], hull_color],
 		["CREW %d" % ship.crew.size(), COLOR_TEXT],
+		["SPRÜNGE %d/%d" % [run.jumps_done(), StarMap.JUMPS], COLOR_JUMPS],
 	]
-	var x := 6.0
+	var widths: Array[float] = []
+	var total := 0.0
 	for item: Array in items:
-		draw_string(font, Vector2(x, 10), item[0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, item[1])
-		x += font.get_string_size(item[0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x + 14.0
-	var sector := "UNIVERSUM 1"
-	var w := font.get_string_size(sector, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
-	draw_string(font, Vector2(size.x - w - 6.0, 10), sector, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, COLOR_SECTOR)
+		widths.append(font.get_string_size(item[0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x)
+		total += widths.back()
+	var gap := clampf((size.x - 12.0 - total) / (items.size() - 1), 6.0, 18.0)
+	var x := 6.0
+	for i in items.size():
+		draw_string(font, Vector2(x, 10), items[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, items[i][1])
+		x += widths[i] + gap
+
+
+func _draw_distress() -> void:
+	var font := ThemeDB.fallback_font
+	var r := distress_rect()
+	var pulse := 0.5 + 0.5 * sin(_time * 5.0)
+	draw_rect(r, COLOR_BOX)
+	draw_rect(r, Color(COLOR_BOSS, 0.15 + 0.2 * pulse))
+	draw_rect(r.grow(-0.5), COLOR_BOSS, false, 1.0)
+	draw_string(font, r.position + Vector2(5, 11), "NOTSIGNAL", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Color("#F7C1C1"))
 
 
 func _draw_hint() -> void:

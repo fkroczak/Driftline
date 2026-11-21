@@ -2,18 +2,22 @@
 
 Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ein ganzer Run durch ein Universum. Phase 1 (macht der Kampf per Touch Spaß?) ist abgeschlossen.
 
-**Stand:** Das Spiel startet auf der Sternenkarte. Der Mensch-Frachter mit drei Crewmitgliedern springt in 10 Sprüngen vom Start zum Boss; unterwegs warten Piratenkutter oder leere Systeme. Im Kampf links die Crew-Leiste, unten Energie und Waffen, oben rechts Hülle, Schild und Ausweichchance.
+**Stand:** Das Spiel startet auf der Sternenkarte. Der Mensch-Frachter mit drei Crewmitgliedern springt in 10 Sprüngen vom Start zum Boss. Unterwegs warten Kämpfe, Ereignisse mit Textentscheidungen, Händler, eine Reparaturstation oder leere Systeme. Im Kampf links die Crew-Leiste, unten Energie und Waffen, oben rechts Hülle, Schild und Ausweichchance.
 
 ### Sternenkarte und Run
 
 - **Karte** (`StarMap`, je Run ein Seed): 11 Spalten von links (Start) nach rechts (Boss = Ausgang), dazwischen je 2–3 Systeme. Ein Sprung führt immer in die nächste Spalte, also braucht jeder Weg genau 10 Sprünge. Verbindungen kreuzen sich nicht, und von jedem System aus ist der Boss erreichbar.
-- **Bedienung:** Ein gelbes (erreichbares) Ziel antippen zeigt das Infofeld, nochmal antippen springt. Grün = besucht, weiß = unerforscht, roter Rhombus = Boss. Oben Sprünge, Hülle und Crew.
-- **Systeme:** etwa 65 % Kampf, 35 % leer. Was dort wartet, zeigt die Karte noch nicht (später über Sensoren). Leere Systeme sind sicher.
-- **Bleibender Schaden:** Ein einziges Schiff geht durch den ganzen Run. Es bleiben Hülle, gefallene Crew, Erfahrung und die eingestellte Energieverteilung. Nach dem Kampf bzw. beim Sprung löscht und repariert die Crew alles andere: Feuer, Lecks und Systemschäden sind weg, Luft voll, Türen und Schleusen zu, Schilde voll, Waffen ungeladen; die Medbay heilt die Crew.
-- **Hülle flicken** (Zwischenlösung bis zu Händler und Belohnungen, Werte in `data/run.json`): nach einem Sieg Bergung aus dem Wrack +3, in einem leeren System +2. Fliehen bringt nichts.
+- **Bedienung:** Ein gelbes (erreichbares) Ziel antippen zeigt das Infofeld, nochmal antippen springt. Grün = besucht, weiß = unerforscht, roter Rhombus = Boss. Oben Treibstoff, Rohstoffe, Hülle, Crew und Sprünge.
+- **Systeme:** je Karte 2 Händler (Sprung 2–4 und 6–8) und 1 Reparaturstation (Sprung 4–8), immer sichtbar. Der Rest: 45 % Kampf, 42 % Ereignis, 13 % leer. Notrufe (rote Ringe) zeigt die Karte nur bis 2 Sprünge voraus; alles andere bleibt „unerforscht“.
+- **Ressourcen** (`data/run.json`): Start mit 6 Treibstoff und 10 Rohstoffen. Jeder Sprung kostet 1 Treibstoff. Ohne Treibstoff erscheint der Knopf **NOTSIGNAL**: Es antwortet ein Händler, Piraten (Kampf um ihre Tanks) oder eine Gildenpatrouille.
+- **Beute:** Nach jedem Sieg Rohstoffe und manchmal Treibstoff, je nach Stufe (`reward` in `data/enemies.json`).
+- **Ereignisse** (`data/events.json`, Format im Feld `_doc`): Wrack, Rettungskapsel, Eismond-Station, Kolonie in Not, havarierter Gildenfrachter, Asteroidenfeld, Piratenzoll, Schmuggler, Ionensturm, stillgelegte Mine, abgestürzte Fähre, Geleitschutz. Dialog links mit kleiner Szene, rechts Text, darunter die Optionen. Optionen kosten eventuell Rohstoffe oder Treibstoff (grau, wenn es nicht reicht), Außeneinsätze brauchen mindestens 2 Crew. Ausgänge sind gewichtet: Rohstoffe, Treibstoff, Hülle (+/−), verletzte, gefallene oder neue Crew, Ansehen, ein Kampf (mit Extrabeute nach dem Sieg) oder ein Folgeereignis.
+- **Ansehen:** „Gildenbrief“ (`gilde_freund`) macht Händler 25 % billiger und öffnet bei der Gildenpatrouille eine eigene (blaue) Option. „Dank der Kolonie“ (`kolonie_dank`) bringt einmal eine Gratis-Komplettreparatur in der Reparaturstation. Manche Ereignisse reparieren aus Dankbarkeit auch sofort die Hülle.
+- **Händler:** 1 Treibstoff für 3 Rohstoffe, Hülle +5 für 8 Rohstoffe, Hülle +3 für 1 Treibstoff. **Reparaturstation:** Komplettreparatur für 1 Rohstoff je Hüllenpunkt, Hülle +5 für 5, Hülle +4 für 1 Treibstoff.
+- **Bleibender Schaden:** Ein einziges Schiff geht durch den ganzen Run. Es bleiben Hülle, gefallene Crew, Erfahrung und die eingestellte Energieverteilung. Nach dem Kampf bzw. beim Sprung löscht und repariert die Crew alles andere: Feuer, Lecks und Systemschäden sind weg, Luft voll, Türen und Schleusen zu, Schilde voll, Waffen ungeladen; die Medbay heilt die Crew. Die Hülle reparieren nur Händler, Reparaturstation und Ereignisse.
 - **Gegnerstufen** (`data/enemies.json`): ab Sprung 1 nur der Piratenkutter, ab Sprung 4 zu 35 % der Schwere Kutter, ab Sprung 7 zu 65 % und alle mit +2 Hülle. Boss: das Piraten-Flaggschiff (Schwerer Kutter mit 24 Hülle). Der Gegner pro System steht fest (aus Seed und Knoten).
-- **Ende:** Niederlage beendet den Run, Sieg über den Boss schafft das Universum; danach antippen für einen neuen Run. Wer vor dem Boss flieht, steht weiter vor ihm und greift durch Antippen des eigenen Schiffs auf der Karte erneut an.
-- **Balance** (40 simulierte Runs, Bot ohne Crew-Steuerung): ganz passiv schaffen 1 von 40 den Boss, mit allen Waffen auf den gegnerischen Waffenraum 11 von 40. Aktives Spiel (Pause, Crew, Energie) sollte deutlich besser abschneiden; dafür sind die Reparaturwerte in `data/run.json` die Stellschraube.
+- **Ende:** Niederlage (auch Hülle oder Crew durch ein Ereignis verloren) beendet den Run, Sieg über den Boss schafft das Universum; danach antippen für einen neuen Run. Wer vor dem Boss flieht, steht weiter vor ihm und greift durch Antippen des eigenen Schiffs auf der Karte erneut an.
+- **Balance** (60 simulierte Runs, Bot ohne Crew-Steuerung, wählt in Ereignissen zufällig): 11 von 60 schaffen den Boss, im Schnitt 3–4 Kämpfe pro Run, 9 Notsignale insgesamt. Aktives Spiel (Pause, Crew, Energie, kluge Entscheidungen) sollte deutlich besser abschneiden. Stellschrauben sind die Preise in `data/run.json`, die Beute in `data/enemies.json` und die Anteile `TYPE_WEIGHTS` in `scripts/core/star_map.gd`.
 
 ### Crew
 
@@ -75,9 +79,10 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `data/ships/*.json` | Schiffe: Raster, Räume, Türen als Kachelpaare; Hülle, Reaktor, Systemstufen, Startenergie, Waffen, Grafikpunkte (Waffenmündung, Triebwerke, Schildblase) |
 | `data/weapons.json` | Waffenwerte: Energie, Ladezeit, Schüsse, Schaden |
 | `data/enemies.json` | Gegnerstufen je Sprungnummer (gewichtete Schiffe, Hüllenbonus) und der Boss |
-| `data/run.json` | Run-Regeln: Hüllenreparatur nach Sieg und in leeren Systemen |
-| `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte), `RunState` (Run: Karte, Position, Schiff, Gegnerwahl) |
-| `scripts/view/` | Darstellung und Eingabe: `ShipView` (eigenes und Gegnerschiff), `Effects`, `PowerPanel`, `WeaponPanel`, `StatusBar`, `CrewPanel`, `MapView` (Sternenkarte) |
+| `data/run.json` | Run-Regeln: Startressourcen, Sprungkosten, Preise bei Händler und Reparaturstation, Gildenrabatt |
+| `data/events.json` | Ereignisse mit Optionen, Kosten, Bedingungen und gewichteten Ausgängen (Format im Feld `_doc`) |
+| `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte), `RunState` (Run: Karte, Position, Schiff, Ressourcen, Dialoge, Händler, Gegnerwahl), `EventBook` (Ereignisse laden, ziehen, prüfen) |
+| `scripts/view/` | Darstellung und Eingabe: `ShipView` (eigenes und Gegnerschiff), `Effects`, `PowerPanel`, `WeaponPanel`, `StatusBar`, `CrewPanel`, `MapView` (Sternenkarte), `EventDialog` (Ereignis-, Händler- und Werftdialog) |
 | `scripts/game.gd` | Autoload `Game`: hält den Run über Szenenwechsel, wechselt zwischen Karte und Kampf |
 | `scenes/map.tscn` | Startszene: Sternenkarte (`scripts/map_screen.gd`) |
 | `scenes/battle.tscn` | Kampf (`scripts/battle_screen.gd`) |

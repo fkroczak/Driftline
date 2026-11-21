@@ -1,8 +1,9 @@
 {
+  "_doc": "Gegnerstufen je Sprungnummer: pool = gewichtete Schiffe, hull_bonus, reward = Beute nach dem Sieg [min, max].",
   "stages": [
-    {"from_jump": 1, "pool": [["piraten_kutter", 1.0]]},
-    {"from_jump": 4, "pool": [["piraten_kutter", 0.65], ["piraten_kutter_schwer", 0.35]]},
-    {"from_jump": 7, "pool": [["piraten_kutter", 0.35], ["piraten_kutter_schwer", 0.65]], "hull_bonus": 2}
+    {"from_jump": 1, "pool": [["piraten_kutter", 1.0]], "reward": {"scrap": [8, 12], "fuel": [0, 1]}},
+    {"from_jump": 4, "pool": [["piraten_kutter", 0.65], ["piraten_kutter_schwer", 0.35]], "reward": {"scrap": [10, 15], "fuel": [0, 2]}},
+    {"from_jump": 7, "pool": [["piraten_kutter", 0.35], ["piraten_kutter_schwer", 0.65]], "hull_bonus": 2, "reward": {"scrap": [12, 18], "fuel": [1, 2]}}
   ],
   "boss": {"ship": "piraten_kutter_schwer", "name": "Piraten-Flaggschiff", "hull_bonus": 6}
 }

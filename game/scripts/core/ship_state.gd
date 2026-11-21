@@ -441,6 +441,25 @@ func _update_crew_health(delta: float) -> void:
 			_hurt(member, damage * delta)
 
 
+## Verletzt ein Crewmitglied (z. B. bei einem Außeneinsatz); bei 0 LP stirbt es.
+func hurt(member: CrewMember, amount: float) -> void:
+	_hurt(member, amount)
+
+
+## Neue Crew auf die erste freie Kachel, bevorzugt in Räumen ohne System (Erweiterungen).
+## Falsch, wenn das Schiff voll ist.
+func add_crew_anywhere(p_name: String, species: String) -> CrewMember:
+	var reserved := _reserved_tiles(null)
+	for prefer_empty in [true, false]:
+		for room in layout.rooms.size():
+			if prefer_empty and layout.rooms[room].system != "":
+				continue
+			for t in layout.room_tiles(room):
+				if layout.is_walkable(t) and not reserved.has(t):
+					return add_crew(p_name, species, t)
+	return null
+
+
 func _hurt(member: CrewMember, amount: float) -> void:
 	member.hp -= amount
 	if member.hp <= 0.0 and crew.has(member):

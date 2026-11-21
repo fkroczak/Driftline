@@ -54,11 +54,9 @@ var _auto_paused := false
 func _ready() -> void:
 	var run := Game.ensure_run()
 	if not run.needs_battle():
-		# Szene direkt gestartet (F6): Probekampf gegen den Gegner des ersten Kampfknotens
-		for id: int in run.node().links:
-			if run.map.node(id).type == "kampf":
-				run.jump_to(id)
-				break
+		# Szene direkt gestartet (F6): Probekampf am aktuellen System
+		run.dialog = {}
+		run.pending_battle[run.current] = {}
 	state = run.ship
 	enemy = run.create_enemy()
 	$HUD/Title.text = "Sprung %d/%d" % [run.jumps_done(), StarMap.JUMPS]
@@ -460,8 +458,8 @@ func _show_banner(own_ship: bool, reason: String) -> void:
 		text = ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
 		if run.result == "geschafft":
 			text += "\nUniversum geschafft!"
-		elif run.last_repair > 0:
-			text += "\nBergung aus dem Wrack: Hülle +%d" % run.last_repair
+		elif run.last_reward != "":
+			text += "\nBeute: " + run.last_reward
 	banner.text = text + ("\nTippen für neuen Run" if run.result != "" else "\nTippen: zur Sternenkarte")
 	banner.visible = true
 	banner.modulate = Color(1, 1, 1, 0)

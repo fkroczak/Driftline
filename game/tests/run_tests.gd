@@ -649,17 +649,120 @@ func test_defeat_ends_run_and_boss_victory_wins() -> void:
 	check(run.result == "geschafft", "Sieg über den Boss beendet den Run nicht")
 
 
-func test_hull_repair_after_victory_and_in_empty_systems() -> void:
-	var run := RunState.new(11)
-	run.ship.hull = 10
-	run.current = run.map.columns[3][0]
-	run.map.node(run.current).type = "kampf"
-	run.finish_battle("sieg")
-	check(run.ship.hull == 13 and run.last_repair == 3, "Bergung nach dem Sieg repariert nicht 3 Hülle: %d" % run.ship.hull)
+## Run mit offenem Ereignis (ohne Sprung), für Ereignistests.
+func _event_run(id: String) -> RunState:
+	var run := RunState.new(5)
+	run._open_event(id)
+	return run
+
+
+func test_stations_on_every_map() -> void:
+	for s in range(1, 40):
+		var map := StarMap.generate(s)
+		check(map.count_type("haendler") == 2 and map.count_type("reparatur") == 1, "Seed %d: nicht 2 Händler und 1 Reparaturstation" % s)
+		var run := RunState.new(s)
+		for n in map.nodes:
+			if n.type == "ereignis":
+				check(run.node_events.get(n.id, "") != "", "Seed %d: Ereignisknoten %d ohne Ereignis" % [s, n.id])
+
+
+func test_events_are_valid() -> void:
+	var book := EventBook.load_default()
+	check(book.validate().is_empty(), "Ereignisfehler: %s" % ", ".join(book.validate()))
+	check(book.ids_in_pool("ereignis").size() >= 10, "Zu wenige Ereignisse")
+	check(book.ids_in_pool("notsignal").size() >= 2, "Zu wenige Notsignal-Ereignisse")
+
+
+func test_jump_costs_fuel_and_distress_without_fuel() -> void:
+	var run := RunState.new(21)
 	var next: int = run.node().links[0]
 	run.map.node(next).type = "leer"
-	run.jump_to(next)
-	check(run.ship.hull == 15 and run.last_repair == 2, "Leeres System repariert nicht 2 Hülle: %d" % run.ship.hull)
-	run.ship.hull = run.ship.max_hull
-	run.finish_battle("entkommen")
-	check(run.ship.hull == run.ship.max_hull, "Hülle über dem Maximum")
+	var fuel := run.fuel
+	check(run.jump_to(next) and run.fuel == fuel - 1, "Sprung kostet keinen Treibstoff")
+	run.fuel = 0
+	check(not run.can_jump_to(run.node().links[0]), "Sprung ohne Treibstoff möglich")
+	check(run.can_send_distress() and run.send_distress(), "Kein Notsignal ohne Treibstoff")
+	check(not run.dialog.is_empty(), "Notsignal öffnet keinen Dialog")
+
+
+func test_event_choice_applies_effects() -> void:
+	var run := _event_run("wrack_frachter")
+	check(run.dialog.choices.size() == 3, "Wrack: 3 Optionen erwartet")
+	var fuel := run.fuel
+	check(run.choose(1), "Option nicht wählbar")
+	check(run.fuel == fuel + 2, "Tanks abzapfen bringt keine 2 Treibstoff")
+	check(run.dialog.choices.size() == 1 and "+2 Treibstoff" in run.dialog.text, "Ergebnis zeigt den Effekt nicht")
+	run.choose(0)
+	check(run.dialog.is_empty() and not run.needs_battle(), "Ergebnis schließt nicht")
+
+
+func test_event_costs_and_requirements() -> void:
+	var run := _event_run("kolonie_reaktor")
+	run.scrap = 3
+	run._open_event("kolonie_reaktor")
+	check(not run.dialog.choices[0].enabled and not run.choose(0), "Spende ohne genug Rohstoffe möglich")
+	run.scrap = 12
+	run._open_event("kolonie_reaktor")
+	check(run.choose(0) and run.scrap == 2 and run.flags.has("kolonie_dank"), "Spende kostet nicht 10 oder setzt kein Ansehen")
+	run = _event_run("notsignal_patrouille")
+	check(run.dialog.choices.size() == 1, "Gildenoption sichtbar ohne Gildenbrief")
+	run.flags["gilde_freund"] = true
+	run._open_event("notsignal_patrouille")
+	check(run.dialog.choices.size() == 2 and run.dialog.choices[0].special, "Gildenoption fehlt mit Gildenbrief")
+
+
+func test_event_battle_and_victory_reward() -> void:
+	var run := _event_run("piratenzoll")
+	run.choose(1)  # Kämpfen
+	check(not run.needs_battle(), "Kampf startet vor dem Weiter")
+	run.choose(0)
+	check(run.needs_battle(), "Ereignis löst keinen Kampf aus")
+	var scrap := run.scrap
+	run.finish_battle("sieg")
+	check(not run.needs_battle() and run.scrap >= scrap + 4, "Siegbeute fehlt: %d -> %d" % [scrap, run.scrap])
+	check(run.last_reward != "", "Beute nicht als Text")
+
+
+func test_shop_prices_and_guild_discount() -> void:
+	var run := RunState.new(8)
+	run._open_shop()
+	run.scrap = 20
+	run.fuel = 1
+	run._open_shop()
+	check(not run.dialog.choices[1].enabled, "Hüllenreparatur bei voller Hülle möglich")
+	check(run.choose(0) and run.fuel == 2 and run.scrap == 17, "Treibstoff kostet nicht 3 Rohstoffe")
+	run.flags["gilde_freund"] = true
+	run.ship.hull -= 10
+	run._open_shop()
+	check(run.choose(1) and run.scrap == 11 and run.ship.hull == run.ship.max_hull - 5, "Hülle +5 mit Rabatt kostet nicht 6")
+	check(run.choose(2) and run.fuel == 1 and run.ship.hull == run.ship.max_hull - 2, "Hülle gegen Treibstoff klappt nicht")
+	check(run.choose(run.dialog.choices.size() - 1) and run.dialog.is_empty(), "Ablegen schließt den Händler nicht")
+
+
+func test_repair_station_goodwill() -> void:
+	var run := RunState.new(8)
+	run.ship.hull = 10
+	run.scrap = 0
+	run.flags["kolonie_dank"] = true
+	run._open_repair()
+	check(run.dialog.choices[0].special and run.dialog.choices[0].enabled, "Gratisreparatur der Kolonie fehlt")
+	check(run.choose(0) and run.ship.hull == run.ship.max_hull, "Gratisreparatur repariert nicht komplett")
+	check(not run.flags.has("kolonie_dank"), "Gratisreparatur lässt sich mehrfach nutzen")
+	run.ship.hull = 20
+	run.scrap = 15
+	run._open_repair()
+	check(run.choose(0) and run.scrap == 5 and run.ship.hull == run.ship.max_hull, "Komplettreparatur kostet nicht 1 je Punkt")
+
+
+func test_crew_join_and_loss_from_events() -> void:
+	var run := RunState.new(8)
+	run._apply({"crew_add": 1})
+	check(run.ship.crew.size() == 4, "Neue Crew kommt nicht an Bord")
+	var tiles := {}
+	for m in run.ship.crew:
+		tiles[m.tile] = true
+	check(tiles.size() == 4, "Neue Crew steht auf einer besetzten Kachel")
+	run._apply({"crew_lose": 1})
+	check(run.ship.crew.size() == 3 and run.result == "", "Crew-Verlust klappt nicht")
+	run._apply({"crew_lose": 3})
+	check(run.result == "verloren", "Ohne Crew ist der Run nicht verloren")

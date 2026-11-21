@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/map_screen.gd" id="1_map"]
 [ext_resource type="Script" path="res://scripts/view/starfield.gd" id="2_stars"]
 [ext_resource type="Script" path="res://scripts/view/map_view.gd" id="3_view"]
+[ext_resource type="Script" path="res://scripts/view/event_dialog.gd" id="4_dialog"]
 
 [node name="Map" type="Node2D"]
 script = ExtResource("1_map")
@@ -16,3 +17,11 @@ anchors_preset = 0
 offset_right = 384.0
 offset_bottom = 216.0
 script = ExtResource("3_view")
+
+[node name="EventDialog" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_right = 384.0
+offset_bottom = 216.0
+script = ExtResource("4_dialog")
