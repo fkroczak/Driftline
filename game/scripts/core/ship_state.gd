@@ -497,6 +497,41 @@ func _update_combat(delta: float) -> void:
 		weapon.update(delta, speed)
 
 
+## Nach einem Kampf bzw. beim Sprung: Die Crew löscht Brände, flickt Lecks und repariert alle
+## Systeme, die Lebenserhaltung füllt die Luft auf, Türen und Schleusen gehen zu, Schilde sind
+## voll, Waffen ungeladen und ohne Ziel, der Sprungantrieb leer. Hat das Schiff eine Medbay,
+## heilt sie die Crew vollständig.
+## Bleibt: Hülle, gefallene Crew, Erfahrung und die eingestellte Energieverteilung.
+func after_jump() -> void:
+	fires.clear()
+	breaches.clear()
+	_fire_damage.clear()
+	for sys: ShipSystem in systems.values():
+		sys.damage = 0
+		sys.repair_progress = 0.0
+	for r in oxygen.size():
+		oxygen[r] = 1.0
+	for i in airlock_open.size():
+		airlock_open[i] = false
+	door_open.clear()
+	jump_charge = 0.0
+	for weapon in weapons:
+		weapon.charge = 0.0
+		weapon.target = -1
+	for member in crew:
+		if member.is_moving():
+			member.tile = member.destination()
+			member.path.clear()
+		member.step_progress = 0.0
+		member.activity = ""
+		if systems.has("medbay"):
+			member.hp = CrewMember.MAX_HP
+	events.clear()
+	_rebalance()
+	shield_layers = max_shield_layers()
+	shield_progress = 0.0
+
+
 func add_crew(p_name: String, species: String, tile: Vector2i, experience := {}) -> CrewMember:
 	assert(layout.is_walkable(tile), "Crew-Startkachel %s liegt in keinem Raum" % tile)
 	var member := CrewMember.new(p_name, species, tile)

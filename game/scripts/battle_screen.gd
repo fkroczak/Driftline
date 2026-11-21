@@ -1,15 +1,10 @@
 extends Node2D
-## Prototyp Phase 1: eigenes Schiff gegen einen Piratenkutter.
+## Kampfszene: eigenes Schiff gegen den Gegner am aktuellen Knoten der Sternenkarte.
 ## Crew bewegen, Energie verteilen, je Waffe ein Ziel wählen, Türen und Schleusen schalten.
 ## Waffen feuern selbst; Feuer, Hüllenbrüche und Sauerstoff laufen in ShipState.
+## Schiff und Gegner kommen aus dem laufenden Run (Autoload Game); nach dem Kampf geht es
+## zurück zur Karte, nach einer Niederlage oder dem Sieg über den Boss in einen neuen Run.
 
-const LAYOUT_PATH := "res://data/ships/mensch_frachter.json"
-## Mögliche Gegner mit Gewicht. Jeder muss mit gutem Spiel schlagbar sein (kein No-win-Szenario);
-## der Sprung ist der Notausgang, nicht die einzige Lösung.
-const ENEMIES := [
-	["res://data/ships/piraten_kutter.json", 0.65],
-	["res://data/ships/piraten_kutter_schwer.json", 0.35],
-]
 const MARGIN := 6.0
 const TOP := 30.0
 const BOTTOM_PANEL_Y := 184.0
@@ -57,22 +52,18 @@ var _auto_paused := false
 
 
 func _ready() -> void:
-	var layout := ShipLayout.load_json(LAYOUT_PATH)
-	for error in layout.validate():
-		push_error("%s: %s" % [LAYOUT_PATH, error])
-	state = ShipState.new(layout)
-	state.add_crew("Mara Voss", "mensch", Vector2i(9, 3), {"cockpit": 3.0, "waffen": 1.0})
-	state.add_crew("Jonas Reil", "mensch", Vector2i(6, 6), {"waffen": 3.0, "schilde": 1.0})
-	state.add_crew("Ilka Brandt", "mensch", Vector2i(6, 0), {"schilde": 2.0, "antrieb": 2.0})
-
-	var enemy_path := _pick_enemy()
-	var enemy_layout := ShipLayout.load_json(enemy_path)
-	for error in enemy_layout.validate():
-		push_error("%s: %s" % [enemy_path, error])
-	enemy = ShipState.new(enemy_layout)
-	for spec in [["Kapitänin", "cockpit"], ["Schütze", "waffen"], ["Mechaniker", "schilde"]]:
-		var console: Vector2i = enemy_layout.console_of(enemy_layout.room_index_by_id(spec[1]))
-		enemy.add_crew(spec[0], "mensch", console, {spec[1]: 1.0})
+	var run := Game.ensure_run()
+	if not run.needs_battle():
+		# Szene direkt gestartet (F6): Probekampf gegen den Gegner des ersten Kampfknotens
+		for id: int in run.node().links:
+			if run.map.node(id).type == "kampf":
+				run.jump_to(id)
+				break
+	state = run.ship
+	enemy = run.create_enemy()
+	$HUD/Title.text = "Sprung %d/%d" % [run.jumps_done(), StarMap.JUMPS]
+	if run.node().type == "boss":
+		$HUD/Title.text += " · Boss"
 
 	battle = Battle.new(state, enemy)
 	ship_view.setup(state)
@@ -150,15 +141,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
 		_toggle_pause()
 		get_viewport().set_input_as_handled()
-
-
-func _pick_enemy() -> String:
-	var roll := randf()
-	for e: Array in ENEMIES:
-		roll -= e[1]
-		if roll <= 0.0:
-			return e[0]
-	return ENEMIES[0][0]
 
 
 func _on_jump_requested() -> void:
@@ -463,15 +445,24 @@ func _update_explosions(delta: float) -> void:
 
 
 func _show_banner(own_ship: bool, reason: String) -> void:
+	var run := Game.run
+	run.finish_battle(battle.outcome)
 	var text := ""
 	if reason == "jump":
 		text = "Entkommen – Sprung geglückt"
+		if run.node().type == "boss":
+			text += "\nDas Flaggschiff wartet weiter"
 	elif own_ship:
 		text = "Schiff verloren" if reason == "hull" else "Die ganze Crew ist tot"
+		text += "\nRun vorbei nach %d von %d Sprüngen" % [run.jumps_done(), StarMap.JUMPS]
 	else:
 		var name := enemy.layout.display_name
 		text = ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
-	banner.text = text + "\nTippen für neuen Kampf"
+		if run.result == "geschafft":
+			text += "\nUniversum geschafft!"
+		elif run.last_repair > 0:
+			text += "\nBergung aus dem Wrack: Hülle +%d" % run.last_repair
+	banner.text = text + ("\nTippen für neuen Run" if run.result != "" else "\nTippen: zur Sternenkarte")
 	banner.visible = true
 	banner.modulate = Color(1, 1, 1, 0)
 	create_tween().tween_property(banner, "modulate", Color.WHITE, 0.4)
@@ -480,7 +471,10 @@ func _show_banner(own_ship: bool, reason: String) -> void:
 
 func _on_banner_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and _can_restart_at >= 0.0 and _time >= _can_restart_at:
-		get_tree().reload_current_scene()
+		_can_restart_at = -1.0
+		if Game.run.result != "":
+			Game.new_run()
+		Game.to_map()
 
 
 func _on_crew_selected(member: CrewMember) -> void:

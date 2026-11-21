@@ -1,8 +1,19 @@
 # Hullbound – Godot-Projekt
 
-Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage ist, ob der Kampf per Touch Spaß macht.
+Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ein ganzer Run durch ein Universum. Phase 1 (macht der Kampf per Touch Spaß?) ist abgeschlossen.
 
-**Stand:** Der Mensch-Frachter mit drei Crewmitgliedern kämpft gegen einen Piratenkutter. Links die Crew-Leiste, unten Energie und Waffen, oben rechts Hülle, Schild und Ausweichchance.
+**Stand:** Das Spiel startet auf der Sternenkarte. Der Mensch-Frachter mit drei Crewmitgliedern springt in 10 Sprüngen vom Start zum Boss; unterwegs warten Piratenkutter oder leere Systeme. Im Kampf links die Crew-Leiste, unten Energie und Waffen, oben rechts Hülle, Schild und Ausweichchance.
+
+### Sternenkarte und Run
+
+- **Karte** (`StarMap`, je Run ein Seed): 11 Spalten von links (Start) nach rechts (Boss = Ausgang), dazwischen je 2–3 Systeme. Ein Sprung führt immer in die nächste Spalte, also braucht jeder Weg genau 10 Sprünge. Verbindungen kreuzen sich nicht, und von jedem System aus ist der Boss erreichbar.
+- **Bedienung:** Ein gelbes (erreichbares) Ziel antippen zeigt das Infofeld, nochmal antippen springt. Grün = besucht, weiß = unerforscht, roter Rhombus = Boss. Oben Sprünge, Hülle und Crew.
+- **Systeme:** etwa 65 % Kampf, 35 % leer. Was dort wartet, zeigt die Karte noch nicht (später über Sensoren). Leere Systeme sind sicher.
+- **Bleibender Schaden:** Ein einziges Schiff geht durch den ganzen Run. Es bleiben Hülle, gefallene Crew, Erfahrung und die eingestellte Energieverteilung. Nach dem Kampf bzw. beim Sprung löscht und repariert die Crew alles andere: Feuer, Lecks und Systemschäden sind weg, Luft voll, Türen und Schleusen zu, Schilde voll, Waffen ungeladen; die Medbay heilt die Crew.
+- **Hülle flicken** (Zwischenlösung bis zu Händler und Belohnungen, Werte in `data/run.json`): nach einem Sieg Bergung aus dem Wrack +3, in einem leeren System +2. Fliehen bringt nichts.
+- **Gegnerstufen** (`data/enemies.json`): ab Sprung 1 nur der Piratenkutter, ab Sprung 4 zu 35 % der Schwere Kutter, ab Sprung 7 zu 65 % und alle mit +2 Hülle. Boss: das Piraten-Flaggschiff (Schwerer Kutter mit 24 Hülle). Der Gegner pro System steht fest (aus Seed und Knoten).
+- **Ende:** Niederlage beendet den Run, Sieg über den Boss schafft das Universum; danach antippen für einen neuen Run. Wer vor dem Boss flieht, steht weiter vor ihm und greift durch Antippen des eigenen Schiffs auf der Karte erneut an.
+- **Balance** (40 simulierte Runs, Bot ohne Crew-Steuerung): ganz passiv schaffen 1 von 40 den Boss, mit allen Waffen auf den gegnerischen Waffenraum 11 von 40. Aktives Spiel (Pause, Crew, Energie) sollte deutlich besser abschneiden; dafür sind die Reparaturwerte in `data/run.json` die Stellschraube.
 
 ### Crew
 
@@ -34,8 +45,8 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 - **Zielen, einzeln:** Waffenkarte antippen (rot umrandet), dann einen Gegnerraum. Den aktuellen Zielraum der Waffe erneut antippen hebt das Ziel auf. Fadenkreuze im Gegnerschiff tragen die Waffennummer.
 - **Einschlag:** Ausweichen (Antrieb + besetztes Cockpit), sonst fängt der Schild ab (2 Balken = 1 Schicht: Backbord und Steuerbord, in der Energieleiste nebeneinander; ist einer beschädigt oder ohne Energie, fällt die Schicht weg und der übrige Balken leuchtet gelb; eine Schicht lädt in 3 s nach, mit besetzter Konsole schneller), sonst Treffer: Hülle und System im Raum verlieren Balken
 - **Reaktortreffer** senken die verfügbare Energie; dann werden Systeme in der Reihenfolge Lebenserhaltung, Schilde, Waffen, Antrieb, Sensoren, Medbay versorgt. Nach der Reparatur kommt die gewünschte Energie von selbst zurück.
-- **Gegner** (vor jedem Kampf ausgewürfelt): zu 65 % der **Piratenkutter** (Hülle 18, Reaktor 6, eine Schildschicht, Pulslaser und Bordkanone), zu 35 % der rötliche **Schwere Kutter** (Hülle 18, Reaktor 8, eine Schildschicht, Pulslaser und zwei Bordkanonen). Name steht über dem Hüllenbalken. Jede Waffe zielt alle paar Sekunden auf einen anderen Raum. Die Mechanikerin oder der Mechaniker löscht Feuer, flickt Lecks, repariert Systeme und kehrt danach zur Konsole zurück. Der Kutter hat keine Lebenserhaltung, aber eine eingebaute Luftaufbereitung (`oxygen_regen`).
-- **Balance:** In 20 simulierten Kämpfen ohne Eingreifen (Antrieb aus) gewinnt der Frachter gegen den Piratenkutter 17, im Schnitt nach rund 60 s. Gegen den Schweren Kutter gewinnt er passiv 14 von 30, schon mit einer einfachen Taktik (Lebenserhaltung aus, Antrieb an) 17 von 30.
+- **Gegner** (je nach Sprungnummer, siehe oben): der **Piratenkutter** (Hülle 18, Reaktor 6, eine Schildschicht, Pulslaser und Bordkanone) oder der rötliche **Schwere Kutter** (Hülle 18, Reaktor 8, eine Schildschicht, Pulslaser und zwei Bordkanonen). Name steht über dem Hüllenbalken. Jede Waffe zielt alle paar Sekunden auf einen anderen Raum. Die Mechanikerin oder der Mechaniker löscht Feuer, flickt Lecks, repariert Systeme und kehrt danach zur Konsole zurück. Der Kutter hat keine Lebenserhaltung, aber eine eingebaute Luftaufbereitung (`oxygen_regen`).
+- **Balance (Einzelkampf):** In 20 simulierten Kämpfen ohne Eingreifen (Antrieb aus) gewinnt der Frachter gegen den Piratenkutter 17, im Schnitt nach rund 60 s. Gegen den Schweren Kutter gewinnt er passiv 14 von 30, schon mit einer einfachen Taktik (Lebenserhaltung aus, Antrieb an) 17 von 30.
 - **Regel: kein No-win-Szenario.** Jeder Gegner muss mit gutem Spiel schlagbar sein; der Sprung ist der Notausgang. Zwei Schildschichten beim Gegner sind mit 6 Reaktorbalken kaum zu knacken (auch Salven helfen nicht: 4 von 30) und bleiben späteren Gegnern vorbehalten, wenn das eigene Schiff ausgebaut werden kann. Zwei Schildschichten beim Gegner waren zu viel (nur 9–12 von 20, Test am Handy: mehrfach verloren).
 - **Treffer** können Feuer (30 %) und Hüllenbrüche (10 %) im Raum auslösen.
 - **Sauerstoff** je Raum: Die Lebenserhaltung füllt nach (4 %/s je Balken). Feuer verbraucht Luft, Hüllenbrüche und offene Schleusen lassen sie entweichen. Räume mit wenig Luft färben sich rosa; „Luft“ oben rechts ist der Schnitt über alle Räume.
@@ -43,7 +54,7 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 - **Türen** antippen: auf oder zu (am Start alle zu). Offene Türen gleichen die Luft zwischen Räumen aus und lassen Feuer durch. Die eigene Crew läuft auch durch geschlossene Türen.
 - **Luftschleusen** antippen (gelbe Luken auf der Außenwand, Frachter 2, Kutter 1): offen saugen sie den Raum in 2 s leer, über offene Türen auch die Nachbarräume. So erstickt man Feuer; eigene Crew sollte den Raum vorher verlassen.
 - **Fluchtsprung** (Knopf „SPRUNG“ unten rechts): Der Antrieb lädt den Sprung, solange er Energie hat und jemand im Cockpit sitzt. Ein Balken braucht 40 s, zwei Balken 20 s, ein besetzter Antrieb geht schneller. Lange Triebwerksflammen zeigen den Ladestand. Voll geladen antippen: Das Schiff springt weg, der Kampf endet mit „Entkommen“. Lädt er nicht, steht der Grund auf dem Knopf (Antrieb aus, kein Pilot).
-- **Ende:** Hülle auf 0, ganze Crew tot oder Fluchtsprung. Danach antippen für einen neuen Kampf.
+- **Ende:** Hülle auf 0, ganze Crew tot oder Fluchtsprung. Danach antippen: zurück zur Sternenkarte (oder neuer Run nach Niederlage bzw. Boss-Sieg). Läuft die Kampfszene direkt aus dem Editor (F6), gibt es einen Probekampf am ersten System.
 
 ### Effekte
 
@@ -63,9 +74,13 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | --- | --- |
 | `data/ships/*.json` | Schiffe: Raster, Räume, Türen als Kachelpaare; Hülle, Reaktor, Systemstufen, Startenergie, Waffen, Grafikpunkte (Waffenmündung, Triebwerke, Schildblase) |
 | `data/weapons.json` | Waffenwerte: Energie, Ladezeit, Schüsse, Schaden |
-| `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse) |
-| `scripts/view/` | Darstellung und Eingabe: `ShipView` (eigenes und Gegnerschiff), `Effects`, `PowerPanel`, `WeaponPanel`, `StatusBar`, `CrewPanel` |
-| `scenes/main.tscn` | Startszene |
+| `data/enemies.json` | Gegnerstufen je Sprungnummer (gewichtete Schiffe, Hüllenbonus) und der Boss |
+| `data/run.json` | Run-Regeln: Hüllenreparatur nach Sieg und in leeren Systemen |
+| `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte), `RunState` (Run: Karte, Position, Schiff, Gegnerwahl) |
+| `scripts/view/` | Darstellung und Eingabe: `ShipView` (eigenes und Gegnerschiff), `Effects`, `PowerPanel`, `WeaponPanel`, `StatusBar`, `CrewPanel`, `MapView` (Sternenkarte) |
+| `scripts/game.gd` | Autoload `Game`: hält den Run über Szenenwechsel, wechselt zwischen Karte und Kampf |
+| `scenes/map.tscn` | Startszene: Sternenkarte (`scripts/map_screen.gd`) |
+| `scenes/battle.tscn` | Kampf (`scripts/battle_screen.gd`) |
 | `assets/` | Kopien aus `art/export/1x` |
 | `tests/run_tests.gd` | Logiktests |
 

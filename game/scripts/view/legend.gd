@@ -1,7 +1,7 @@
 class_name Legend
 extends Control
 ## Symbol-Legende über dem ganzen Bildschirm: Raumsymbol, Name, Wirkung, dazu die Bedienung.
-## Antippen schließt sie. Solange sie offen ist, pausiert main.gd den Kampf.
+## Antippen schließt sie. Solange sie offen ist, pausiert battle_screen.gd den Kampf.
 
 signal closed
 

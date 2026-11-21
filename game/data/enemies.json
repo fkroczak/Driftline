@@ -1,0 +1,8 @@
+{
+  "stages": [
+    {"from_jump": 1, "pool": [["piraten_kutter", 1.0]]},
+    {"from_jump": 4, "pool": [["piraten_kutter", 0.65], ["piraten_kutter_schwer", 0.35]]},
+    {"from_jump": 7, "pool": [["piraten_kutter", 0.35], ["piraten_kutter_schwer", 0.65]], "hull_bonus": 2}
+  ],
+  "boss": {"ship": "piraten_kutter_schwer", "name": "Piraten-Flaggschiff", "hull_bonus": 6}
+}

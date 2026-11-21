@@ -535,3 +535,131 @@ func test_heavy_enemy_layout_is_valid() -> void:
 	var ship := ShipState.new(layout)
 	check(ship.max_shield_layers() == 1, "Schwerer Kutter: eine Schildschicht (zwei sind mit 6 Reaktorbalken kaum zu knacken)")
 	check(ship.weapons.size() == 3 and ship.weapons.all(func(w: Weapon) -> bool: return w.powered), "Schwerer Kutter: drei Waffen mit Energie")
+
+
+# --- Sternenkarte und Run ---
+
+
+func test_star_map_always_leads_to_boss() -> void:
+	for s in range(1, 60):
+		var map := StarMap.generate(s)
+		check(map.columns.size() == StarMap.JUMPS + 1, "Seed %d: falsche Spaltenzahl" % s)
+		check(map.node(map.boss_id()).type == "boss" and map.node(map.start_id()).type == "start", "Seed %d: Start oder Boss fehlt" % s)
+		for n in map.nodes:
+			if n.type != "boss":
+				check(not n.links.is_empty(), "Seed %d: Knoten %d ist eine Sackgasse" % [s, n.id])
+			if n.type != "start":
+				check(not map.incoming(n.id).is_empty(), "Seed %d: Knoten %d ist unerreichbar" % [s, n.id])
+			for to: int in n.links:
+				check(map.node(to).column == n.column + 1, "Seed %d: Verbindung überspringt eine Spalte" % s)
+		# Verbindungen zwischen zwei Spalten kreuzen sich nicht
+		for c in StarMap.JUMPS:
+			var pairs := []
+			for i in map.columns[c].size():
+				for to: int in map.node(map.columns[c][i]).links:
+					pairs.append([i, map.columns[c + 1].find(to)])
+			for p: Array in pairs:
+				for q: Array in pairs:
+					check(not (p[0] < q[0] and p[1] > q[1]), "Seed %d: Verbindungen kreuzen sich in Spalte %d" % [s, c])
+
+
+func test_star_map_is_deterministic() -> void:
+	var a := StarMap.generate(1234)
+	var b := StarMap.generate(1234)
+	check(a.nodes.size() == b.nodes.size(), "Gleicher Seed, andere Knotenzahl")
+	for i in a.nodes.size():
+		check(a.nodes[i].pos == b.nodes[i].pos and a.nodes[i].type == b.nodes[i].type and a.nodes[i].links == b.nodes[i].links,
+			"Gleicher Seed, anderer Knoten %d" % i)
+
+
+func test_run_jumps_only_along_links() -> void:
+	var run := RunState.new(77)
+	var linked: int = run.node().links[0]
+	var far: int = run.map.columns[2][0]
+	check(not run.jump_to(far), "Sprung über zwei Spalten möglich")
+	check(run.jump_to(linked) and run.current == linked and run.jumps_done() == 1, "Sprung zum verbundenen Knoten klappt nicht")
+	if run.needs_battle():
+		var next: int = run.node().links[0]
+		check(not run.jump_to(next), "Weiterspringen trotz wartendem Gegner")
+		run.finish_battle("sieg")
+		check(run.jump_to(next), "Nach dem Sieg geht es nicht weiter")
+
+
+func test_hull_and_dead_crew_persist_across_jumps() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	var shields := ship.layout.room_index_by_id("schilde")
+	ship.take_hit(shields, 2)
+	ship.start_fire(Vector2i(6, 0))
+	ship.start_breach(Vector2i(7, 1))
+	ship.toggle_airlock(0)
+	ship.crew[0].hp = 30.0
+	var victim := ship.crew[2]
+	ship._hurt(victim, 200.0)
+	ship.jump_charge = 0.7
+	var hull := ship.hull
+	check(hull == ship.max_hull - 2, "Treffer hat die Hülle nicht beschädigt")
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "kampf"  # leere Systeme flicken die Hülle
+	run.jump_to(next)
+	check(run.ship == ship, "Run hat ein neues Schiff gebaut")
+	check(ship.hull == hull, "Hüllenschaden ist nach dem Sprung weg")
+	check(ship.crew.size() == 2 and not ship.crew.has(victim), "Gefallene Crew ist wieder da")
+	check(ship.get_system("schilde").damage == 0 and ship.shield_layers == 1, "Schilde nach dem Sprung nicht repariert")
+	check(ship.fires.is_empty() and ship.breaches.is_empty(), "Feuer oder Leck nach dem Sprung")
+	check(not ship.airlock_open[0] and ship.average_oxygen() == 1.0, "Schleuse offen oder Luft fehlt nach dem Sprung")
+	check(ship.crew[0].hp == CrewMember.MAX_HP, "Medbay heilt die Crew beim Sprung nicht")
+	check(ship.jump_charge == 0.0, "Sprungantrieb bleibt geladen")
+
+
+func test_energy_setting_survives_jump() -> void:
+	var run := RunState.new(5)
+	var ship := run.ship
+	ship.remove_power("waffen")
+	ship.add_power("antrieb")
+	var engine := ship.get_system("antrieb").power
+	ship.after_jump()
+	check(ship.get_system("antrieb").power == engine and engine > 0, "Energieverteilung geht beim Sprung verloren")
+
+
+func test_enemy_stages_follow_jump_number() -> void:
+	var run := RunState.new(9)
+	for id: int in run.map.columns[1]:
+		var spec := run.enemy_spec(id)
+		check(spec.ship.ends_with("piraten_kutter.json") and spec.hull_bonus == 0, "Sprung 1: nur der einfache Kutter")
+	var boss := run.create_enemy(run.map.boss_id())
+	check(boss.layout.display_name == "Piraten-Flaggschiff", "Boss heißt nicht Piraten-Flaggschiff")
+	check(boss.max_hull == 24 and boss.hull == 24, "Boss hat nicht 18 + 6 Hülle: %d" % boss.max_hull)
+	check(boss.crew.size() == 3, "Boss ohne Besatzung")
+	check(run.enemy_spec(run.map.columns[5][0]) == run.enemy_spec(run.map.columns[5][0]), "Gegner am Knoten ist nicht fest")
+
+
+func test_defeat_ends_run_and_boss_victory_wins() -> void:
+	var run := RunState.new(3)
+	run.jump_to(run.node().links[0])
+	run.finish_battle("niederlage")
+	check(run.result == "verloren", "Niederlage beendet den Run nicht")
+	check(not run.can_jump_to(run.node().links[0]), "Nach der Niederlage geht es weiter")
+	run = RunState.new(3)
+	run.current = run.map.boss_id()
+	check(run.needs_battle(), "Boss wartet nicht")
+	run.finish_battle("entkommen")
+	check(run.needs_battle() and run.result == "", "Nach der Flucht vor dem Boss ist der Boss weg")
+	run.finish_battle("sieg")
+	check(run.result == "geschafft", "Sieg über den Boss beendet den Run nicht")
+
+
+func test_hull_repair_after_victory_and_in_empty_systems() -> void:
+	var run := RunState.new(11)
+	run.ship.hull = 10
+	run.current = run.map.columns[3][0]
+	run.map.node(run.current).type = "kampf"
+	run.finish_battle("sieg")
+	check(run.ship.hull == 13 and run.last_repair == 3, "Bergung nach dem Sieg repariert nicht 3 Hülle: %d" % run.ship.hull)
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "leer"
+	run.jump_to(next)
+	check(run.ship.hull == 15 and run.last_repair == 2, "Leeres System repariert nicht 2 Hülle: %d" % run.ship.hull)
+	run.ship.hull = run.ship.max_hull
+	run.finish_battle("entkommen")
+	check(run.ship.hull == run.ship.max_hull, "Hülle über dem Maximum")
