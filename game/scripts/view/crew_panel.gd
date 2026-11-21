@@ -41,6 +41,12 @@ func _draw() -> void:
 		draw_rect(rect.grow(-0.5), COLOR_SELECTED if member == selected else COLOR_EDGE, false, 1.0)
 		var portrait: Texture2D = PORTRAITS.get(member.species, PORTRAITS["mensch"])
 		draw_texture(portrait, rect.position + Vector2(2, 1))
+		# Lebenspunkte
+		var ratio := member.hp / CrewMember.MAX_HP
+		var hp_color := Color("#5DCAA5") if ratio > 0.6 else (Color("#FAC775") if ratio > 0.3 else Color("#E24B4A"))
+		var hp_bar := Rect2(rect.position + Vector2(4, SLOT.y - 9), Vector2(SLOT.x - 8, 2))
+		draw_rect(hp_bar, COLOR_XP_EMPTY)
+		draw_rect(Rect2(hp_bar.position, Vector2(roundf(hp_bar.size.x * ratio), 2)), hp_color)
 		# Erfahrung im aktuellen Raum: bis zu 5 Punkte
 		var room := state.layout.room_index_at(member.tile)
 		var system: String = state.layout.rooms[room].system if room >= 0 else ""

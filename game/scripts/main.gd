@@ -1,6 +1,7 @@
 extends Node2D
 ## Prototyp Phase 1: eigenes Schiff gegen einen Piratenkutter.
-## Crew bewegen, Energie verteilen, Gegnerraum antippen zum Zielen, Waffen feuern selbst.
+## Crew bewegen, Energie verteilen, je Waffe ein Ziel wählen, Türen und Schleusen schalten.
+## Waffen feuern selbst; Feuer, Hüllenbrüche und Sauerstoff laufen in ShipState.
 
 const LAYOUT_PATH := "res://data/ships/mensch_frachter.json"
 const ENEMY_PATH := "res://data/ships/piraten_kutter.json"
@@ -24,6 +25,8 @@ var _enemy_base := Vector2.ZERO
 var _time := 0.0
 var _explosion_queue: Array[Dictionary] = []  # {delay, pos, strength}
 var _can_restart_at := -1.0
+var _hint := ""
+var _hint_until := 0.0
 
 @onready var world: Node2D = $World
 @onready var ship_view: ShipView = $World/ShipView
@@ -61,10 +64,13 @@ func _ready() -> void:
 	effects.battle = battle
 	crew_panel.setup(state)
 	power_panel.setup(state, load(state.layout.sprite_path))
-	weapon_panel.setup(state, battle)
+	weapon_panel.setup(state, enemy)
+	enemy_view.aim_weapons = state.weapons
 	status_bar.setup(state)
 	ship_view.selection_changed.connect(_on_selection_changed)
-	enemy_view.room_tapped.connect(battle.set_player_target)
+	enemy_view.room_tapped.connect(_on_enemy_room)
+	weapon_panel.selection_changed.connect(func(idx: int) -> void: enemy_view.aim_selected = idx)
+	ship_view.hatch_toggled.connect(_on_hatch_toggled)
 	crew_panel.crew_selected.connect(_on_crew_selected)
 	banner.gui_input.connect(_on_banner_input)
 	get_viewport().size_changed.connect(_layout)
@@ -101,6 +107,8 @@ func _process(delta: float) -> void:
 	for e in battle.take_events():
 		_on_battle_event(e)
 	_update_explosions(delta)
+	_ambient_effects(ship_view, delta)
+	_ambient_effects(enemy_view, delta)
 	# Gegner schwebt leicht, solange er intakt ist
 	if not enemy.is_destroyed():
 		enemy_view.position = _enemy_base + Vector2(0, roundf(sin(_time * 1.3)))
@@ -114,7 +122,28 @@ func _process(delta: float) -> void:
 func _on_battle_event(e: Dictionary) -> void:
 	match e.type:
 		"target":
-			enemy_view.set_target(e.room)
+			enemy_view.on_target_changed(e.weapon)
+		"fire_started":
+			var pos := _tile_pos(e)
+			effects.explosion(pos, 0.3)
+			if e.own_ship:
+				effects.float_text(pos + Vector2(0, -6), "FEUER", Color("#EF9F27"))
+		"breach":
+			var pos := _tile_pos(e)
+			if e.own_ship:
+				effects.float_text(pos + Vector2(0, -10), "HÜLLENBRUCH", Color("#85B7EB"))
+		"extinguished":
+			var pos := _tile_pos(e)
+			for i in 5:
+				effects.puff(pos + Vector2(randf_range(-4, 4), randf_range(-3, 3)), Vector2(randf_range(-4, 4), randf_range(-14, -6)), Color("#A9B0BB"), 0.8, 3.0)
+		"breach_fixed":
+			effects.sparkle(_tile_pos(e), Color("#85B7EB"))
+		"crew_died":
+			var pos := _tile_pos(e)
+			effects.sparkle(pos, Color("#E24B4A"))
+			effects.float_text(pos + Vector2(0, -8), "%s gefallen" % e.name, Color("#F7C1C1"))
+			if e.own_ship:
+				_red_flash = 0.15
 		"fire":
 			_on_fire(e)
 		"shield":
@@ -150,7 +179,59 @@ func _on_battle_event(e: Dictionary) -> void:
 				if e.own_ship:
 					effects.float_text(pos, "REPARIERT", Color("#5DCAA5"))
 		"destroyed":
-			_on_destroyed(e.own_ship)
+			_on_destroyed(e.own_ship, e.reason)
+
+
+## Weltposition einer Kachel aus einem Schiffs-Ereignis (tile, own_ship).
+func _tile_pos(e: Dictionary) -> Vector2:
+	var view := ship_view if e.own_ship else enemy_view
+	return view.position + view.state.layout.tile_center(Vector2(e.tile))
+
+
+## Laufende Kleinsteffekte: Rauch über Feuer, Luft aus Lecks und offenen Schleusen.
+func _ambient_effects(view: ShipView, delta: float) -> void:
+	var ship := view.state
+	if ship.is_destroyed():
+		return
+	for t: Vector2i in ship.fires:
+		if randf() < delta * 4.0:
+			var p := view.position + ship.layout.tile_center(Vector2(t)) + Vector2(randf_range(-4, 4), -4)
+			effects.puff(p, Vector2(randf_range(-3, 3), randf_range(-12, -6)), Color("#424A56"), 1.0, 3.0)
+	for t: Vector2i in ship.breaches:
+		var o: float = ship.oxygen[ship.layout.room_index_at(t)]
+		if randf() < delta * 10.0 * o:
+			var p := view.position + ship.layout.tile_center(Vector2(t))
+			effects.puff(p, Vector2.from_angle(randf() * TAU) * randf_range(8, 20), Color("#D3E6F8", 0.8), 0.5)
+	for i in ship.airlock_open.size():
+		if not ship.airlock_open[i]:
+			continue
+		var o: float = ship.oxygen[ship.layout.room_index_at(ship.layout.airlocks[i].tile)]
+		if randf() < delta * 40.0 * maxf(o, 0.05):
+			var dir := Vector2(ship.layout.airlocks[i].dir)
+			var p := view.position + view.airlock_point(i)
+			var v := (dir.rotated(randf_range(-0.5, 0.5))) * randf_range(20, 45) * (0.4 + o)
+			effects.puff(p, v, Color("#D3E6F8", 0.9), 0.7)
+
+
+func _on_enemy_room(room: int) -> void:
+	var idx := weapon_panel.selected
+	if idx >= 0:
+		battle.set_weapon_target(idx, -1 if state.weapons[idx].target == room else room)
+		weapon_panel.select(-1)
+	else:
+		battle.set_all_targets(room)
+
+
+func _on_hatch_toggled(kind: String, open: bool) -> void:
+	if kind == "airlock":
+		_show_hint("Luftschleuse " + ("offen – Raum verliert Luft" if open else "geschlossen"))
+	else:
+		_show_hint("Tür " + ("offen" if open else "geschlossen"))
+
+
+func _show_hint(text: String) -> void:
+	_hint = text
+	_hint_until = _time + 2.0
 
 
 func _defender(e: Dictionary) -> ShipView:
@@ -190,7 +271,14 @@ func _ellipse_entry(from: Vector2, to: Vector2, center: Vector2, radius: Vector2
 
 
 ## Schiff zerstört: Explosionskette über alle Räume, danach ausblenden und Ergebnis zeigen.
-func _on_destroyed(own_ship: bool) -> void:
+func _on_destroyed(own_ship: bool, reason: String) -> void:
+	ship_view.selected = null
+	weapon_panel.select(-1)
+	if reason == "crew":
+		var tween := create_tween()
+		tween.tween_interval(1.0)
+		tween.tween_callback(_show_banner.bind(own_ship, reason))
+		return
 	var view := ship_view if own_ship else enemy_view
 	var rooms := view.state.layout.rooms.size()
 	for i in 10:
@@ -200,8 +288,7 @@ func _on_destroyed(own_ship: bool) -> void:
 	var tween := create_tween()
 	tween.tween_interval(1.2)
 	tween.tween_property(view, "modulate", Color(1, 1, 1, 0), 0.6)
-	tween.tween_callback(_show_banner.bind(own_ship))
-	ship_view.selected = null
+	tween.tween_callback(_show_banner.bind(own_ship, reason))
 
 
 func _update_explosions(delta: float) -> void:
@@ -213,8 +300,13 @@ func _update_explosions(delta: float) -> void:
 	_explosion_queue = _explosion_queue.filter(func(x): return x.delay > 0.0)
 
 
-func _show_banner(own_ship: bool) -> void:
-	banner.text = ("Schiff verloren" if own_ship else "Sieg – Piratenkutter zerstört") + "\nTippen für neuen Kampf"
+func _show_banner(own_ship: bool, reason: String) -> void:
+	var text := ""
+	if own_ship:
+		text = "Schiff verloren" if reason == "hull" else "Die ganze Crew ist tot"
+	else:
+		text = "Sieg – Piratenkutter zerstört" if reason == "hull" else "Sieg – Piratencrew ausgeschaltet"
+	banner.text = text + "\nTippen für neuen Kampf"
 	banner.visible = true
 	banner.modulate = Color(1, 1, 1, 0)
 	create_tween().tween_property(banner, "modulate", Color.WHITE, 0.4)
@@ -236,6 +328,12 @@ func _on_selection_changed(member: CrewMember, _room_idx: int) -> void:
 
 
 func _update_info() -> void:
+	if _time < _hint_until:
+		info.text = _hint
+		return
+	if weapon_panel.selected >= 0:
+		info.text = "Waffe %d: Gegnerraum antippen (gleicher Raum = Ziel aufheben)" % (weapon_panel.selected + 1)
+		return
 	var member := ship_view.selected
 	if not member:
 		var ordered := ship_view.last_order
@@ -244,10 +342,10 @@ func _update_info() -> void:
 			info.text = "%s → %s" % [ordered.display_name, state.layout.rooms[state.layout.room_index_at(ordered.destination())].name]
 		elif room >= 0:
 			info.text = state.layout.rooms[room].name
-		elif battle.player_target < 0:
-			info.text = "Gegnerischen Raum antippen, um zu zielen"
+		elif not battle.player_has_target():
+			info.text = "Gegnerraum antippen = alle Waffen zielen · Waffe antippen = einzeln"
 		else:
-			info.text = "Ziel: %s · Energie: antippen +1, halten −1" % enemy.layout.rooms[battle.player_target].name
+			info.text = "Tür/Schleuse antippen: auf/zu · Energie: antippen +1, halten −1"
 		return
 	var target_room := state.layout.room_index_at(member.destination())
 	var room_data: Dictionary = state.layout.rooms[target_room]

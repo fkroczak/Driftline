@@ -65,7 +65,7 @@ static func from_dict(d: Dictionary) -> ShipLayout:
 	for door: Array in d.get("doors", []):
 		var a := _vec(door[0])
 		var b := _vec(door[1])
-		layout._doors[_door_key(a, b)] = [a, b]
+		layout._doors[door_key(a, b)] = [a, b]
 	return layout
 
 
@@ -164,8 +164,13 @@ func is_walkable(tile: Vector2i) -> bool:
 	return _room_at.has(tile)
 
 
+## Alle Türen als [Kachel a, Kachel b].
+func door_list() -> Array:
+	return _doors.values()
+
+
 func has_door(a: Vector2i, b: Vector2i) -> bool:
-	return _doors.has(_door_key(a, b))
+	return _doors.has(door_key(a, b))
 
 
 ## Begehbare Nachbarkacheln: im selben Raum oder durch eine Tür.
@@ -227,7 +232,7 @@ static func _vec(a: Variant) -> Vector2i:
 	return Vector2i(int(a[0]), int(a[1]))
 
 
-static func _door_key(a: Vector2i, b: Vector2i) -> String:
+static func door_key(a: Vector2i, b: Vector2i) -> String:
 	if a.x > b.x or (a.x == b.x and a.y > b.y):
 		var tmp := a
 		a = b

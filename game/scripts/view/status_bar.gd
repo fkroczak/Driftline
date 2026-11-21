@@ -19,7 +19,7 @@ var _time := 0.0
 func setup(p_state: ShipState) -> void:
 	state = p_state
 	_ghost = state.hull
-	custom_minimum_size = Vector2(state.max_hull * 3 + 70, 22)
+	custom_minimum_size = Vector2(state.max_hull * 3 + 85, 22)
 	size = custom_minimum_size
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -58,3 +58,6 @@ func _draw() -> void:
 			draw_rect(Rect2(r.position, Vector2(roundf(6 * state.shield_progress), 6)), Color(COLOR_SHIELD, 0.4))
 	var evade := "Ausweichen %d %%" % roundi(state.evasion() * 100.0)
 	draw_string(font, Vector2(x0 + 24, 19), evade, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, COLOR_TEXT)
+	var air := state.average_oxygen()
+	var air_color := COLOR_TEXT if air > 0.5 else (COLOR_WARN if air > 0.25 else COLOR_BAD)
+	draw_string(font, Vector2(x0 + 102, 19), "Luft %d %%" % roundi(air * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, air_color)

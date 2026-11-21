@@ -15,23 +15,30 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
   2. Sitzt dort jemand weniger Erfahrenes, tauschen beide, außer diese Person wurde ausdrücklich an die Konsole geschickt.
   3. An der Konsole steigt die Erfahrung im System (1 Stufe pro Minute, höchstens 5). Die Punkte unter dem Porträt zeigen die Stufe im aktuellen Raum.
   4. Eine besetzte Konsole beschleunigt das System: +10 % plus 5 % je Erfahrungsstufe (Schilde laden, Waffen laden, Ausweichen).
-- **Reparieren:** Wer in einem Raum mit beschädigtem System steht, repariert es (1 Balken in 4 s, mehrere Personen schneller). Beschädigte Räume pulsieren rot, der gelbe Balken zeigt den Fortschritt.
+- **Arbeit im Raum** (automatisch, wer im Raum steht): erst Feuer löschen, dann Hüllenbrüche flicken (5 s), dann das System reparieren (1 Balken in 4 s). Mehrere Personen arbeiten schneller. Beschädigte Räume pulsieren rot, der gelbe Balken zeigt den Fortschritt.
+- **Lebenspunkte** (100): Balken unter dem Porträt und über verletzten Figuren. Schaden durch Treffer im Raum (15 je Schadenspunkt), Feuer (5/s auf der Kachel, 1,5/s im Raum) und Ersticken (6/s unter 10 % Luft). Die Medbay heilt mit Energie 6/s je Balken. Bei 0 stirbt die Figur.
 
 ### Energie und Kampf
 
 - **Energie** (Leiste unten): Spalte antippen = 1 Balken mehr, gedrückt halten oder Rechtsklick = 1 Balken weniger. Ganz links der Reaktor: gelb = frei, rot = zerstört. Bei Systemen: grün = versorgt, rot = beschädigt.
 - **Startverteilung** (Reaktor 8): Lebenserhaltung 1, Schilde 2, Waffen 3, Antrieb 2. Sensoren und Medbay bleiben aus, bis du umschichtest.
-- **Waffen** (Karten unten): antippen schaltet eine Waffe ein oder aus. Mit Energie lädt sie, ohne entlädt sie sich. Geladen feuert sie selbst auf das Ziel; ohne Ziel blinkt die Karte.
-- **Zielen:** einen Raum im Gegnerschiff antippen (knapp daneben zählt auch)
+- **Waffen** (Karten unten, nummeriert): Mit Energie lädt eine Waffe, ohne entlädt sie sich. Geladen feuert sie selbst auf ihr Ziel; ohne Ziel blinkt die Karte. Gedrückt halten oder Rechtsklick schaltet eine Waffe ein oder aus.
+- **Zielen, alle Waffen:** einen Gegnerraum antippen (knapp daneben zählt auch)
+- **Zielen, einzeln:** Waffenkarte antippen (rot umrandet), dann einen Gegnerraum. Den aktuellen Zielraum der Waffe erneut antippen hebt das Ziel auf. Fadenkreuze im Gegnerschiff tragen die Waffennummer.
 - **Einschlag:** Ausweichen (Antrieb + besetztes Cockpit), sonst fängt der Schild ab (2 Balken = 1 Schicht, lädt in 2 s nach), sonst Treffer: Hülle und System im Raum verlieren Balken
 - **Reaktortreffer** senken die verfügbare Energie; dann werden Systeme in der Reihenfolge Lebenserhaltung, Schilde, Waffen, Antrieb, Sensoren, Medbay versorgt. Nach der Reparatur kommt die gewünschte Energie von selbst zurück.
-- **Gegner:** zielt alle paar Sekunden auf einen anderen Raum. Seine Mechanikerin oder sein Mechaniker repariert Schäden und kehrt danach zur Konsole zurück.
-- **Luftschleusen:** Gelb markierte Luken auf der Außenwand (Frachter: 2, Kutter: 1). Noch ohne Funktion; sie sollen später Sauerstoff ablassen, damit Feuer und Enterkommandos ersticken.
-- **Ende:** Hülle auf 0. Danach antippen für einen neuen Kampf.
+- **Gegner:** Hülle 14, Reaktor 8, zwei Schildschichten, Pulslaser und Bordkanone. Jede Waffe zielt alle paar Sekunden auf einen anderen Raum. Die Mechanikerin oder der Mechaniker löscht Feuer, flickt Lecks, repariert Systeme und kehrt danach zur Konsole zurück. Der Kutter hat keine Lebenserhaltung, aber eine eingebaute Luftaufbereitung (`oxygen_regen`).
+- **Balance:** In 20 simulierten Kämpfen ohne Eingreifen gewinnt der Frachter 12. Wer Energie umschichtet, gezielt schießt und Feuer bekämpft, sollte klar besser abschneiden.
+- **Treffer** können Feuer (35 %) und Hüllenbrüche (20 %) im Raum auslösen.
+- **Sauerstoff** je Raum: Die Lebenserhaltung füllt nach (4 %/s je Balken). Feuer verbraucht Luft, Hüllenbrüche und offene Schleusen lassen sie entweichen. Räume mit wenig Luft färben sich rosa; „Luft“ oben rechts ist der Schnitt über alle Räume.
+- **Feuer** (je Kachel): breitet sich bei mehr als 25 % Luft aus, im Raum und durch offene Türen; unter 12 % erlischt es. Es beschädigt das System im Raum.
+- **Türen** antippen: auf oder zu (am Start alle zu). Offene Türen gleichen die Luft zwischen Räumen aus und lassen Feuer durch. Die eigene Crew läuft auch durch geschlossene Türen.
+- **Luftschleusen** antippen (gelbe Luken auf der Außenwand, Frachter 2, Kutter 1): offen saugen sie den Raum in 2 s leer, über offene Türen auch die Nachbarräume. So erstickt man Feuer; eigene Crew sollte den Raum vorher verlassen.
+- **Ende:** Hülle auf 0 oder ganze Crew tot. Danach antippen für einen neuen Kampf.
 
 ### Effekte
 
-Geschosse mit Mündungsfeuer, Schildblase mit Welle beim Abfangen, Explosion mit Funken und Rauch, Raumblitz, Bildschirmwackeln und roter Blitz bei eigenen Treffern, schwebende Texte (Schaden, „SCHILD“, „AUSGEWICHEN“, „REPARIERT“), Triebwerksflammen je nach Antriebsenergie, Explosionskette beim Zerstören. Alles ist in `scripts/view/` gezeichnet, ohne zusätzliche Grafikdateien.
+Flackernde Flammen mit Rauch, entweichende Luft an Lecks und offenen Schleusen, Dampf beim Löschen, Geschosse mit Mündungsfeuer, Schildblase mit Welle beim Abfangen, Explosion mit Funken und Rauch, Raumblitz, Bildschirmwackeln und roter Blitz bei eigenen Treffern, schwebende Texte (Schaden, „SCHILD“, „AUSGEWICHEN“, „REPARIERT“), Triebwerksflammen je nach Antriebsenergie, Explosionskette beim Zerstören. Alles ist in `scripts/view/` gezeichnet, ohne zusätzliche Grafikdateien.
 
 ## Öffnen und starten
 

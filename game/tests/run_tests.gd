@@ -244,6 +244,8 @@ func test_weapon_power_toggles_weapons() -> void:
 
 func test_damage_cuts_power_and_repair_restores_it() -> void:
 	var state := ShipState.new(_layout())
+	state.fire_chance = 0.0
+	state.breach_chance = 0.0
 	var schilde := state.layout.room_index_by_id("schilde")
 	check(state.take_hit(schilde, 1) == 1, "Systemschaden fehlt")
 	check(state.get_system("schilde").power == 1, "Beschädigtes System behält volle Energie")
@@ -281,9 +283,9 @@ func test_evasion_needs_pilot() -> void:
 func test_weapons_fire_and_damage_enemy() -> void:
 	var battle := Battle.new(ShipState.new(_layout()), _enemy_ship(), 42)
 	var target := battle.enemy.layout.room_index_by_id("waffen")
-	battle.set_player_target(target)
+	battle.set_all_targets(target)
 	var seen := {}
-	for i in 200:  # 20 s
+	for i in 400:  # 40 s
 		battle.update(0.1)
 		for e in battle.take_events():
 			seen[e.type] = true
@@ -305,7 +307,10 @@ func test_battle_ends_in_victory() -> void:
 	var player := ShipState.new(_layout())
 	player.add_crew("Mara", "mensch", Vector2i(7, 7), {"waffen": 3.0})
 	var battle := Battle.new(player, _enemy_ship(), 7)
-	battle.set_player_target(battle.enemy.layout.room_index_by_id("schilde"))
+	battle.enemy.hull = 4  # prüft das Kampfende, nicht die Balance
+	while battle.enemy.remove_power("waffen"):
+		pass
+	battle.set_all_targets(battle.enemy.layout.room_index_by_id("schilde"))
 	for i in 3000:
 		battle.update(0.1)
 		if battle.outcome != "":
@@ -320,3 +325,154 @@ func test_enemy_crew_repairs() -> void:
 	for i in 150:
 		battle.update(0.1)
 	check(battle.enemy.get_system("antrieb").damage == 0, "Gegner-Crew repariert nicht")
+
+
+# --- Waffenziele, Sauerstoff, Feuer, Crew-Gesundheit, Türen ---
+
+func _quiet_state() -> ShipState:
+	var state := ShipState.new(_layout())
+	state.fire_chance = 0.0
+	state.breach_chance = 0.0
+	return state
+
+
+func test_weapons_have_independent_targets() -> void:
+	var battle := Battle.new(ShipState.new(_layout()), _enemy_ship(), 5)
+	var schilde := battle.enemy.layout.room_index_by_id("schilde")
+	var waffen := battle.enemy.layout.room_index_by_id("waffen")
+	while battle.enemy.remove_power("waffen"):
+		pass  # Gegner feuert nicht, damit keine eigene Waffe ausfällt
+	battle.set_weapon_target(0, schilde)
+	battle.set_weapon_target(1, waffen)
+	var rooms_by_weapon := {}
+	for i in 150:
+		battle.update(0.1)
+		for p in battle.projectiles:
+			if p.player:
+				rooms_by_weapon[p.weapon] = p.room
+	check(rooms_by_weapon.get(0, -1) == schilde, "Waffe 1 schießt nicht auf die Schilde")
+	check(rooms_by_weapon.get(1, -1) == waffen, "Waffe 2 schießt nicht auf die Waffen")
+
+
+func test_weapon_without_target_holds_fire() -> void:
+	var battle := Battle.new(ShipState.new(_layout()), _enemy_ship(), 5)
+	battle.set_weapon_target(1, battle.enemy.layout.room_index_by_id("waffen"))
+	for i in 150:
+		battle.update(0.1)
+		for p in battle.projectiles:
+			check(not p.player or p.weapon == 1, "Waffe ohne Ziel feuert")
+	check(battle.player.weapons[0].is_ready(), "Waffe ohne Ziel sollte geladen warten")
+
+
+func test_airlock_vents_room_and_life_support_refills() -> void:
+	var state := _quiet_state()
+	var room := state.layout.room_index_at(state.layout.airlocks[0].tile)
+	state.toggle_airlock(0)
+	_settle(state, 3.0)
+	check(state.oxygen[room] < 0.05, "Offene Schleuse lässt keinen Sauerstoff ab: %.2f" % state.oxygen[room])
+	state.toggle_airlock(0)
+	_settle(state, 10.0)
+	check(state.oxygen[room] > 0.3, "Lebenserhaltung füllt nicht nach")
+
+
+func test_doors_control_airflow() -> void:
+	var state := _quiet_state()
+	state.remove_power("lebenserhaltung")
+	var vented := state.layout.room_index_at(state.layout.airlocks[0].tile)  # Erweiterung 1
+	var neighbor := state.layout.room_index_by_id("antrieb")
+	state.toggle_airlock(0)
+	_settle(state, 3.0)
+	check(state.oxygen[neighbor] > 0.99, "Geschlossene Tür lässt Luft durch")
+	check(state.toggle_door(Vector2i(1, 1), Vector2i(2, 1)), "Tür lässt sich nicht öffnen")
+	_settle(state, 4.0)
+	check(state.oxygen[neighbor] < 0.3, "Offene Tür gleicht nicht aus: %.2f" % state.oxygen[neighbor])
+	check(state.oxygen[vented] < 0.3, "")
+
+
+func test_fire_dies_without_oxygen() -> void:
+	var state := _quiet_state()
+	var tile: Vector2i = state.layout.airlocks[0].tile
+	state.start_fire(tile)
+	state.toggle_airlock(0)
+	_settle(state, 6.0)
+	check(state.fires.is_empty(), "Feuer brennt ohne Sauerstoff weiter")
+
+
+func test_fire_damages_system_and_crew_extinguishes() -> void:
+	var state := _quiet_state()
+	var schilde := state.layout.room_index_by_id("schilde")
+	state.start_fire(Vector2i(6, 1))
+	_settle(state, 13.0)
+	check(state.get_system("schilde").damage > 0, "Feuer beschädigt das System nicht")
+	var member := state.add_crew("Löscher", "mensch", Vector2i(6, 0))
+	_settle(state, 20.0)
+	check(state.fires_in_room(schilde).is_empty(), "Crew löscht das Feuer nicht")
+	check(member.hp < CrewMember.MAX_HP, "Feuer verletzt die Crew nicht")
+
+
+func test_fire_spreads_only_through_open_doors() -> void:
+	var state := _quiet_state()
+	state.start_fire(Vector2i(0, 0))
+	state.start_fire(Vector2i(1, 0))
+	state.start_fire(Vector2i(0, 1))
+	state.start_fire(Vector2i(1, 1))
+	_settle(state, 60.0)
+	for t: Vector2i in state.fires:
+		check(state.layout.room_index_at(t) == state.layout.room_index_by_id("antrieb"), "Feuer springt durch eine geschlossene Tür")
+
+
+func test_breach_leaks_until_repaired() -> void:
+	var state := _quiet_state()
+	var medbay := state.layout.room_index_by_id("medbay")
+	state.start_breach(Vector2i(2, 6))
+	_settle(state, 3.0)
+	check(state.oxygen[medbay] < 0.8, "Hüllenbruch lässt keine Luft entweichen")
+	state.add_crew("Flicker", "mensch", Vector2i(3, 7))
+	_settle(state, 6.0)
+	check(state.breaches.is_empty(), "Crew flickt den Hüllenbruch nicht")
+
+
+func test_suffocation_kills_and_reports() -> void:
+	var state := _quiet_state()
+	var member := state.add_crew("Pech", "mensch", Vector2i(3, 1))
+	state.toggle_airlock(0)
+	var died := false
+	for i in 300:
+		state.update(0.1)
+		for e in state.events:
+			if e.type == "crew_died":
+				died = true
+		state.events.clear()
+	check(died and not state.crew.has(member), "Crew erstickt nicht")
+	check(state.is_crew_dead(), "Ganze Crew tot wird nicht erkannt")
+
+
+func test_medbay_heals() -> void:
+	var state := _quiet_state()
+	state.remove_power("antrieb")
+	check(state.add_power("medbay"), "Medbay bekommt keine Energie")
+	var member := state.add_crew("Patient", "mensch", Vector2i(2, 7))
+	member.hp = 40.0
+	_settle(state, 5.0)
+	check(member.hp > 60.0, "Medbay heilt nicht")
+
+
+func test_hit_hurts_crew_in_room() -> void:
+	var state := _quiet_state()
+	var member := state.add_crew("Pech", "mensch", Vector2i(6, 6))
+	state.take_hit(state.layout.room_index_by_id("waffen"), 2)
+	check(member.hp == CrewMember.MAX_HP - 2 * ShipState.HP_PER_HIT, "Treffer verletzt Crew im Raum nicht")
+
+
+func test_enemy_crew_wipe_is_victory() -> void:
+	var battle := Battle.new(ShipState.new(_layout()), _enemy_ship(), 9)
+	battle.player.add_crew("Mara", "mensch", Vector2i(10, 3))
+	for i in range(battle.enemy.airlock_open.size()):
+		battle.enemy.toggle_airlock(i)
+	for pair: Array in battle.enemy.layout.door_list():
+		battle.enemy.set_door_open(pair[0], pair[1], true)
+	for i in 600:
+		battle.update(0.1)
+		if battle.outcome != "":
+			break
+	check(battle.outcome == "sieg", "Erstickte Gegner-Crew beendet den Kampf nicht: '%s'" % battle.outcome)
