@@ -159,6 +159,13 @@ func _sync_crew() -> void:
 			continue
 		sprite.position = state.layout.tile_center(member.tile_position()).round()
 		sprite.frame = FRAME_BY_FACING.get(member.facing, 0)
+		# Arbeiten sichtbar machen: Hämmern wippt, Löschen zittert leicht
+		match member.activity:
+			"reparieren", "flicken":
+				if fmod(_time * 6.0, 1.0) < 0.5:
+					sprite.position += Vector2(member.facing)
+			"loeschen":
+				sprite.position.x += -1.0 if fmod(_time * 10.0, 1.0) < 0.5 else 0.0
 
 
 func _draw() -> void:
@@ -310,12 +317,15 @@ func _draw_fires() -> void:
 			draw_rect(Rect2(x + 1, base - roundf(h * 0.35), 1, roundf(h * 0.35)), FIRE_COLORS[2])
 
 
-## Kleine Lebensbalken über verletzten Figuren.
+## Über den Figuren: Tätigkeitssymbol und (wenn verletzt) ein kleiner Lebensbalken.
 func _draw_crew_health() -> void:
 	for member in state.crew:
+		var head := state.layout.tile_center(member.tile_position()).round()
+		if member.activity != "":
+			ActivityIcons.draw(self, head + Vector2(-3, -18 + (1 if fmod(_time * 2.0, 1.0) < 0.5 else 0)), member.activity)
 		if member.hp >= CrewMember.MAX_HP:
 			continue
-		var p := state.layout.tile_center(member.tile_position()).round() + Vector2(-5, -10)
+		var p := head + Vector2(-5, -10)
 		var ratio := member.hp / CrewMember.MAX_HP
 		var color := Color("#5DCAA5") if ratio > 0.6 else (Color("#FAC775") if ratio > 0.3 else COLOR_DAMAGE)
 		draw_rect(Rect2(p, Vector2(10, 2)), Color(0, 0, 0, 0.7))

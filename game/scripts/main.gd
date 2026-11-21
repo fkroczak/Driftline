@@ -211,6 +211,26 @@ func _ambient_effects(view: ShipView, delta: float) -> void:
 		if randf() < delta * 10.0 * o:
 			var p := view.position + ship.layout.tile_center(Vector2(t))
 			effects.puff(p, Vector2.from_angle(randf() * TAU) * randf_range(8, 20), Color("#D3E6F8", 0.8), 0.5)
+	for member in ship.crew:
+		var pos := view.position + ship.layout.tile_center(member.tile_position())
+		match member.activity:
+			"loeschen":
+				# Löschschaum spritzt zum Feuer
+				if randf() < delta * 30.0:
+					var target := view.position + ship.layout.tile_center(Vector2(member.activity_tile))
+					var dir := (target - pos).normalized() if target != pos else Vector2.UP
+					var v := dir.rotated(randf_range(-0.35, 0.35)) * randf_range(30, 55)
+					effects.puff(pos + dir * 4.0, v, Color("#E6EAF0", 0.9), 0.35)
+			"reparieren", "flicken":
+				# Schweißfunken an der Arbeitsstelle
+				if randf() < delta * 14.0:
+					var spot := pos + Vector2(member.facing) * 6.0
+					var c := Color("#FDE6BF") if randf() < 0.5 else Color("#FAC775")
+					effects.puff(spot, Vector2(randf_range(-25, 25), randf_range(-35, -10)), c, 0.25)
+			"heilen":
+				# Grüne Funken steigen auf
+				if randf() < delta * 6.0:
+					effects.puff(pos + Vector2(randf_range(-5, 5), 2), Vector2(0, randf_range(-14, -8)), Color("#97C459"), 0.8)
 	for i in ship.airlock_open.size():
 		if not ship.airlock_open[i]:
 			continue
@@ -365,13 +385,16 @@ func _update_info() -> void:
 			elif system == "" and state.layout.rooms[room].size == Vector2i(2, 2):
 				info.text += ": " + SystemInfo.describe("")
 		elif not battle.player_has_target():
-			info.text = "Gegnerraum antippen = alle Waffen zielen · Waffe antippen = einzeln"
+			info.text = "Gegnerraum: alle Waffen zielen · Waffenkarte: einzeln"
 		else:
-			info.text = "Tür/Schleuse antippen: auf/zu · Energie: antippen +1, halten −1"
+			info.text = "Energie: antippen +1, halten −1 · ? = Symbole"
 		return
 	var target_room := state.layout.room_index_at(member.destination())
 	var room_data: Dictionary = state.layout.rooms[target_room]
 	var text := "%s → %s" % [member.display_name, room_data.name] if member.is_moving() else "%s · %s" % [member.display_name, room_data.name]
+	if member.activity != "":
+		text += " · " + ActivityIcons.NAMES.get(member.activity, "")
+	text += " · %d LP" % roundi(member.hp)
 	if room_data.system != "" and room_data.console != null:
 		text += " · Erfahrung %d" % member.level(room_data.system)
 		if not member.is_moving() and member.tile == room_data.console:

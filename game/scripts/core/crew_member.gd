@@ -21,6 +21,10 @@ var pinned := false
 ## Stammplatz (z. B. die eigene Konsole), zu dem die Gegner-KI nach Reparaturen zurückkehrt.
 var home_tile := Vector2i(-1, -1)
 var hp := MAX_HP
+## Was die Figur gerade tut (für die Darstellung): "", "loeschen", "flicken", "reparieren", "heilen".
+var activity := ""
+## Kachel, an der gearbeitet wird (Feuer, Leck); sonst die eigene.
+var activity_tile := Vector2i.ZERO
 
 
 func _init(p_name: String, p_species: String, p_tile: Vector2i) -> void:
@@ -33,6 +37,15 @@ func _init(p_name: String, p_species: String, p_tile: Vector2i) -> void:
 ## Kachel, auf der die Figur gerade überwiegend steht.
 func current_tile() -> Vector2i:
 	return Vector2i(tile_position().round())
+
+
+## Tätigkeit setzen und zur Arbeitsstelle schauen.
+func set_activity(kind: String, target: Vector2i) -> void:
+	activity = kind
+	activity_tile = target
+	var d := target - tile
+	if d != Vector2i.ZERO and not is_moving():
+		facing = Vector2i(signi(d.x), 0) if absi(d.x) >= absi(d.y) else Vector2i(0, signi(d.y))
 
 
 func level(system: String) -> int:

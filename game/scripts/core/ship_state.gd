@@ -297,20 +297,24 @@ func average_oxygen() -> float:
 
 ## Alle Personen im Raum löschen, flicken oder reparieren – in dieser Reihenfolge.
 func _crew_work(delta: float) -> void:
-	var idle := {}  # Raum -> Anzahl stehender Personen
+	var idle := {}  # Raum -> [stehende Personen]
 	for member in crew:
+		member.activity = ""
 		if not member.is_moving():
 			var room := layout.room_index_at(member.tile)
 			if room >= 0:
-				idle[room] = idle.get(room, 0) + 1
+				if not idle.has(room):
+					idle[room] = []
+				idle[room].append(member)
 	var busy := {}
 	for room: int in idle:
-		var workers: int = idle[room]
+		var workers: Array = idle[room]
 		var room_fires := fires_in_room(room)
 		if not room_fires.is_empty():
 			busy[room] = true
-			for i in workers:
+			for i in workers.size():
 				var t: Vector2i = room_fires[i % room_fires.size()]
+				workers[i].set_activity("loeschen", t)
 				if fires.has(t):
 					fires[t] -= delta * EXTINGUISH
 					if fires[t] <= 0.0:
@@ -321,15 +325,20 @@ func _crew_work(delta: float) -> void:
 		if not room_breaches.is_empty():
 			busy[room] = true
 			var t: Vector2i = room_breaches[0]
-			breaches[t] += delta * workers / BREACH_REPAIR_TIME
+			for member: CrewMember in workers:
+				member.set_activity("flicken", t)
+			breaches[t] += delta * workers.size() / BREACH_REPAIR_TIME
 			if breaches[t] >= 1.0:
 				breaches.erase(t)
 				events.append({"type": "breach_fixed", "tile": t, "room": room})
 	for sys: ShipSystem in systems.values():
 		var room := layout.room_of_system(sys.id)
 		var workers := 0.0
-		if sys.damage > 0 and room >= 0 and not busy.has(room):
-			workers = float(idle.get(room, 0))
+		if sys.damage > 0 and room >= 0 and not busy.has(room) and idle.has(room):
+			workers = float(idle[room].size())
+			for member: CrewMember in idle[room]:
+				var console: Variant = layout.console_of(room)
+				member.set_activity("reparieren", console if console != null and console != member.tile else layout.rooms[room].pos)
 		if sys.repair(delta, workers):
 			events.append({"type": "repaired", "system": sys.id, "room": room})
 
@@ -408,7 +417,9 @@ func _update_crew_health(delta: float) -> void:
 			damage += HP_FIRE_ROOM
 		if room >= 0 and oxygen[room] < O2_LOW:
 			damage += HP_SUFFOCATE
-		if room == medbay and room >= 0 and not member.is_moving():
+		if room == medbay and room >= 0 and not member.is_moving() and level("medbay") > 0:
+			if member.hp < CrewMember.MAX_HP and member.activity == "":
+				member.activity = "heilen"
 			member.hp = minf(member.hp + level("medbay") * HEAL_PER_LEVEL * delta, CrewMember.MAX_HP)
 		if damage > 0.0:
 			_hurt(member, damage * delta)
