@@ -20,6 +20,13 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ein ganzer R
 - **Ende:** Niederlage (auch Hülle oder Crew durch ein Ereignis verloren) beendet den Run, Sieg über den Boss schafft das Universum; danach antippen für einen neuen Run. Wer vor dem Boss flieht, steht weiter vor ihm und greift durch Antippen des eigenen Schiffs auf der Karte erneut an.
 - **Balance:** Seit Schäden zwischen den Kämpfen bleiben, sind die Simulationen mit dem einfachen Bot (keine Crew-Steuerung) nicht mehr aussagekräftig; die Werte müssen im echten Spiel getestet werden. Stellschrauben sind die Preise in `data/run.json`, die Beute in `data/enemies.json`, die Anteile `TYPE_WEIGHTS` in `scripts/core/star_map.gd` und `JUMP_SHIP_TIME` in `scripts/core/run_state.gd`.
 
+### Spielstand
+
+- **Automatisch:** Der Run wird auf der Sternenkarte gespeichert, nach jedem Sprung, jeder Entscheidung, jedem Kampfende und wenn die App in den Hintergrund geht. Beim nächsten Start geht es genau dort weiter. Wird die App mitten im Kampf beendet, beginnt dieser Kampf neu, mit dem Schiff, wie es vorher war.
+- **Run vorbei** (Sieg über den Boss oder Niederlage): Der Spielstand wird gelöscht, der nächste Start beginnt einen neuen Run.
+- **Updates überschreiben nichts:** Android behält die Daten der App bei einem Update (gleicher Schlüssel, siehe unten). Die Datei `user://savegame.json` trägt eine Formatversion. Ältere Stände werden angehoben, fehlende Felder bekommen Standardwerte, und was es nicht mehr gibt (Waffe, System, Ereignis), wird übersprungen. Die Karte des laufenden Runs ist mitgespeichert und bleibt auch bei einem geänderten Kartengenerator gleich. Eine unlesbare Datei oder ein Stand aus einem neueren Build wird nie überschrieben, sondern als `savegame-<Zeit>.json` beiseitegelegt. Die vorige Fassung bleibt als `savegame.bak.json` zum Rückfall.
+- **Beim Entwickeln:** Wer das Format ändert, erhöht `SaveGame.VERSION` und ergänzt in `_migrate` (`scripts/core/save_game.gd`) einen Schritt. Tests dazu stehen am Ende von `tests/run_tests.gd`.
+
 ### Crew
 
 - **Auswählen:** Figur im Schiff (knapp daneben zählt auch) oder Porträt in der Leiste antippen; eine andere Figur antippen wechselt die Auswahl
@@ -84,7 +91,8 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `data/events.json` | Ereignisse mit Optionen, Kosten, Bedingungen und gewichteten Ausgängen (Format im Feld `_doc`) |
 | `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte), `RunState` (Run: Karte, Position, Schiff, Ressourcen, Dialoge, Händler, Gegnerwahl), `EventBook` (Ereignisse laden, ziehen, prüfen) |
 | `scripts/view/` | Darstellung und Eingabe: `ShipView` (eigenes und Gegnerschiff), `Effects`, `PowerPanel`, `WeaponPanel`, `StatusBar`, `CrewPanel`, `MapView` (Sternenkarte), `EventDialog` (Ereignis-, Händler- und Werftdialog) |
-| `scripts/game.gd` | Autoload `Game`: hält den Run über Szenenwechsel, wechselt zwischen Karte und Kampf |
+| `scripts/core/save_game.gd` | `SaveGame`: Spielstand speichern und laden, Formatversion und Migration |
+| `scripts/game.gd` | Autoload `Game`: hält den Run über Szenenwechsel, wechselt zwischen Karte und Kampf, speichert |
 | `scenes/map.tscn` | Startszene: Sternenkarte (`scripts/map_screen.gd`) |
 | `scenes/battle.tscn` | Kampf (`scripts/battle_screen.gd`) |
 | `assets/` | Kopien aus `art/export/1x` |
@@ -114,6 +122,11 @@ Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Wor
 
 Nach etwa 5 Minuten liegt die APK unter **Releases** als Vorabversion; am Handy herunterladen und installieren.
 
-**Updates installieren:** Ohne festen Schlüssel wird jede APK neu signiert, dann muss die alte Version vorher deinstalliert werden. Abhilfe: einen Debug-Keystore als Base64 im Repository-Secret `ANDROID_DEBUG_KEYSTORE_BASE64` hinterlegen (Passwort `android`, Alias `androiddebugkey`).
+**Updates:** Jede neue APK installiert sich als Update über die vorige, ohne Deinstallieren. Dafür sorgen zwei Dinge:
+
+- **Fester Schlüssel:** Alle Builds werden mit `tools/android/debug.keystore` signiert (Passwort `android`, Alias `androiddebugkey`). Diesen Schlüssel nicht austauschen, sonst muss jedes Handy einmal deinstallieren. Ein Repository-Secret `ANDROID_DEBUG_KEYSTORE_BASE64` hätte Vorrang. Der Schlüssel ist öffentlich und taugt nur für Testversionen; für den Play Store braucht es später einen eigenen, geheimen Release-Schlüssel.
+- **Versionsnummer:** `versionCode` ist die Laufnummer des Workflows und steigt mit jedem Build. Der Versionsname setzt sich aus `config/version` in `project.godot` (z. B. `0.2`) und dieser Nummer zusammen, etwa `0.2.17`. Er steht klein oben rechts auf der Sternenkarte, im Namen der APK und im Release. Für einen neuen Meilenstein nur `config/version` anheben.
+
+Einmalig: Builds vor dieser Umstellung hatten jeweils einen zufälligen Schlüssel. Die alte Version also ein letztes Mal deinstallieren (es gibt noch keine Spielstände, es geht nichts verloren).
 
 Lokal aus dem Editor: Exportvorlagen und Android SDK in Godot einrichten, Handy per USB anschließen, oben rechts auf das Android-Symbol klicken (Remote Debug).

@@ -125,6 +125,7 @@ func _draw() -> void:
 	if selected >= 0:
 		_draw_info_box(selected)
 	_draw_top_bar()
+	_draw_version()
 	_draw_hint()
 	if run.can_send_distress():
 		_draw_distress()
@@ -306,6 +307,14 @@ func _draw_distress() -> void:
 	draw_rect(r, Color(COLOR_BOSS, 0.15 + 0.2 * pulse))
 	draw_rect(r.grow(-0.5), COLOR_BOSS, false, 1.0)
 	draw_string(font, r.position + Vector2(5, 11), "NOTSIGNAL", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Color("#F7C1C1"))
+
+
+## Installierte Version oben rechts unter der Leiste, damit man nach einem Update sieht, welcher Build läuft.
+func _draw_version() -> void:
+	var font := ThemeDB.fallback_font
+	var text := "v" + str(ProjectSettings.get_setting("application/config/version", ""))
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+	draw_string(font, Vector2(size.x - w - 4.0, TOP_BAR + 9.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, COLOR_DIM)
 
 
 func _draw_hint() -> void:

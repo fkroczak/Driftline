@@ -821,3 +821,112 @@ func test_fire_keeps_burning_during_jump() -> void:
 	run.jump_to(next)
 	check(ship.fires.has(tiles[0]), "Feuer geht beim Sprung von selbst aus")
 	check(ship.fires[tiles[0]] >= 1.0, "Feuer wird beim Sprung schwächer, obwohl niemand löscht")
+
+
+# --- Spielstand ---
+
+
+func _save_paths() -> void:
+	SaveGame.path = "user://test_savegame.json"
+	SaveGame.backup = "user://test_savegame.bak.json"
+	SaveGame.clear()
+
+
+func _played_run() -> RunState:
+	var run := RunState.new(4242)
+	var target: int = run.node().links[0]
+	run.jump_to(target)
+	run.fuel = 3
+	run.scrap = 17
+	run.flags["gilde_freund"] = true
+	run.ship.hull -= 5
+	run.ship.systems["schilde"].damage = 1
+	run.ship.crew[0].hp = 40.0
+	run.ship.crew[0].experience["waffen"] = 2.5
+	run.ship.start_breach(run.ship.crew[1].tile)
+	run.ship.oxygen[2] = 0.3
+	run.cleared[target] = "sieg"
+	return run
+
+
+func test_save_and_load_round_trip() -> void:
+	_save_paths()
+	var run := _played_run()
+	check(SaveGame.save(run), "Speichern fehlgeschlagen")
+	var loaded := SaveGame.load_run()
+	check(loaded != null, "Spielstand lädt nicht")
+	if loaded == null:
+		return
+	check(loaded.current == run.current, "Position falsch")
+	check(loaded.fuel == 3 and loaded.scrap == 17, "Ressourcen falsch")
+	check(loaded.flags.has("gilde_freund"), "Ansehen fehlt")
+	check(loaded.cleared.get(run.current, "") == "sieg", "Erledigte Systeme fehlen")
+	check(loaded.ship.hull == run.ship.hull, "Hülle falsch")
+	check(loaded.ship.systems["schilde"].damage == 1, "Systemschaden fehlt")
+	check(loaded.ship.crew.size() == run.ship.crew.size(), "Crew-Zahl falsch")
+	check(is_equal_approx(loaded.ship.crew[0].hp, 40.0), "Lebenspunkte falsch")
+	check(loaded.ship.crew[0].level("waffen") == 2, "Erfahrung fehlt")
+	check(loaded.ship.breaches.size() == 1, "Leck fehlt")
+	check(is_equal_approx(loaded.ship.oxygen[2], 0.3), "Luft falsch")
+	check(loaded.map.nodes.size() == run.map.nodes.size(), "Karte falsch")
+	check(loaded.node().links == run.node().links, "Verbindungen falsch")
+	check(loaded.enemy_spec(run.node().links[0]) == run.enemy_spec(run.node().links[0]), "Gegner geändert")
+	# Zufall läuft gleich weiter
+	check(loaded._rng.randi() == run._rng.randi(), "Zufallszustand nicht gespeichert")
+	SaveGame.clear()
+
+
+func test_save_keeps_open_dialog() -> void:
+	_save_paths()
+	var run := RunState.new(77)
+	run._open_shop()
+	SaveGame.save(run)
+	var loaded := SaveGame.load_run()
+	check(loaded != null and loaded.dialog.title == "Händler", "Dialog nicht gespeichert")
+	check(loaded != null and loaded.choose(loaded.dialog.choices.size() - 1) and loaded.dialog.is_empty(), "Dialog nach Laden nicht bedienbar")
+	SaveGame.clear()
+
+
+func test_older_save_without_new_fields_loads() -> void:
+	_save_paths()
+	var data := SaveGame.to_dict(_played_run())
+	# So könnte ein Stand aus einer älteren Version aussehen: Felder fehlen
+	data.run.erase("flags")
+	data.run.erase("rng")
+	data.ship.erase("fires")
+	data.ship.erase("doors")
+	data.ship.systems["gibtsnicht"] = {"damage": 2}
+	data.ship.weapons.append({"id": "alte_waffe", "wanted": true})
+	var f := FileAccess.open(SaveGame.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(JSON.from_native(data)))
+	f.close()
+	var loaded := SaveGame.load_run()
+	check(loaded != null, "Älterer Stand lädt nicht")
+	check(loaded != null and loaded.flags.is_empty(), "Fehlende Felder nicht ersetzt")
+	check(loaded != null and loaded.ship.weapons.size() == data.ship.weapons.size() - 1, "Unbekannte Waffe nicht übersprungen")
+	SaveGame.clear()
+
+
+func test_broken_or_newer_save_is_never_overwritten() -> void:
+	_save_paths()
+	var run := _played_run()
+	SaveGame.save(run)
+	SaveGame.save(run)  # jetzt gibt es auch eine Sicherung
+	var f := FileAccess.open(SaveGame.path, FileAccess.WRITE)
+	f.store_string("{kaputt")
+	f.close()
+	var loaded := SaveGame.load_run()
+	check(loaded != null and loaded.scrap == 17, "Sicherung nicht als Rückfall genutzt")
+	# Stand aus einem neueren Build: nicht laden, aber beiseitelegen statt löschen
+	var data := SaveGame.to_dict(run)
+	data.version = SaveGame.VERSION + 1
+	f = FileAccess.open(SaveGame.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(JSON.from_native(data)))
+	f.close()
+	DirAccess.remove_absolute(SaveGame.backup)
+	check(SaveGame.load_run() == null, "Neuerer Stand wurde geladen")
+	var kept := Array(DirAccess.get_files_at("user://")).filter(func(n: String) -> bool: return n.begins_with("savegame-"))
+	check(kept.size() == 2, "Kaputter und neuerer Stand nicht beide beiseitegelegt (%d)" % kept.size())
+	for n: String in kept:
+		DirAccess.remove_absolute("user://" + n)
+	SaveGame.clear()

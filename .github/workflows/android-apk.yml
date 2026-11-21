@@ -56,13 +56,13 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
         run: |
+          # Immer derselbe Schlüssel, damit sich neue APKs über die alte installieren lassen.
+          # Standard: der Debug-Keystore im Repository; ein Secret kann ihn ersetzen.
           ks="$RUNNER_TEMP/debug.keystore"
           if [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > "$ks"
           else
-            keytool -genkeypair -keystore "$ks" -storepass android -keypass android \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
+            cp tools/android/debug.keystore "$ks"
           fi
           {
             echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$ks"
@@ -80,6 +80,17 @@ jobs:
           SETTINGS
           sed -i 's/^ *//' ~/.config/godot/editor_settings-${major_minor}.tres
 
+      - name: Versionsnummer setzen
+        # versionCode zählt mit jedem Build hoch (Android verlangt das für Updates),
+        # der Versionsname wird z. B. 0.2.17 und steht im Spiel auf der Sternenkarte.
+        run: |
+          base=$(sed -n 's/^config\/version="\(.*\)"/\1/p' game/project.godot)
+          name="${base}.${GITHUB_RUN_NUMBER}"
+          sed -i "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/; s/^version\/name=.*/version\/name=\"${name}\"/" game/export_presets.cfg
+          sed -i "s/^config\/version=.*/config\/version=\"${name}\"/" game/project.godot
+          grep -E '^version/(code|name)=' game/export_presets.cfg
+          echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
+
       - name: Logiktests
         run: |
           "$GODOT" --headless --path game --import
@@ -93,7 +104,7 @@ jobs:
           mkdir -p build
           "$GODOT" --headless --path game --export-debug "Android" ../build/hullbound-debug.apk
           test -s build/hullbound-debug.apk
-          name="hullbound-$(git rev-parse --short HEAD)-debug.apk"
+          name="hullbound-${VERSION_NAME}-debug.apk"
           mv build/hullbound-debug.apk "build/$name"
           echo "APK=build/$name" >> "$GITHUB_ENV"
 
@@ -108,9 +119,10 @@ jobs:
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('apk-build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }}
-          name: Hullbound Testversion ${{ github.ref_type == 'tag' && github.ref_name || format('#{0}', github.run_number) }}
+          name: Hullbound ${{ env.VERSION_NAME }}
           prerelease: true
           files: ${{ env.APK }}
           body: |
-            Debug-APK vom Branch `${{ github.ref_name }}`, Commit ${{ github.sha }}.
-            Auf dem Handy herunterladen und öffnen; beim ersten Mal „Aus dieser Quelle installieren“ erlauben.
+            Version ${{ env.VERSION_NAME }} (Build ${{ github.run_number }}) vom Branch `${{ github.ref_name }}`, Commit ${{ github.sha }}.
+            Auf dem Handy herunterladen und öffnen; sie installiert sich als Update über die vorige Version.
+            Beim ersten Mal „Aus dieser Quelle installieren“ erlauben.

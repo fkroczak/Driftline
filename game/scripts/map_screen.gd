@@ -24,7 +24,13 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	view.hint = _default_hint()
+	Game.save()
 	_show_run_dialog()
+	# Spielstand aus einem abgebrochenen Kampf: Kampf neu beginnen (außer beim Boss nach einer Flucht).
+	if Game.resumed:
+		Game.resumed = false
+		if run.dialog.is_empty() and run.node().type != "boss":
+			_start_battle_if_needed()
 
 
 func _layout() -> void:
@@ -81,6 +87,7 @@ func _jump(id: int) -> void:
 	_busy = true
 	var from := run.current
 	run.jump_to(id)
+	Game.save()
 	view.selected = -1
 	view.ship_from = from
 	view.ship_to = id
@@ -102,6 +109,7 @@ func _arrived() -> void:
 
 func _on_distress() -> void:
 	if run.send_distress():
+		Game.save()
 		view.hint = "Notsignal gesendet …"
 		_show_run_dialog()
 
@@ -112,6 +120,7 @@ func _on_choice(index: int) -> void:
 		Game.to_map()  # Ende-Dialog: neuer Run
 		return
 	run.choose(index)
+	Game.save()
 	_show_run_dialog()
 	if run.dialog.is_empty():
 		_start_battle_if_needed()

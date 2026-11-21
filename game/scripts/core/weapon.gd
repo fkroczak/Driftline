@@ -22,10 +22,20 @@ var powered := false
 var target := -1
 
 
-static func create(weapon_id: String) -> Weapon:
+## Gibt es diese Waffe (z. B. für Spielstände aus älteren Versionen)?
+static func known(weapon_id: String) -> bool:
+	_load_defs()
+	return _defs.has(weapon_id)
+
+
+static func _load_defs() -> void:
 	if _defs.is_empty():
 		var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(DEFS_PATH))
 		_defs = data if typeof(data) == TYPE_DICTIONARY else {}
+
+
+static func create(weapon_id: String) -> Weapon:
+	_load_defs()
 	assert(_defs.has(weapon_id), "Unbekannte Waffe: %s" % weapon_id)
 	var d: Dictionary = _defs.get(weapon_id, {})
 	var w := Weapon.new()

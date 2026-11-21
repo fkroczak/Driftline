@@ -460,6 +460,7 @@ func _update_aftermath(delta: float) -> void:
 	state.events.clear()
 	if state.is_crew_dead() and Game.run.result == "":
 		Game.run.result = "verloren"
+		Game.save()
 		_aftermath = false
 		jump_button.map_mode = false
 		_show_end_banner("Die ganze Crew ist tot\nRun vorbei nach %d von %d Sprüngen" % [Game.run.jumps_done(), StarMap.JUMPS])
@@ -487,6 +488,7 @@ func _show_end_banner(text: String) -> void:
 func _show_banner(own_ship: bool, reason: String) -> void:
 	var run := Game.run
 	run.finish_battle(battle.outcome)
+	Game.save()
 	if battle.outcome == "sieg" and run.result == "":
 		_show_victory(reason, run.last_reward)
 		return
