@@ -18,6 +18,9 @@ extends RefCounted
 ## Feuer (je Kachel): breitet sich bei genug Sauerstoff aus (im Raum und durch offene Türen),
 ## beschädigt das System im Raum und verletzt Crew.
 ##
+## Sprungantrieb: Mit Energie im Antrieb und einer Person im Cockpit lädt der Sprung
+## (JUMP_TIME Sekunden je Balken Antrieb geteilt). Voll geladen kann das Schiff fliehen.
+##
 ## Türen sind anfangs zu. Die eigene Crew läuft trotzdem hindurch; Luft und Feuer nicht.
 ##
 ## Konsolenregel (Räume mit Konsole, siehe data/ships/*.json):
@@ -55,6 +58,8 @@ const HP_FIRE_ROOM := 1.5
 const HP_SUFFOCATE := 6.0
 const HP_PER_HIT := 15.0
 const HEAL_PER_LEVEL := 6.0
+## Sekunden bis zum Sprung bei einem Balken Antrieb; zwei Balken laden doppelt so schnell.
+const JUMP_TIME := 40.0
 
 var layout: ShipLayout
 var crew: Array[CrewMember] = []
@@ -74,6 +79,8 @@ var fire_chance := 0.3
 var breach_chance := 0.1
 var rng := RandomNumberGenerator.new()
 var had_crew := false
+## Ladestand des Sprungantriebs (0..1).
+var jump_charge := 0.0
 var _fire_damage := {}  # System-ID -> Fortschritt bis zum nächsten Brandschaden
 ## Meldungen für die Darstellung (z. B. Reparatur fertig); wer sie liest, leert die Liste.
 var events: Array[Dictionary] = []
@@ -226,6 +233,15 @@ func take_hit(room_idx: int, amount: int) -> int:
 			start_breach(tiles[rng.randi() % tiles.size()])
 	_rebalance()
 	return dealt
+
+
+## Lädt der Sprungantrieb gerade? Braucht Antrieb mit Energie und eine Person im Cockpit.
+func can_charge_jump() -> bool:
+	return level("antrieb") > 0 and level("cockpit") > 0 and operator_of_system("cockpit") != null
+
+
+func jump_ready() -> bool:
+	return jump_charge >= 1.0 and operator_of_system("cockpit") != null
 
 
 func is_destroyed() -> bool:
@@ -474,6 +490,8 @@ func _update_combat(delta: float) -> void:
 			shield_layers += 1
 	else:
 		shield_progress = 0.0
+	if can_charge_jump():
+		jump_charge = minf(jump_charge + delta * level("antrieb") * skill_factor("antrieb") / JUMP_TIME, 1.0)
 	var speed := skill_factor("waffen")
 	for weapon in weapons:
 		weapon.update(delta, speed)

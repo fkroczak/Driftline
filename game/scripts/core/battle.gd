@@ -24,7 +24,7 @@ var player: ShipState
 var enemy: ShipState
 var projectiles: Array[Dictionary] = []
 var events: Array[Dictionary] = []
-## "" solange gekämpft wird, sonst "sieg" oder "niederlage".
+## "" solange gekämpft wird, sonst "sieg", "niederlage" oder "entkommen" (Fluchtsprung).
 var outcome := ""
 
 var _rng := RandomNumberGenerator.new()
@@ -55,6 +55,16 @@ func set_weapon_target(weapon_idx: int, room_idx: int) -> void:
 func set_all_targets(room_idx: int) -> void:
 	for i in player.weapons.size():
 		set_weapon_target(i, room_idx)
+
+
+## Fluchtsprung des Spielers. Falsch, wenn der Antrieb noch nicht geladen ist.
+func player_jump() -> bool:
+	if outcome != "" or not player.jump_ready():
+		return false
+	outcome = "entkommen"
+	projectiles.clear()
+	_emit({"type": "jumped"})
+	return true
 
 
 func player_has_target() -> bool:

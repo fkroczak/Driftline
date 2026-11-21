@@ -492,3 +492,34 @@ func test_crew_shows_activity() -> void:
 	state.take_hit(state.layout.room_index_by_id("schilde"), 1)
 	state.update(0.1)
 	check(member.activity == "reparieren", "Reparieren nicht als Tätigkeit sichtbar: '%s'" % member.activity)
+
+
+func test_jump_needs_engine_and_pilot() -> void:
+	var state := _quiet_state()
+	_settle(state, 5.0)
+	check(state.jump_charge == 0.0, "Sprung lädt ohne Antrieb")
+	state.remove_power("waffen")
+	state.add_power("antrieb")
+	_settle(state, 5.0)
+	check(state.jump_charge == 0.0, "Sprung lädt ohne Pilot")
+	state.add_crew("Pilot", "mensch", Vector2i(10, 3))
+	_settle(state, 10.0)
+	check(state.jump_charge > 0.0 and not state.jump_ready(), "Sprung lädt nicht oder ist zu schnell fertig")
+	_settle(state, 40.0)
+	check(state.jump_ready(), "Sprung nach 50 s mit 2 Balken Antrieb nicht bereit")
+
+
+func test_jump_ends_battle() -> void:
+	var player := ShipState.new(_layout())
+	player.add_crew("Pilot", "mensch", Vector2i(10, 3))
+	var battle := Battle.new(player, _enemy_ship(), 4)
+	check(not battle.player_jump(), "Sprung ohne Ladung möglich")
+	player.jump_charge = 1.0
+	check(battle.player_jump() and battle.outcome == "entkommen", "Geladener Sprung beendet den Kampf nicht")
+
+
+func test_heavy_enemy_layout_is_valid() -> void:
+	var layout := ShipLayout.load_json("res://data/ships/piraten_kutter_schwer.json")
+	check(layout.validate().is_empty(), "Schwerer Kutter: Layout-Fehler")
+	var ship := ShipState.new(layout)
+	check(ship.max_shield_layers() == 2, "Schwerer Kutter sollte zwei Schildschichten haben")

@@ -11,7 +11,7 @@ extends Control
 
 signal selection_changed(idx: int)
 
-const CARD := Vector2(76, 30)
+const CARD := Vector2(74, 30)
 const GAP := 3.0
 const FONT_SIZE := 8
 const LONG_PRESS_MS := 400

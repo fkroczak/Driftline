@@ -1,0 +1,31 @@
+{
+  "id": "piraten_kutter_schwer",
+  "name": "Schwerer Kutter",
+  "tint": "#ffb8a8",
+  "sprite": "res://assets/ships/piraten_kutter.png",
+  "tile_size": 14,
+  "grid_origin": [18, 12],
+  "grid_size": [6, 4],
+  "hull": 16,
+  "reactor": 8,
+  "oxygen_regen": 0.04,
+  "systems": {"schilde": 4, "waffen": 2, "antrieb": 2, "cockpit": 1},
+  "power": {"schilde": 4, "antrieb": 2},
+  "weapons": ["pulslaser", "bordkanone"],
+  "weapons_powered": 2,
+  "weapon_mount": [8, 66],
+  "engines": [[109, 31], [109, 40], [109, 49]],
+  "engine_dir": 1,
+  "shield_ellipse": [59, 40, 64, 46],
+  "rooms": [
+    {"id": "cockpit", "name": "Cockpit", "system": "cockpit", "pos": [0, 1], "console": [0, 1]},
+    {"id": "waffen", "name": "Waffen", "system": "waffen", "pos": [2, 0], "console": [2, 0]},
+    {"id": "schilde", "name": "Schilde", "system": "schilde", "pos": [2, 2], "console": [2, 3]},
+    {"id": "antrieb", "name": "Antrieb", "system": "antrieb", "pos": [4, 0], "console": [5, 0]},
+    {"id": "reaktor", "name": "Reaktor", "system": "reaktor", "pos": [4, 2]}
+  ],
+  "airlocks": [[[5, 3], [0, 1]]],
+  "doors": [
+    [[1, 1], [2, 1]], [[1, 2], [2, 2]], [[3, 1], [3, 2]], [[3, 0], [4, 0]], [[3, 3], [4, 3]], [[5, 1], [5, 2]]
+  ]
+}

@@ -173,7 +173,7 @@ func _draw() -> void:
 		return
 	var layout := state.layout
 	_draw_engines()
-	draw_texture(_ship_texture, Vector2.ZERO)
+	draw_texture(_ship_texture, Vector2.ZERO, Color(state.layout.stats.get("tint", "#ffffff")))
 	_draw_oxygen()
 	_draw_doors()
 	_draw_airlocks()
@@ -219,7 +219,8 @@ func _draw_engines() -> void:
 	for e: Array in state.layout.stats.get("engines", []):
 		i += 1
 		var flicker := float((tick * 7 + i * 13) % 5) * 0.5
-		var length := roundf(3.0 + level * 3.0 + flicker)
+		# Ladender Sprungantrieb: Flammen werden länger und heller
+		var length := roundf(3.0 + level * 3.0 + flicker + state.jump_charge * 6.0)
 		var p := Vector2(e[0], e[1])
 		var outer := Rect2(p + Vector2(0 if dir > 0 else -length, -2), Vector2(length, 4))
 		var core_len := roundf(length * 0.55)
@@ -425,6 +426,9 @@ func _draw_hull_bar() -> void:
 	var color := Color("#5DCAA5") if ratio > 0.5 else (Color("#FAC775") if ratio > 0.25 else COLOR_DAMAGE)
 	var label := "%d/%d" % [state.hull, state.max_hull]
 	var text_pos := Vector2(4, -9)
+	var title: String = state.layout.display_name
+	draw_string(font, Vector2(5, -19), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0, 0, 0, 0.8))
+	draw_string(font, Vector2(4, -20), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("#F7C1C1"))
 	draw_string(font, text_pos + Vector2(1, 1), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0, 0, 0, 0.8))
 	draw_string(font, text_pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, color)
 	var origin := Vector2(6 + font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x, -15)
