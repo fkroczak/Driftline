@@ -4,10 +4,11 @@ extends Node2D
 ## Waffen feuern selbst; Feuer, Hüllenbrüche und Sauerstoff laufen in ShipState.
 
 const LAYOUT_PATH := "res://data/ships/mensch_frachter.json"
-## Mögliche Gegner mit Gewicht; der schwere Kutter ist oft nur durch Flucht zu überstehen.
+## Mögliche Gegner mit Gewicht. Jeder muss mit gutem Spiel schlagbar sein (kein No-win-Szenario);
+## der Sprung ist der Notausgang, nicht die einzige Lösung.
 const ENEMIES := [
-	["res://data/ships/piraten_kutter.json", 0.6],
-	["res://data/ships/piraten_kutter_schwer.json", 0.4],
+	["res://data/ships/piraten_kutter.json", 0.65],
+	["res://data/ships/piraten_kutter_schwer.json", 0.35],
 ]
 const MARGIN := 6.0
 const TOP := 30.0

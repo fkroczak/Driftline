@@ -522,4 +522,5 @@ func test_heavy_enemy_layout_is_valid() -> void:
 	var layout := ShipLayout.load_json("res://data/ships/piraten_kutter_schwer.json")
 	check(layout.validate().is_empty(), "Schwerer Kutter: Layout-Fehler")
 	var ship := ShipState.new(layout)
-	check(ship.max_shield_layers() == 2, "Schwerer Kutter sollte zwei Schildschichten haben")
+	check(ship.max_shield_layers() == 1, "Schwerer Kutter: eine Schildschicht (zwei sind mit 6 Reaktorbalken kaum zu knacken)")
+	check(ship.weapons.size() == 3 and ship.weapons.all(func(w: Weapon) -> bool: return w.powered), "Schwerer Kutter: drei Waffen mit Energie")
