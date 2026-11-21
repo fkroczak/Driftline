@@ -143,6 +143,7 @@ func _draw() -> void:
 	var layout := state.layout
 	_draw_engines()
 	draw_texture(_ship_texture, Vector2.ZERO)
+	_draw_airlocks()
 	_draw_damage()
 	if focused_room >= 0:
 		var rect := layout.room_rect(focused_room).grow(-1)
@@ -189,6 +190,21 @@ func _draw_engines() -> void:
 		var core := Rect2(p + Vector2(0 if dir > 0 else -core_len, -1), Vector2(core_len, 2))
 		draw_rect(outer, Color(colors[0], 0.75))
 		draw_rect(core, colors[1])
+
+
+## Luftschleusen: Luke mit gelbem Warnstreifen auf der Außenwand.
+func _draw_airlocks() -> void:
+	var layout := state.layout
+	for lock in layout.airlocks:
+		var dir: Vector2 = Vector2(lock.dir)
+		var edge := layout.tile_center(Vector2(lock.tile)) + dir * (layout.tile_size / 2.0)
+		var along := Vector2(absf(dir.y), absf(dir.x))  # entlang der Wand
+		var size := along * 7.0 + Vector2(absf(dir.x), absf(dir.y)) * 3.0
+		var rect := Rect2((edge - size / 2.0).round(), size)
+		draw_rect(rect, Color("#2A2F3A"))
+		draw_rect(rect, Color("#0A0B16"), false, 1.0)
+		var stripe := along * 5.0 + Vector2(absf(dir.x), absf(dir.y))
+		draw_rect(Rect2((edge - stripe / 2.0).round(), stripe), Color("#FAC775"))
 
 
 ## Beschädigte Systeme: rot pulsierender Raum, gelber Balken für den Reparaturfortschritt.

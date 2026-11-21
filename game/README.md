@@ -26,6 +26,7 @@ Prototyp Phase 1 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): Die Frage is
 - **Einschlag:** Ausweichen (Antrieb + besetztes Cockpit), sonst fängt der Schild ab (2 Balken = 1 Schicht, lädt in 2 s nach), sonst Treffer: Hülle und System im Raum verlieren Balken
 - **Reaktortreffer** senken die verfügbare Energie; dann werden Systeme in der Reihenfolge Lebenserhaltung, Schilde, Waffen, Antrieb, Sensoren, Medbay versorgt. Nach der Reparatur kommt die gewünschte Energie von selbst zurück.
 - **Gegner:** zielt alle paar Sekunden auf einen anderen Raum. Seine Mechanikerin oder sein Mechaniker repariert Schäden und kehrt danach zur Konsole zurück.
+- **Luftschleusen:** Gelb markierte Luken auf der Außenwand (Frachter: 2, Kutter: 1). Noch ohne Funktion; sie sollen später Sauerstoff ablassen, damit Feuer und Enterkommandos ersticken.
 - **Ende:** Hülle auf 0. Danach antippen für einen neuen Kampf.
 
 ### Effekte

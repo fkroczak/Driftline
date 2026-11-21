@@ -198,6 +198,19 @@ func _enemy_ship() -> ShipState:
 	return ship
 
 
+func test_airlocks_lead_outside() -> void:
+	var layout := _layout()
+	check(layout.airlocks.size() == 2, "Frachter sollte 2 Luftschleusen haben")
+	var rooms := layout.rooms_with_airlock()
+	check(rooms.has(layout.room_index_by_id("erweiterung_1")) and rooms.has(layout.room_index_by_id("erweiterung_2")),
+		"Luftschleusen in den falschen Räumen")
+	var bad := ShipLayout.from_dict({"grid_size": [4, 2], "rooms": [
+		{"id": "a", "pos": [0, 0]}, {"id": "b", "pos": [2, 0]}],
+		"doors": [[[1, 0], [2, 0]]], "airlocks": [[[1, 0], [1, 0]], [[0, 0], [0, -1]]]})
+	var errors := bad.validate()
+	check(errors.size() == 1 and "nach draußen" in errors[0], "Schleuse in einen Nachbarraum nicht erkannt: %s" % errors)
+
+
 func test_enemy_layout_is_valid() -> void:
 	var layout := ShipLayout.load_json(ENEMY_PATH)
 	var errors := layout.validate()
