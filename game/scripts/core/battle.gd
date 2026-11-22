@@ -5,7 +5,8 @@ extends RefCounted
 ## Ablauf eines Schusses: Eine geladene Waffe feuert auf ihren eigenen Zielraum (Spieler:
 ## je Waffe angetippt, Gegner: je Waffe zufällig ein Raum mit System). Das Geschoss fliegt FLIGHT_TIME Sekunden.
 ## Beim Einschlag wird entschieden: Ausweichen (Antrieb + besetztes Cockpit), sonst
-## Schild (eine Schicht fällt), sonst Treffer (Hülle und System im Raum).
+## Schild (eine Schicht fällt), sonst Treffer (Hülle immer, System, Feuer und Leck mit den
+## Chancen der Waffe, siehe ShipState.take_hit).
 ##
 ## Alles, was die Darstellung animieren soll, landet in `events`:
 ## - fire, miss, shield, hit: from_player (Spieler hat geschossen), projectile, room
@@ -35,6 +36,8 @@ var _id_counter := 0
 func _init(p_player: ShipState, p_enemy: ShipState, rng_seed := 0) -> void:
 	player = p_player
 	enemy = p_enemy
+	player.in_combat = true
+	enemy.in_combat = true
 	if rng_seed != 0:
 		_rng.seed = rng_seed
 	else:
@@ -161,7 +164,9 @@ func _resolve(p: Dictionary) -> void:
 		event["type"] = "shield"
 	else:
 		event["type"] = "hit"
-		event["system_damage"] = defender.take_hit(p.room, p.damage)
+		var attacker := player if p.player else enemy
+		var weapon: Weapon = attacker.weapons[p.weapon] if p.weapon < attacker.weapons.size() else null
+		event["system_damage"] = defender.take_hit(p.room, p.damage, weapon)
 	_emit(event)
 
 

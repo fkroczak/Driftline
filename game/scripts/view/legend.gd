@@ -16,7 +16,7 @@ const CONTROLS := [
 	"Energie: Spalte antippen +1, gedrückt halten −1 · Waffenkarte halten: an/aus",
 	"Tür oder gelbe Schleuse antippen: auf/zu · offene Schleuse saugt Luft ab",
 	"Crew antippen, dann Ziel · Wer im Raum steht, löscht, flickt und repariert",
-	"SPRUNG lädt mit Antrieb und Pilot · voll geladen antippen = fliehen",
+	"SPRUNG lädt nach jedem Sprung neu (Pilot nötig, im Kampf auch Antrieb) · voll: Ziel auf der Karte",
 	"Pause antippen (oder Leertaste) · halten: Auto-Pause an/aus (A)",
 ]
 

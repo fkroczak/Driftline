@@ -20,6 +20,15 @@ extends RefCounted
 ##
 ## Sprungantrieb: Mit Energie im Antrieb und einer Person im Cockpit lädt der Sprung
 ## (JUMP_TIME Sekunden je Balken Antrieb geteilt). Voll geladen kann das Schiff fliehen.
+## Außerhalb des Kampfs (in_combat = false) lädt er schneller und auch ohne Energie im Antrieb
+## (PEACE_JUMP_TIME, geteilt durch 1 + Balken Antrieb); Waffen laden dann nicht.
+##
+## Treffer: Die Hülle verliert immer Punkte. Das System im Raum nimmt nur mit der
+## Systemchance der Waffe Schaden (data/weapons.json: system), Feuer und Hüllenbrüche ebenso
+## (fire, breach). So fallen Räume nicht bei jedem Treffer aus.
+##
+## Spezies (data/species.json): Lebenspunkte, Tempo, Reparatur, Feuer- und Luftbedarf,
+## Medbay-Heilung und Konsolenboni hängen an der Spezies der Person.
 ##
 ## Türen sind anfangs zu. Die eigene Crew läuft trotzdem hindurch; Luft und Feuer nicht.
 ##
@@ -60,6 +69,8 @@ const HP_PER_HIT := 15.0
 const HEAL_PER_LEVEL := 6.0
 ## Sekunden bis zum Sprung bei einem Balken Antrieb; zwei Balken laden doppelt so schnell.
 const JUMP_TIME := 40.0
+## Außerhalb des Kampfs: Sekunden ohne Energie im Antrieb, geteilt durch 1 + Balken.
+const PEACE_JUMP_TIME := 15.0
 
 var layout: ShipLayout
 var crew: Array[CrewMember] = []
@@ -81,6 +92,8 @@ var rng := RandomNumberGenerator.new()
 var had_crew := false
 ## Ladestand des Sprungantriebs (0..1).
 var jump_charge := 0.0
+## Im Kampf: Sprung lädt langsam, Waffen laden. Außerhalb: Sprung lädt schnell, Waffen nicht.
+var in_combat := true
 var _fire_damage := {}  # System-ID -> Fortschritt bis zum nächsten Brandschaden
 ## Meldungen für die Darstellung (z. B. Reparatur fertig); wer sie liest, leert die Liste.
 var events: Array[Dictionary] = []
@@ -206,7 +219,10 @@ func evasion() -> float:
 ## Faktor für Lade- und Aufladezeiten: besetzte Konsole und Erfahrung beschleunigen.
 func skill_factor(system: String) -> float:
 	var op := operator_of_system(system)
-	return 1.0 if op == null else 1.0 + OPERATOR_BONUS + LEVEL_BONUS * op.level(system)
+	if op == null:
+		return 1.0
+	return 1.0 + (OPERATOR_BONUS + LEVEL_BONUS * op.level(system)) * op.console_factor(system) \
+		+ (Species.SYSTEM_BONUS if (Species.value(op.species, "bonus", []) as Array).has(system) else 0.0)
 
 
 func operator_of_system(system: String) -> CrewMember:
@@ -214,22 +230,25 @@ func operator_of_system(system: String) -> CrewMember:
 	return operator_of(room) if room >= 0 else null
 
 
-## Treffer in einem Raum: Hüllenschaden, Schaden am System des Raums, verletzte Crew,
-## eventuell Feuer und Hüllenbruch. Liefert den Schaden am System.
-func take_hit(room_idx: int, amount: int) -> int:
+## Treffer in einem Raum: Hüllenschaden, verletzte Crew und mit den Chancen der Waffe
+## Systemschaden, Feuer und Hüllenbruch. Ohne Waffe (z. B. in Tests oder Ereignissen) trifft es
+## das System immer, Feuer und Lecks mit fire_chance und breach_chance des Schiffs.
+## Liefert den Schaden am System.
+func take_hit(room_idx: int, amount: int, weapon: Weapon = null) -> int:
 	hull = maxi(hull - amount, 0)
 	var dealt := 0
 	if room_idx >= 0:
 		var sys: ShipSystem = systems.get(layout.rooms[room_idx].system)
-		if sys:
+		var sys_chance := weapon.system_chance if weapon else 1.0
+		if sys and rng.randf() < sys_chance:
 			dealt = sys.apply_damage(amount)
 		for member: CrewMember in crew.duplicate():
 			if layout.room_index_at(member.current_tile()) == room_idx:
 				_hurt(member, HP_PER_HIT * amount)
 		var tiles := layout.room_tiles(room_idx)
-		if rng.randf() < fire_chance:
+		if rng.randf() < (weapon.fire_chance if weapon else fire_chance):
 			start_fire(tiles[rng.randi() % tiles.size()])
-		if rng.randf() < breach_chance:
+		if rng.randf() < (weapon.breach_chance if weapon else breach_chance):
 			start_breach(tiles[rng.randi() % tiles.size()])
 	_rebalance()
 	return dealt
@@ -295,6 +314,25 @@ func toggle_door(a: Vector2i, b: Vector2i) -> bool:
 	return is_door_open(a, b)
 
 
+## Alle Türen auf oder zu.
+func set_all_doors(open: bool) -> void:
+	for pair: Array in layout.door_list():
+		set_door_open(pair[0], pair[1], open)
+
+
+func any_door_open() -> bool:
+	return door_open.values().has(true)
+
+
+func any_airlock_open() -> bool:
+	return airlock_open.has(true)
+
+
+func close_airlocks() -> void:
+	for i in airlock_open.size():
+		airlock_open[i] = false
+
+
 func toggle_airlock(idx: int) -> bool:
 	if idx < 0 or idx >= airlock_open.size():
 		return false
@@ -332,7 +370,7 @@ func _crew_work(delta: float) -> void:
 				var t: Vector2i = room_fires[i % room_fires.size()]
 				workers[i].set_activity("loeschen", t)
 				if fires.has(t):
-					fires[t] -= delta * EXTINGUISH
+					fires[t] -= delta * EXTINGUISH * workers[i].repair_factor()
 					if fires[t] <= 0.0:
 						fires.erase(t)
 						events.append({"type": "extinguished", "tile": t, "room": room})
@@ -341,9 +379,11 @@ func _crew_work(delta: float) -> void:
 		if not room_breaches.is_empty():
 			busy[room] = true
 			var t: Vector2i = room_breaches[0]
+			var power := 0.0
 			for member: CrewMember in workers:
 				member.set_activity("flicken", t)
-			breaches[t] += delta * workers.size() / BREACH_REPAIR_TIME
+				power += member.repair_factor()
+			breaches[t] += delta * power / BREACH_REPAIR_TIME
 			if breaches[t] >= 1.0:
 				breaches.erase(t)
 				events.append({"type": "breach_fixed", "tile": t, "room": room})
@@ -351,8 +391,8 @@ func _crew_work(delta: float) -> void:
 		var room := layout.room_of_system(sys.id)
 		var workers := 0.0
 		if sys.damage > 0 and room >= 0 and not busy.has(room) and idle.has(room):
-			workers = float(idle[room].size())
 			for member: CrewMember in idle[room]:
+				workers += member.repair_factor()
 				var console: Variant = layout.console_of(room)
 				member.set_activity("reparieren", console if console != null and console != member.tile else layout.rooms[room].pos)
 		if sys.repair(delta, workers):
@@ -428,15 +468,16 @@ func _update_crew_health(delta: float) -> void:
 		var room := layout.room_index_at(t)
 		var damage := 0.0
 		if fires.has(t):
-			damage += HP_FIRE_TILE
+			damage += HP_FIRE_TILE * member.fire_factor()
 		elif room >= 0 and not fires_in_room(room).is_empty():
-			damage += HP_FIRE_ROOM
-		if room >= 0 and oxygen[room] < O2_LOW:
+			damage += HP_FIRE_ROOM * member.fire_factor()
+		if room >= 0 and oxygen[room] < O2_LOW and member.breathes():
 			damage += HP_SUFFOCATE
-		if room == medbay and room >= 0 and not member.is_moving() and level("medbay") > 0:
-			if member.hp < CrewMember.MAX_HP and member.activity == "":
+		var heal := member.medbay_factor()
+		if room == medbay and room >= 0 and not member.is_moving() and level("medbay") > 0 and heal > 0.0:
+			if member.hp < member.max_hp and member.activity == "":
 				member.activity = "heilen"
-			member.hp = minf(member.hp + level("medbay") * HEAL_PER_LEVEL * delta, CrewMember.MAX_HP)
+			member.hp = minf(member.hp + level("medbay") * HEAL_PER_LEVEL * heal * delta, member.max_hp)
 		if damage > 0.0:
 			_hurt(member, damage * delta)
 
@@ -509,20 +550,28 @@ func _update_combat(delta: float) -> void:
 			shield_layers += 1
 	else:
 		shield_progress = 0.0
-	if can_charge_jump():
+	if not in_combat:
+		if level("cockpit") > 0 and operator_of_system("cockpit") != null:
+			jump_charge = minf(jump_charge + delta * (1 + level("antrieb")) * skill_factor("antrieb") / PEACE_JUMP_TIME, 1.0)
+	elif can_charge_jump():
 		jump_charge = minf(jump_charge + delta * level("antrieb") * skill_factor("antrieb") / JUMP_TIME, 1.0)
 	var speed := skill_factor("waffen")
 	for weapon in weapons:
+		var was_powered := weapon.powered
+		if not in_combat:
+			weapon.powered = false  # außerhalb des Kampfs laden Waffen nicht
 		weapon.update(delta, speed)
+		weapon.powered = was_powered
 
 
 ## Kampfende bzw. Sprung: nur was zum Kampf selbst gehört, wird zurückgesetzt. Waffen sind
-## ungeladen und ohne Ziel, der Sprungantrieb ist leer, laufende Crew steht auf ihrem Ziel.
+## ungeladen und ohne Ziel, laufende Crew steht auf ihrem Ziel. Der Sprungantrieb behält seine
+## Ladung (geleert wird er beim Sprung selbst, siehe RunState.jump_to).
 ## Nichts wird automatisch repariert oder aufgeladen: Hülle, Systemschäden, Lecks, Feuer, Luft,
 ## Schilde, Türen, Schleusen und verletzte Crew bleiben, bis die Crew sie behebt (im Kampf oder
 ## in der Zeit danach) oder eine Reparaturstation hilft.
 func end_combat() -> void:
-	jump_charge = 0.0
+	in_combat = false
 	for weapon in weapons:
 		weapon.charge = 0.0
 		weapon.target = -1

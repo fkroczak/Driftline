@@ -1,6 +1,7 @@
 class_name SaveGame
 extends RefCounted
-## Spielstand des laufenden Runs, gespeichert in user://savegame.json.
+## Spielstand des laufenden Runs: je Modus ein Slot, user://savegame.json (Jagd) und
+## user://savegame_endlos.json (Endloses Universum).
 ##
 ## Gespeichert wird auf der Sternenkarte (nach jedem Sprung, jeder Entscheidung, beim Verlassen
 ## der App). Ein Kampf wird nicht mitten drin gespeichert: Wird die App im Kampf beendet, beginnt
@@ -19,8 +20,9 @@ extends RefCounted
 ##   savegame.bak.json (Rückfall, falls die Hauptdatei kaputt ist).
 ##
 ## Bei Formatänderungen: VERSION erhöhen und in `_migrate` einen Schritt ergänzen.
+## Version 2: Modus, Sektor, Sprungzähler, Jägerfront, freie Karte mit Verbindungen in beide Richtungen.
 
-const VERSION := 1
+const VERSION := 2
 const PATH := "user://savegame.json"
 const BACKUP := "user://savegame.bak.json"
 const TEMP := "user://savegame.tmp"
@@ -30,34 +32,45 @@ static var path := PATH
 static var backup := BACKUP
 
 
-static func exists() -> bool:
-	return FileAccess.file_exists(path) or FileAccess.file_exists(backup)
+## Hauptdatei und Sicherung des Slots für einen Modus.
+static func _files(mode: String) -> Array[String]:
+	if mode == RunState.MODE_ENDLESS:
+		return [path.get_basename() + "_" + mode + ".json", backup.replace(".bak.", "_%s.bak." % mode)]
+	return [path, backup]
+
+
+static func exists(mode := RunState.MODE_HUNT) -> bool:
+	var files := _files(mode)
+	return FileAccess.file_exists(files[0]) or FileAccess.file_exists(files[1])
 
 
 ## Speichert den Run. Falsch, wenn das Schreiben scheitert (der alte Stand bleibt dann erhalten).
 static func save(run: RunState) -> bool:
+	var files := _files(run.mode)
+	var main := files[0]
+	var bak := files[1]
 	var text := JSON.stringify(JSON.from_native(to_dict(run)))
-	var temp := path.get_base_dir().path_join(TEMP.get_file())
+	var temp := main.get_base_dir().path_join(TEMP.get_file())
 	var f := FileAccess.open(temp, FileAccess.WRITE)
 	if f == null:
 		push_warning("Spielstand nicht speicherbar: %s" % error_string(FileAccess.get_open_error()))
 		return false
 	f.store_string(text)
 	f.close()
-	if FileAccess.file_exists(path):
-		DirAccess.remove_absolute(backup)
-		DirAccess.rename_absolute(path, backup)
-	return DirAccess.rename_absolute(temp, path) == OK
+	if FileAccess.file_exists(main):
+		DirAccess.remove_absolute(bak)
+		DirAccess.rename_absolute(main, bak)
+	return DirAccess.rename_absolute(temp, main) == OK
 
 
 ## Lädt den gespeicherten Run oder null. Erst die Hauptdatei, dann die Sicherung.
-static func load_run() -> RunState:
-	for file in [path, backup]:
+static func load_run(mode := RunState.MODE_HUNT) -> RunState:
+	for file in _files(mode):
 		if not FileAccess.file_exists(file):
 			continue
 		var data: Variant = _read(file)
 		if data is Dictionary and int(data.get("version", 0)) <= VERSION:
-			var run := from_dict(_migrate(data))
+			var run := from_dict(_migrate(data), mode)
 			if run:
 				return run
 		_set_aside(file)
@@ -65,9 +78,21 @@ static func load_run() -> RunState:
 
 
 ## Run vorbei: Stand löschen, damit der nächste Start einen neuen Run beginnt.
-static func clear() -> void:
-	DirAccess.remove_absolute(path)
-	DirAccess.remove_absolute(backup)
+static func clear(mode := RunState.MODE_HUNT) -> void:
+	for file in _files(mode):
+		DirAccess.remove_absolute(file)
+
+
+## Kurzbeschreibung eines gespeicherten Runs für das Hauptmenü ("" = keiner), ohne ihn zu laden.
+static func summary(mode: String) -> Dictionary:
+	for file in _files(mode):
+		if not FileAccess.file_exists(file):
+			continue
+		var data: Variant = _read(file)
+		if data is Dictionary and int(data.get("version", 0)) <= VERSION:
+			var r: Dictionary = _migrate(data).get("run", {})
+			return {"sector": int(r.get("sector", 1)), "jumps": int(r.get("jumps", 0)), "hull": int(data.get("ship", {}).get("hull", 0))}
+	return {}
 
 
 static func _read(file: String) -> Variant:
@@ -89,11 +114,25 @@ static func _set_aside(file: String) -> void:
 	push_warning("Spielstand %s nicht lesbar, beiseitegelegt als %s" % [file, target])
 
 
-## Hebt ältere Formate auf VERSION an. Beispiel für später:
-##   if v < 2: data.run["neues_feld"] = 0
+## Hebt ältere Formate auf VERSION an.
 static func _migrate(data: Dictionary) -> Dictionary:
-	var _v := int(data.get("version", 1))
+	var v := int(data.get("version", 1))
+	var r: Dictionary = data.get("run", {})
+	if v < 2:
+		# Version 1: nur Jagd, Karte in Spalten mit Verbindungen nach rechts, Sprung = Spalte.
+		r["mode"] = RunState.MODE_HUNT
+		r["sector"] = 1
+		var nodes: Array = r.get("map", {}).get("nodes", [])
+		var cur := int(r.get("current", 0))
+		var jumps := int(nodes[cur].get("column", 0)) if cur >= 0 and cur < nodes.size() else 0
+		r["jumps"] = jumps
+		r["total_jumps"] = jumps
+		r["front"] = RunState.FRONT_START + jumps * RunState.FRONT_STEP
+		for c: Dictionary in data.get("ship", {}).get("crew", []):
+			if c.get("name", "") == "Mara Voss":
+				c["role"] = CrewMember.ROLE_CAPTAIN
 	data.version = VERSION
+	data["run"] = r
 	return data
 
 
@@ -107,7 +146,14 @@ static func to_dict(run: RunState) -> Dictionary:
 		"saved_at": Time.get_datetime_string_from_system(),
 		"run": {
 			"seed": run.seed_value,
-			"map": {"nodes": run.map.nodes, "columns": run.map.columns},
+			"mode": run.mode,
+			"sector": run.sector,
+			"jumps": run.jumps,
+			"total_jumps": run.total_jumps,
+			"front": run.front,
+			"hunter_battle": run.hunter_battle,
+			"sector_cleared": run.sector_cleared,
+			"map": {"nodes": run.map.nodes, "exit_type": run.map.exit_type},
 			"current": run.current,
 			"visited": run.visited,
 			"cleared": run.cleared,
@@ -127,14 +173,26 @@ static func to_dict(run: RunState) -> Dictionary:
 	}
 
 
-static func from_dict(data: Dictionary) -> RunState:
+static func from_dict(data: Dictionary, mode := RunState.MODE_HUNT) -> RunState:
 	var r: Dictionary = data.get("run", {})
 	var m: Dictionary = r.get("map", {})
 	if m.get("nodes", []).is_empty() or not data.has("ship"):
 		return null
-	var run := RunState.new(int(r.get("seed", 1)))
+	var run := RunState.new(int(r.get("seed", 1)), r.get("mode", mode))
+	run.sector = maxi(int(r.get("sector", 1)), 1)
+	run.jumps = int(r.get("jumps", 0))
+	run.total_jumps = int(r.get("total_jumps", run.jumps))
+	run.front = float(r.get("front", RunState.FRONT_START))
+	run.hunter_battle = bool(r.get("hunter_battle", false))
+	run.sector_cleared = bool(r.get("sector_cleared", false))
 	run.map.nodes.assign(m.nodes)
-	run.map.columns.assign(m.get("columns", []))
+	run.map.exit_type = m.get("exit_type", "boss" if run.mode == RunState.MODE_HUNT else "ausgang")
+	for n: Dictionary in run.map.nodes:
+		var links: Array[int] = []
+		for to: Variant in n.get("links", []):
+			links.append(int(to))
+		n["links"] = links
+	run.map.make_links_mutual()
 	run.current = clampi(int(r.get("current", 0)), 0, run.map.nodes.size() - 1)
 	run.visited = r.get("visited", {run.current: true})
 	run.cleared = r.get("cleared", {})
@@ -170,7 +228,7 @@ static func _ship_to_dict(ship: ShipState) -> Dictionary:
 		weapons.append({"id": w.id, "wanted": w.wanted})
 	var crew: Array = []
 	for c in ship.crew:
-		crew.append({"name": c.display_name, "species": c.species, "tile": c.tile, "home": c.home_tile,
+		crew.append({"name": c.display_name, "species": c.species, "role": c.role, "tile": c.tile, "home": c.home_tile,
 			"experience": c.experience, "hp": c.hp, "pinned": c.pinned})
 	return {
 		"hull": ship.hull,
@@ -186,6 +244,7 @@ static func _ship_to_dict(ship: ShipState) -> Dictionary:
 		"doors": ship.door_open,
 		"airlocks": ship.airlock_open,
 		"fire_damage": ship._fire_damage,
+		"jump_charge": ship.jump_charge,
 		"rng": ship.rng.state,
 	}
 
@@ -229,8 +288,9 @@ static func _ship_from_dict(ship: ShipState, s: Dictionary) -> void:
 				continue
 			var home: Vector2i = d.get("home", member.tile)
 			member.home_tile = home if layout.is_walkable(home) else member.tile
-			member.hp = clampf(float(d.get("hp", CrewMember.MAX_HP)), 1.0, CrewMember.MAX_HP)
+			member.hp = clampf(float(d.get("hp", member.max_hp)), 1.0, member.max_hp)
 			member.pinned = bool(d.get("pinned", false))
+			member.role = d.get("role", "")
 	var oxygen: Array = s.get("oxygen", [])
 	for i in mini(oxygen.size(), ship.oxygen.size()):
 		ship.oxygen[i] = clampf(float(oxygen[i]), 0.0, 1.0)
@@ -245,6 +305,7 @@ static func _ship_from_dict(ship: ShipState, s: Dictionary) -> void:
 		ship.airlock_open[i] = bool(airlocks[i])
 	if s.has("rng"):
 		ship.rng.state = int(s.rng)
+	ship.jump_charge = clampf(float(s.get("jump_charge", 0.0)), 0.0, 1.0)
 	ship._rebalance()
 	ship.shield_layers = clampi(int(s.get("shield_layers", ship.shield_layers)), 0, ship.max_shield_layers())
 	ship.shield_progress = float(s.get("shield_progress", 0.0))

@@ -1,15 +1,10 @@
 class_name StatusBar
 extends Control
-## Oben rechts: Hülle des eigenen Schiffs, Schildschichten und Ausweichchance.
-## Verlorene Hüllenpunkte leuchten kurz weiß nach.
+## Oben links (wie im Mockup): Kasten mit Hülle (Segmente und Zahl), darunter die
+## Schildschichten als Kreise, Luft und Ausweichchance.
+## Verlorene Hüllenpunkte leuchten kurz rot nach.
 
-const FONT_SIZE := 8
-const COLOR_OK := Color("#5DCAA5")
-const COLOR_WARN := Color("#FAC775")
-const COLOR_BAD := Color("#E24B4A")
-const COLOR_OFF := Color("#2A2F3A")
-const COLOR_SHIELD := Color("#85B7EB")
-const COLOR_TEXT := Color("#A9B0BB")
+const SEG := 3
 
 var state: ShipState
 var _ghost := 0.0
@@ -19,9 +14,13 @@ var _time := 0.0
 func setup(p_state: ShipState) -> void:
 	state = p_state
 	_ghost = state.hull
-	custom_minimum_size = Vector2(state.max_hull * 3 + 85, 22)
+	custom_minimum_size = Vector2(_box_width(), 24.0)
 	size = custom_minimum_size
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _box_width() -> float:
+	return 32.0 + state.max_hull * SEG + 26.0
 
 
 func _process(delta: float) -> void:
@@ -29,36 +28,45 @@ func _process(delta: float) -> void:
 		return
 	_time += delta
 	_ghost = move_toward(_ghost, state.hull, delta * 4.0) if _ghost > state.hull else float(state.hull)
+	if size.x != _box_width():
+		custom_minimum_size.x = _box_width()
+		size.x = custom_minimum_size.x
 	queue_redraw()
 
 
 func _draw() -> void:
 	if not state:
 		return
-	var font := ThemeDB.fallback_font
+	var box := Rect2(Vector2.ZERO, Vector2(size.x, 24))
+	HudStyle.box(self, box)
 	var ratio := float(state.hull) / maxf(state.max_hull, 1)
-	var color := COLOR_OK if ratio > 0.5 else (COLOR_WARN if ratio > 0.25 else COLOR_BAD)
+	var color := HudStyle.COLOR_OK if ratio > 0.5 else (HudStyle.COLOR_WARN if ratio > 0.25 else HudStyle.COLOR_BAD)
 	if ratio <= 0.25 and fmod(_time, 0.8) < 0.4:
 		color = color.lightened(0.4)
-	draw_string(font, Vector2(0, 7), "HÜLLE", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, COLOR_TEXT)
-	var x0 := 30.0
+	HudStyle.text(self, Vector2(4, 10), "HÜLLE", HudStyle.COLOR_TEXT)
+	var x0 := 32.0
 	for i in state.max_hull:
-		var rect := Rect2(Vector2(x0 + i * 3, 1), Vector2(2, 6))
+		var rect := Rect2(Vector2(x0 + i * SEG, 3), Vector2(SEG - 1, 7))
 		if i < state.hull:
 			draw_rect(rect, color)
 		elif i < ceili(_ghost):
-			draw_rect(rect, Color(COLOR_BAD, 0.5 + 0.5 * sin(_time * 20.0)))
+			draw_rect(rect, Color(HudStyle.COLOR_BAD, 0.5 + 0.5 * sin(_time * 20.0)))
 		else:
-			draw_rect(rect, COLOR_OFF)
-	draw_string(font, Vector2(x0 + state.max_hull * 3 + 3, 7), "%d/%d" % [state.hull, state.max_hull], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, color)
-	draw_string(font, Vector2(0, 19), "SCHILD", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, COLOR_TEXT)
-	for i in state.max_shield_layers():
-		var r := Rect2(Vector2(x0 + i * 8, 12), Vector2(6, 6))
-		draw_rect(r, COLOR_SHIELD if i < state.shield_layers else COLOR_OFF)
-		if i == state.shield_layers and state.shield_progress > 0.0:
-			draw_rect(Rect2(r.position, Vector2(roundf(6 * state.shield_progress), 6)), Color(COLOR_SHIELD, 0.4))
-	var evade := "Ausweichen %d %%" % roundi(state.evasion() * 100.0)
-	draw_string(font, Vector2(x0 + 24, 19), evade, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, COLOR_TEXT)
+			draw_rect(rect, HudStyle.COLOR_OFF)
+	HudStyle.text(self, Vector2(x0 + state.max_hull * SEG + 3, 10), "%d" % state.hull, color)
+	# Schildschichten als Kreise, die gerade ladende füllt sich
+	for i in maxi(state.max_shield_layers(), 1):
+		var c := Vector2(8 + i * 10, 17)
+		var up := i < state.shield_layers
+		draw_circle(c, 4.0, HudStyle.COLOR_SHIELD if up else HudStyle.COLOR_OFF)
+		if not up:
+			draw_arc(c, 3.5, 0, TAU, 12, HudStyle.COLOR_SHIELD.darkened(0.3), 1.0)
+			if i == state.shield_layers and state.shield_progress > 0.0:
+				draw_arc(c, 2.0, -PI / 2, -PI / 2 + TAU * state.shield_progress, 10, HudStyle.COLOR_SHIELD, 2.0)
+	# Luft und Ausweichen rechts daneben in derselben Zeile
 	var air := state.average_oxygen()
-	var air_color := COLOR_TEXT if air > 0.5 else (COLOR_WARN if air > 0.25 else COLOR_BAD)
-	draw_string(font, Vector2(x0 + 102, 19), "Luft %d %%" % roundi(air * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, air_color)
+	var air_color := HudStyle.COLOR_TEXT if air > 0.5 else (HudStyle.COLOR_WARN if air > 0.25 else HudStyle.COLOR_BAD)
+	var x := 6.0 + maxi(state.max_shield_layers(), 1) * 10.0
+	var line_a := "O2 %d %%" % roundi(air * 100.0)
+	HudStyle.text(self, Vector2(x, 21), line_a, air_color)
+	HudStyle.text(self, Vector2(x + HudStyle.text_width(line_a) + 8, 21), "AUSW. %d %%" % roundi(state.evasion() * 100.0), HudStyle.COLOR_TEXT)

@@ -1,0 +1,39 @@
+{
+  "_doc": "Spezies der Crew. hp: Lebenspunkte. speed: Lauftempo (1 = Mensch). repair: Tempo beim Löschen, Flicken und Reparieren. learn: Erfahrung an Konsolen. console: Faktor auf den Konsolenbonus. bonus: Systeme, an denen die Spezies +15 % bringt. fire: Schaden durch Feuer (0 = immun). breathes: braucht Luft. medbay: Heilung in der Medbay (0 = keine). tint: Farbe der Platzhalterfigur, bis es eigene Sprites gibt. traits: Texte für die Crew-Karte. weight: Häufigkeit neuer Crew aus Ereignissen.",
+  "mensch": {
+    "name": "Mensch", "hp": 100, "speed": 1.0, "repair": 1.0, "learn": 1.25, "console": 1.0, "bonus": [],
+    "fire": 1.0, "breathes": true, "medbay": 1.0, "tint": "#ffffff", "weight": 4,
+    "traits": ["Allrounder", "Lernt an Konsolen 25 % schneller"],
+    "names": ["Tess Okafor", "Ruben Lind", "Nia Sato", "Pavel Dorn", "Elin Marsh", "Kofi Brandt", "Lena Vasquez", "Ivo Kern", "Suri Haldane", "Mats Ober"]
+  },
+  "kithra": {
+    "name": "Kith’ra", "hp": 110, "speed": 1.2, "repair": 0.6, "learn": 1.0, "console": 0.8, "bonus": [],
+    "fire": 0.5, "breathes": true, "medbay": 1.0, "tint": "#9fd18a", "weight": 1,
+    "traits": ["Läuft 20 % schneller", "Halber Schaden durch Feuer", "Repariert langsam (60 %)", "Schwächer an Konsolen"],
+    "names": ["Tz'ka", "Krr'ith", "Sha'ket", "Vrix", "Ka'thul"]
+  },
+  "androide": {
+    "name": "Androide", "hp": 100, "speed": 1.0, "repair": 1.6, "learn": 1.0, "console": 1.0, "bonus": ["schilde"],
+    "fire": 1.0, "breathes": false, "medbay": 0.5, "tint": "#d3e6f8", "weight": 1,
+    "traits": ["Repariert 60 % schneller", "Braucht keine Luft", "+15 % an den Schilden", "Medbay heilt nur halb so schnell"],
+    "names": ["K-7", "Unit 12", "Osric", "Tal-9", "Merrit"]
+  },
+  "veyari": {
+    "name": "Veyari", "hp": 70, "speed": 1.0, "repair": 1.0, "learn": 1.0, "console": 1.0, "bonus": ["waffen", "sensoren"],
+    "fire": 1.0, "breathes": true, "medbay": 1.0, "tint": "#c7b5f0", "weight": 1,
+    "traits": ["+15 % an Waffen und Sensoren", "Nur 70 Lebenspunkte"],
+    "names": ["Ylen", "Saevi", "Orun", "Thessa", "Ilvar"]
+  },
+  "ormok": {
+    "name": "Ormok", "hp": 160, "speed": 0.8, "repair": 0.5, "learn": 1.0, "console": 0.8, "bonus": [],
+    "fire": 1.0, "breathes": true, "medbay": 1.0, "tint": "#e0a878", "weight": 1,
+    "traits": ["160 Lebenspunkte", "Langsamer (80 %)", "Repariert schlecht (50 %)", "Schwächer an Konsolen"],
+    "names": ["Brakka", "Gorrum", "Uldo", "Hrask", "Mubba"]
+  },
+  "petrani": {
+    "name": "Petrani", "hp": 140, "speed": 0.5, "repair": 1.0, "learn": 1.0, "console": 1.0, "bonus": [],
+    "fire": 0.0, "breathes": false, "medbay": 0.0, "tint": "#a9b0bb", "weight": 1,
+    "traits": ["Feuerfest", "Braucht keine Luft", "Sehr langsam (50 %)", "Heilt nicht in der Medbay"],
+    "names": ["Petr", "Quarz-Aun", "Sedim", "Basalto", "Kiru"]
+  }
+}

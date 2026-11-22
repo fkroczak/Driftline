@@ -6,7 +6,7 @@ Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realist
 
 | Pfad | Inhalt |
 | --- | --- |
-| [game/](game/README.md) | Godot-4-Projekt: Prototyp Phase 2 (Sternenkarte mit 10 Sprüngen, Ereignisse, Händler, Reparaturstation, bleibender Schaden, Raumkampf mit Crew und Energie) |
+| [game/](game/README.md) | Godot-4-Projekt: Prototyp Phase 2 (Hauptmenü mit Jagd- und Endlos-Modus, Jägerfront, freie Sternenkarte, Sprung mit Warpeffekt, Ereignisse, Händler, Reparaturstation, Spezies, bleibender Schaden, Raumkampf mit Crew und Energie) |
 | [docs/GDD.md](docs/GDD.md) | Game-Design-Dokument: Kernschleife, Kampf, Energie, Spezies, Schiffe, Module, Spielmodi, Roadmap |
 | [docs/fable-prompt.md](docs/fable-prompt.md) | Prompt für die Grafik-Erstellung (Crew-Sprites und 12 Schiffe) |
 | [art/](art/README.md) | Konzeptgrafiken, Pixel-Art-Proben und deren Quelldateien |
@@ -19,7 +19,7 @@ Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realist
 ## Eckdaten
 
 - **Engine:** Godot 4, Export als Android-App (Querformat)
-- **Spielmodi:** „Die Jagd“ (10 Sprünge pro Universum, Endboss) und „Endloses Universum“ (Fraktionen, Highscore)
+- **Spielmodi:** „Die Jagd“ (4 Sektoren, die Jägerfront holt dich nach 10 Sprüngen ein, Endboss je Sektor) und „Endloses Universum“ (Sektoren ohne Ende, Rekord; Fraktionen folgen)
 - **Ressourcen:** Treibstoff ist Währung und kostet 1 pro Sprung; Rohstoffe für Upgrades und Reparatur
 - **Stil:** realistische HD-Pixel-Art, Palette mit ca. 64 Farben, dunkle Konturen
 

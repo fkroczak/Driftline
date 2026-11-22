@@ -1,6 +1,6 @@
 # Hullbound – Game-Design-Dokument
 
-Stand: 18.11.2026 · Autor: Filip Kroczak · Online-Fassung: [Claude Doc](https://claude.ai/artifact/FhYZsfLYM6pFQa2jdF4vUp)
+Stand: 22.11.2026 · Autor: Filip Kroczak · Online-Fassung: [Claude Doc](https://claude.ai/artifact/FhYZsfLYM6pFQa2jdF4vUp)
 
 ## Vision und Eckdaten
 
@@ -35,13 +35,15 @@ flowchart LR
     D -- nächster Sprung --> A
 ```
 
-Im Jagd-Modus kostet jeder Durchlauf einen der 10 Sprünge; Ausbau und Reparatur entscheiden, ob das Schiff den Boss übersteht.
+Im Jagd-Modus rückt mit jedem Durchlauf die Jägerfront vor; nach 10 Sprüngen hat sie den Ausgang erreicht. Ausbau und Reparatur entscheiden, ob das Schiff den Boss übersteht.
+
+**Sprung:** Das Schiff bleibt immer im Bild, auch zwischen den Kämpfen. Nach jedem Sprung lädt der Sprungantrieb neu (außerhalb des Kampfs schnell, im Kampf nur mit Energie im Antrieb). Ist er voll, öffnet der Sprungknopf die Karte; der Sprung selbst zeigt eine Warpblase und Lichtstreifen.
 
 **Kampf: Echtzeit mit Auto-Pause.** Das Spiel hält an, sobald du einen Raum, eine Waffe oder ein Crewmitglied antippst, und läuft weiter, wenn du den Befehl bestätigst. Eine Pausentaste ist jederzeit erreichbar.
 
 - Waffen laden in Echtzeit, du wählst Ziel-Raum am Gegnerschiff
 - Schilde blocken Treffer, bis sie überladen sind
-- Treffer verursachen Raumschaden, Brände, Hüllenbrüche und Verletzte
+- Treffer kosten immer Hülle; Raumschaden, Brände und Hüllenbrüche hängen mit eigener Chance an der Waffe (Schwerlaser knacken Systeme, Pulslaser kratzen meist nur an der Hülle), dazu Verletzte im Raum
 - Ausweichen hängt von Antrieb und besetztem Cockpit ab
 
 **Steuerung im Querformat:** links das eigene Schiff, rechts das Gegnerschiff, unten drei große Daumen-Buttons (Pause, Waffen, Sprung). Crew bewegst du per Tippen auf Figur und Zielraum, nicht per Ziehen. Räume sind mindestens 48 dp groß, damit sie sicher treffbar sind.
@@ -140,6 +142,8 @@ Jedes Crewmitglied basiert auf dem Grundsprite seiner Spezies, ist aber ein Indi
 | Ormok | 160 | 2 | 1 | 5 | keiner |
 | Petrani | 140 | 1 | 3 | 3 | Reaktor |
 
+Im Prototyp umgesetzt (`game/data/species.json`): Lebenspunkte, Lauftempo, Reparaturtempo, Konsolenboni, Feuer- und Luftbedarf und Medbay-Heilung je Spezies; die Crew-Karte im Spiel zeigt sie an. Der Captain ist markiert. Kampfwerte folgen mit dem Entern.
+
 **Charakterzüge (Auswahl):**
 
 | Zug | Wirkung |
@@ -216,15 +220,16 @@ Beide Modi nutzen dieselben Bausteine; der Jagd-Modus wird zuerst gebaut, weil e
 Pro Universum gibt es 20–25 Sprungziele, aber nur 10 Sprünge, bevor die Jägerflotte dich einholt.
 
 - Der Ausgang zum nächsten Universum ist von Anfang an auf der Karte sichtbar; der Weg dorthin muss geplant werden
-- Ein Zähler oben rechts zeigt die verbleibenden Sprünge, die Front der Jäger rückt auf der Karte sichtbar vor
-- Nach Sprung 10 kein sofortiges Game Over: Jeder weitere Sprung löst einen sehr harten Kampf gegen die Jäger aus
+- Ein Zähler zeigt die Sprünge (n/10), die Front der Jäger rückt auf der Karte sichtbar von links vor (je Sprung ein Zehntel der Karte)
+- Springen kann man, solange Treibstoff da ist; jedes System hinter der Front ist von Jägern besetzt und bedeutet einen harten Kampf (Händler und Ereignisse dort sind weg)
+- Nach Sprung 10 kein sofortiges Game Over: Jeder weitere Sprung landet hinter der Front, die Jäger werden je Sprung stärker
 - Am Ausgang wartet der Endboss des Universums; nach dem Sieg folgt der FTL-Sprung ins nächste Universum
 - Jedes Universum ist schwerer und hat einen eigenen Boss und eine eigene Gegnerfraktion
-- Ziel: 4–5 Universen bis zum finalen Boss
+- Ziel: 4–5 Universen bis zum finalen Boss (Prototyp: 4)
 
 ### Endloses Universum
 
-Sektoren ohne Ende, die mit jeder Stufe schwerer werden; ohne Verfolger, aber mit Fraktionen, die sich an dein Verhalten erinnern.
+Sektoren ohne Ende, die mit jeder Stufe schwerer werden; ohne Verfolger, aber mit Fraktionen, die sich an dein Verhalten erinnern. Im Prototyp gibt es schon die Sektoren mit steigender Schwierigkeit und den Rekord (erreichter Sektor), Fraktionen folgen.
 
 - Hilfst du einer Fraktion, wird sie Verbündeter: bessere Preise, Hilfe im Kampf, sichere Systeme
 - Greifst du sie an, wird sie feindlich und schickt Kopfgeldjäger
@@ -302,7 +307,7 @@ Arbeitsweise für Grafiken und Prompt für die Erstellung: siehe [art/README.md]
 Godot 4 mit GDScript, Export als Android-App (AAB für den Play Store); alle Inhalte liegen als Daten vor, nicht im Code.
 
 - **Datengetrieben:** Waffen, Systeme, Gegner, Ereignisse und Fraktionen als Godot-Resources oder JSON, damit Inhalte und Balancing ohne Codeänderung möglich sind
-- **Prozedurale Karte:** pro Universum ein Seed; 20–25 Knoten, garantierter Weg zum Ausgang
+- **Prozedurale Karte:** pro Universum ein Seed; 20–25 frei verteilte Knoten, kreuzungsfreie Verbindungen in beide Richtungen, garantierter Weg zum Ausgang (5–8 Sprünge)
 - **Speichern:** automatisch nach jedem Sprung, ein Run-Slot pro Modus
 - **Zielgeräte:** ab Android 8, Mittelklasse-Handys mit 60 fps
 

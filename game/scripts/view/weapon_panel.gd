@@ -11,12 +11,14 @@ extends Control
 
 signal selection_changed(idx: int)
 
-const CARD := Vector2(72, 30)
+const CARD := Vector2(70, 25)
 const GAP := 3.0
+## Rahmen „WAFFEN“ um die Karten (wie im Mockup): Karten beginnen bei ORIGIN.
+const ORIGIN := Vector2(3, 6)
 const FONT_SIZE := 8
 const LONG_PRESS_MS := 400
-const COLOR_BG := Color("#161B2B", 0.88)
-const COLOR_EDGE := Color("#363E58")
+const COLOR_BG := HudStyle.COLOR_BG
+const COLOR_EDGE := HudStyle.COLOR_EDGE
 const COLOR_READY := Color("#5DCAA5")
 const COLOR_CHARGING := Color("#FAC775")
 const COLOR_OFF := Color("#2A2F3A")
@@ -38,7 +40,7 @@ var _press_idx := -1
 func setup(p_state: ShipState, p_enemy: ShipState) -> void:
 	state = p_state
 	enemy = p_enemy
-	custom_minimum_size = Vector2(state.weapons.size() * (CARD.x + GAP) - GAP, CARD.y)
+	custom_minimum_size = Vector2(state.weapons.size() * (CARD.x + GAP) - GAP + ORIGIN.x * 2, CARD.y + ORIGIN.y + 3)
 	size = custom_minimum_size
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
@@ -68,12 +70,15 @@ func _draw() -> void:
 	if not state:
 		return
 	var font := ThemeDB.fallback_font
+	HudStyle.box(self, Rect2(0, 3, size.x, size.y - 3))
+	draw_rect(Rect2(5, 0, HudStyle.text_width("WAFFEN") + 4, 7), HudStyle.COLOR_BG.lightened(0.0))
+	HudStyle.text(self, Vector2(7, 7), "WAFFEN", HudStyle.COLOR_TEXT)
 	for i in state.weapons.size():
 		var w := state.weapons[i]
-		var x := i * (CARD.x + GAP)
+		var x := ORIGIN.x + i * (CARD.x + GAP)
 		if _deny.has(i):
 			x += roundf(sin(_deny[i] * 60.0) * 1.5)
-		var rect := Rect2(Vector2(x, 0), CARD)
+		var rect := Rect2(Vector2(x, ORIGIN.y), CARD)
 		var waiting := w.is_ready() and w.target < 0
 		var blink := fmod(_time, 0.6) < 0.3
 		var edge := COLOR_EDGE
@@ -81,7 +86,7 @@ func _draw() -> void:
 			edge = COLOR_AIM if blink else COLOR_AIM.darkened(0.4)
 		elif w.is_ready():
 			edge = COLOR_READY if not waiting or blink else COLOR_EDGE
-		draw_rect(rect, COLOR_BG)
+		draw_rect(rect, Color("#161B2B"))
 		if _fired.has(i):
 			draw_rect(rect, Color(1, 1, 1, _fired[i] * 1.2))
 		draw_rect(rect.grow(-0.5), edge, false, 1.0)
@@ -101,7 +106,9 @@ func _draw() -> void:
 		# Zweite Zeile: Ziel oder Hinweis
 		var line := ""
 		var line_color := COLOR_TEXT_OFF
-		if i == selected:
+		if not state.in_combat:
+			line = "kein Gegner" if w.powered else "aus"
+		elif i == selected:
 			line = "Raum antippen"
 			line_color = COLOR_AIM
 		elif not w.powered:
@@ -112,9 +119,9 @@ func _draw() -> void:
 		elif w.target >= 0 and enemy:
 			line = "→ " + enemy.layout.rooms[w.target].name
 			line_color = COLOR_TEXT
-		draw_string(font, rect.position + Vector2(3, 20), line, HORIZONTAL_ALIGNMENT_LEFT, CARD.x - 14, FONT_SIZE, line_color)
+		draw_string(font, rect.position + Vector2(3, 18), line, HORIZONTAL_ALIGNMENT_LEFT, CARD.x - 6, FONT_SIZE, line_color)
 		# Ladebalken
-		var bar := Rect2(rect.position + Vector2(3, CARD.y - 6), Vector2(CARD.x - 6, 3))
+		var bar := Rect2(rect.position + Vector2(3, CARD.y - 5), Vector2(CARD.x - 6, 3))
 		draw_rect(bar, COLOR_OFF)
 		var fill := Rect2(bar.position, Vector2(roundf(bar.size.x * w.ratio()), bar.size.y))
 		draw_rect(fill, COLOR_READY if w.is_ready() else (COLOR_CHARGING if w.powered else COLOR_TEXT_OFF))
@@ -123,7 +130,7 @@ func _draw() -> void:
 func _gui_input(event: InputEvent) -> void:
 	if not state or not (event is InputEventMouseButton):
 		return
-	var idx := int(event.position.x / (CARD.x + GAP))
+	var idx := int((event.position.x - ORIGIN.x) / (CARD.x + GAP))
 	if idx < 0 or idx >= state.weapons.size():
 		return
 	accept_event()
@@ -141,6 +148,9 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _tap(idx: int) -> void:
+	if not state.in_combat:
+		_toggle_power(idx)  # ohne Gegner gibt es nichts zu zielen
+		return
 	if selected == idx:
 		select(-1)
 		return

@@ -2,6 +2,8 @@ class_name Starfield
 extends Node2D
 ## Hintergrund: Sterne in drei Ebenen, die langsam nach links ziehen (Flug Richtung Bug).
 ## Füllt immer die ganze sichtbare Fläche, auch bei breiten Handys.
+## `warp` (0..1) beschleunigt die Sterne beim Sprung zu Lichtstreifen; `reseed` zeigt nach
+## der Ankunft einen anderen Himmel.
 
 const LAYERS := [
 	# Geschwindigkeit (px/s), Dichte (Sterne pro 1000 px²), Farben aus der Palette
@@ -12,6 +14,8 @@ const LAYERS := [
 const BRIGHT_STARS := 6
 
 @export var seed_value := 7
+## Sprungeffekt: 0 = normal, 1 = volle Lichtgeschwindigkeit (Streifen).
+var warp := 0.0
 
 var _stars: Array[Dictionary] = []  # {pos, layer, color, big}
 var _size := Vector2.ZERO
@@ -46,9 +50,15 @@ func _generate() -> void:
 	queue_redraw()
 
 
+func reseed(value: int) -> void:
+	seed_value = value
+	_generate()
+
+
 func _process(delta: float) -> void:
+	var boost := 1.0 + warp * warp * 120.0
 	for star in _stars:
-		star.pos.x -= LAYERS[star.layer].speed * delta
+		star.pos.x -= LAYERS[star.layer].speed * delta * boost
 		if star.pos.x < -2.0:
 			star.pos.x += _size.x + 4.0
 	queue_redraw()
@@ -57,6 +67,10 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	for star in _stars:
 		var p: Vector2 = star.pos.floor()
+		if warp > 0.05:
+			var length := roundf(warp * warp * LAYERS[star.layer].speed * 6.0)
+			draw_rect(Rect2(p, Vector2(length + 1, 1)), Color(star.color, 0.8))
+			continue
 		if star.big:
 			# Kleines Kreuz: heller Kern, gedimmte Strahlen
 			var dim := Color(star.color, 0.45)
