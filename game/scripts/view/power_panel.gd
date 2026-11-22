@@ -11,11 +11,11 @@ extends Control
 const SYSTEMS := ["schilde", "waffen", "antrieb", "sensoren", "medbay", "lebenserhaltung"]
 const REACTOR_W := 12
 const COL_W := 20
-const HEIGHT := 30
+const HEIGHT := 34
 const BAR_H := 2
 const BAR_STEP := 3
-const COLOR_BG := Color("#161B2B", 0.88)
-const COLOR_EDGE := Color("#363E58")
+const COLOR_BG := HudStyle.COLOR_BG
+const COLOR_EDGE := HudStyle.COLOR_EDGE
 const COLOR_ON := Color("#5DCAA5")
 const COLOR_OFF := Color("#2A2F3A")
 const COLOR_BROKEN := Color("#E24B4A")
@@ -64,8 +64,9 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if not state:
 		return
-	draw_rect(Rect2(Vector2.ZERO, size), COLOR_BG)
-	draw_rect(Rect2(Vector2.ZERO, size).grow(-0.5), COLOR_EDGE, false, 1.0)
+	HudStyle.box(self, Rect2(0, 3, size.x, size.y - 3))
+	draw_rect(Rect2(5, 0, HudStyle.text_width("ENERGIE") + 4, 7), HudStyle.COLOR_BG)
+	HudStyle.text(self, Vector2(7, 7), "ENERGIE", HudStyle.COLOR_TEXT)
 	# Reaktor: unten freie Balken (gelb), darüber belegte (dunkel), oben zerstörte (rot)
 	var reactor := state.get_system("reaktor")
 	if reactor:

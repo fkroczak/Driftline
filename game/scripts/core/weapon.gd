@@ -14,6 +14,10 @@ var cost := 1
 var charge_time := 10.0
 var shots := 1
 var damage := 1
+## Chancen bei einem Treffer: System im Raum beschädigt, Feuer, Hüllenbruch.
+var system_chance := 0.5
+var fire_chance := 0.2
+var breach_chance := 0.1
 var charge := 0.0
 ## Vom Spieler eingeschaltet; ob sie wirklich Energie hat, steht in `powered`.
 var wanted := false
@@ -45,6 +49,9 @@ static func create(weapon_id: String) -> Weapon:
 	w.charge_time = float(d.get("charge", 10.0))
 	w.shots = int(d.get("shots", 1))
 	w.damage = int(d.get("damage", 1))
+	w.system_chance = float(d.get("system", w.system_chance))
+	w.fire_chance = float(d.get("fire", w.fire_chance))
+	w.breach_chance = float(d.get("breach", w.breach_chance))
 	return w
 
 

@@ -1,6 +1,6 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=23 format=3]
 
-[ext_resource type="Script" path="res://scripts/battle_screen.gd" id="1_battle"]
+[ext_resource type="Script" path="res://scripts/ship_screen.gd" id="1_ship"]
 [ext_resource type="Script" path="res://scripts/view/ship_view.gd" id="2_ship"]
 [ext_resource type="Script" path="res://scripts/view/starfield.gd" id="3_stars"]
 [ext_resource type="Script" path="res://scripts/view/crew_panel.gd" id="4_crew"]
@@ -12,12 +12,18 @@
 [ext_resource type="Script" path="res://scripts/view/help_button.gd" id="10_help"]
 [ext_resource type="Script" path="res://scripts/view/jump_button.gd" id="11_jump"]
 [ext_resource type="Script" path="res://scripts/view/pause_button.gd" id="12_pause"]
+[ext_resource type="Script" path="res://scripts/view/resource_bar.gd" id="13_res"]
+[ext_resource type="Script" path="res://scripts/view/hud_button.gd" id="14_button"]
+[ext_resource type="Script" path="res://scripts/view/crew_card.gd" id="15_card"]
+[ext_resource type="Script" path="res://scripts/view/door_panel.gd" id="16_doors"]
+[ext_resource type="Script" path="res://scripts/view/event_dialog.gd" id="17_dialog"]
+[ext_resource type="Script" path="res://scripts/view/map_view.gd" id="18_map"]
 
 [sub_resource type="StyleBoxFlat" id="BannerBg"]
 bg_color = Color(0.027, 0.031, 0.059, 0.72)
 
-[node name="Battle" type="Node2D"]
-script = ExtResource("1_battle")
+[node name="Ship" type="Node2D"]
+script = ExtResource("1_ship")
 
 [node name="Starfield" type="Node2D" parent="."]
 script = ExtResource("3_stars")
@@ -64,87 +70,119 @@ theme_override_font_sizes/font_size = 12
 text = "PAUSE"
 horizontal_alignment = 1
 
-[node name="Title" type="Label" parent="HUD"]
-offset_left = 6.0
-offset_top = 2.0
-offset_right = 300.0
-offset_bottom = 18.0
-mouse_filter = 2
-theme_override_font_sizes/font_size = 11
-text = "Hullbound – Prototyp"
-
 [node name="Info" type="Label" parent="HUD"]
-offset_left = 6.0
-offset_top = 16.0
+offset_left = 60.0
+offset_top = 168.0
 offset_right = 380.0
-offset_bottom = 30.0
+offset_bottom = 180.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.666667, 0.701961, 0.752941, 1)
-theme_override_font_sizes/font_size = 9
+theme_override_colors/font_outline_color = Color(0.027, 0.031, 0.059, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 8
 clip_text = true
 
 [node name="StatusBar" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 220.0
-offset_top = 4.0
-offset_right = 380.0
-offset_bottom = 26.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 140.0
+offset_bottom = 42.0
 script = ExtResource("8_status")
+
+[node name="ResourceBar" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 150.0
+offset_top = 2.0
+offset_right = 240.0
+offset_bottom = 26.0
+script = ExtResource("13_res")
 
 [node name="CrewPanel" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 6.0
-offset_top = 34.0
-offset_right = 30.0
-offset_bottom = 205.0
+offset_left = 2.0
+offset_top = 46.0
+offset_right = 56.0
+offset_bottom = 170.0
 script = ExtResource("4_crew")
 
 [node name="PowerPanel" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 56.0
-offset_top = 184.0
-offset_right = 192.0
+offset_left = 2.0
+offset_top = 180.0
+offset_right = 138.0
 offset_bottom = 214.0
 script = ExtResource("6_power")
 
 [node name="WeaponPanel" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 198.0
-offset_top = 184.0
-offset_right = 317.0
+offset_left = 140.0
+offset_top = 180.0
+offset_right = 290.0
 offset_bottom = 214.0
 script = ExtResource("7_weapons")
 
-[node name="HelpButton" type="Control" parent="HUD"]
+[node name="DoorPanel" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 200.0
-offset_top = 4.0
-offset_right = 218.0
-offset_bottom = 22.0
-script = ExtResource("10_help")
-
-[node name="PauseButton" type="Control" parent="HUD"]
-layout_mode = 3
-anchors_preset = 0
-offset_left = 176.0
-offset_top = 4.0
-offset_right = 194.0
-offset_bottom = 22.0
-script = ExtResource("12_pause")
+offset_left = 330.0
+offset_top = 180.0
+offset_right = 380.0
+offset_bottom = 214.0
+script = ExtResource("16_doors")
 
 [node name="JumpButton" type="Control" parent="HUD"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 332.0
-offset_top = 184.0
-offset_right = 378.0
-offset_bottom = 214.0
+offset_left = 260.0
+offset_top = 2.0
+offset_right = 316.0
+offset_bottom = 26.0
 script = ExtResource("11_jump")
+
+[node name="MapButton" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 318.0
+offset_top = 2.0
+offset_right = 352.0
+offset_bottom = 26.0
+script = ExtResource("14_button")
+label = "KARTE"
+
+[node name="PauseButton" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 340.0
+offset_top = 2.0
+offset_right = 360.0
+offset_bottom = 26.0
+script = ExtResource("12_pause")
+
+[node name="HelpButton" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 362.0
+offset_top = 2.0
+offset_right = 380.0
+offset_bottom = 26.0
+script = ExtResource("10_help")
+
+[node name="CrewCard" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_left = 248.0
+offset_top = 30.0
+offset_right = 380.0
+offset_bottom = 120.0
+mouse_filter = 2
+script = ExtResource("15_card")
 
 [node name="Legend" type="Control" parent="HUD"]
 layout_mode = 3
@@ -166,3 +204,25 @@ theme_override_styles/normal = SubResource("BannerBg")
 text = "Sieg"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="EventDialog" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_right = 384.0
+offset_bottom = 216.0
+script = ExtResource("17_dialog")
+
+[node name="MapView" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_right = 384.0
+offset_bottom = 216.0
+script = ExtResource("18_map")
+
+[node name="WarpFlash" type="ColorRect" parent="HUD"]
+offset_right = 384.0
+offset_bottom = 216.0
+mouse_filter = 2
+color = Color(0.85, 0.9, 1, 0)

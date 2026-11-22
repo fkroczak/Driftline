@@ -1,13 +1,19 @@
 class_name CrewMember
 extends RefCounted
 ## Ein Crewmitglied an Bord: Position im Raster und Bewegung entlang eines Pfads.
+## Spezieswerte (Lebenspunkte, Tempo, Reparatur, Boni) kommen aus data/species.json.
 
 const DEFAULT_SPEED := 2.5  # Kacheln pro Sekunde
 const MAX_EXPERIENCE := 5.0
+## Lebenspunkte eines Menschen; andere Spezies haben eigene Werte (max_hp).
 const MAX_HP := 100.0
+const ROLE_CAPTAIN := "captain"
 
 var display_name: String
 var species: String
+## "captain" oder "" (die übrigen Aufgaben ergeben sich aus der Erfahrung).
+var role := ""
+var max_hp := MAX_HP
 var tile: Vector2i
 ## Noch zu laufende Kacheln; path[0] ist die Kachel, auf die gerade zugelaufen wird.
 var path: Array[Vector2i] = []
@@ -29,9 +35,50 @@ var activity_tile := Vector2i.ZERO
 
 func _init(p_name: String, p_species: String, p_tile: Vector2i) -> void:
 	display_name = p_name
-	species = p_species
+	species = p_species if Species.known(p_species) else Species.DEFAULT
 	tile = p_tile
 	home_tile = p_tile
+	max_hp = float(Species.value(species, "hp", MAX_HP))
+	hp = max_hp
+	speed = DEFAULT_SPEED * float(Species.value(species, "speed", 1.0))
+
+
+func is_captain() -> bool:
+	return role == ROLE_CAPTAIN
+
+
+## Tempo beim Löschen, Flicken und Reparieren (1 = Mensch).
+func repair_factor() -> float:
+	return float(Species.value(species, "repair", 1.0))
+
+
+func breathes() -> bool:
+	return bool(Species.value(species, "breathes", true))
+
+
+func fire_factor() -> float:
+	return float(Species.value(species, "fire", 1.0))
+
+
+func medbay_factor() -> float:
+	return float(Species.value(species, "medbay", 1.0))
+
+
+## Bonus an einer Konsole durch die Spezies: stark (+15 %), schwach (×0,8) oder neutral.
+func console_factor(system: String) -> float:
+	var f := float(Species.value(species, "console", 1.0))
+	if (Species.value(species, "bonus", []) as Array).has(system):
+		f += Species.SYSTEM_BONUS
+	return f
+
+
+## System mit der meisten Erfahrung ("" ohne Erfahrung).
+func best_system() -> String:
+	var best := ""
+	for system: String in experience:
+		if best == "" or experience[system] > experience[best]:
+			best = system
+	return best
 
 
 ## Kachel, auf der die Figur gerade überwiegend steht.
@@ -53,6 +100,7 @@ func level(system: String) -> int:
 
 
 func gain_experience(system: String, amount: float) -> void:
+	amount *= float(Species.value(species, "learn", 1.0))
 	experience[system] = minf(experience.get(system, 0.0) + amount, MAX_EXPERIENCE)
 
 

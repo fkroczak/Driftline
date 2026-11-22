@@ -76,19 +76,33 @@ var _shield_flash := 0.0
 var _ghost_hull := 0.0
 
 
+## Kann mehrfach aufgerufen werden (neuer Gegner im selben Bildschirm).
 func setup(p_state: ShipState) -> void:
+	for sprite: Sprite2D in _crew_sprites.values():
+		sprite.queue_free()
+	_crew_sprites.clear()
+	selected = null
+	focused_room = -1
+	last_order = null
+	_target_anim.clear()
+	_room_flash.clear()
+	modulate = Color.WHITE
 	state = p_state
 	_ship_texture = load(state.layout.sprite_path)
 	_ghost_hull = state.hull
-	for member in state.crew:
-		var sprite := Sprite2D.new()
-		sprite.texture = CREW_SHEETS.get(member.species, CREW_SHEETS["mensch"])
-		sprite.hframes = 4
-		if hostile:
-			sprite.modulate = Color(1.0, 0.82, 0.78)
-		add_child(sprite)
-		_crew_sprites[member] = sprite
 	_sync_crew()
+
+
+func _add_sprite(member: CrewMember) -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = CREW_SHEETS.get(member.species, CREW_SHEETS["mensch"])
+	sprite.hframes = 4
+	# Platzhalter: andere Spezies als eingefärbte Menschen, bis es eigene Sprites gibt
+	sprite.modulate = Species.tint(member.species)
+	if hostile:
+		sprite.modulate *= Color(1.0, 0.82, 0.78)
+	add_child(sprite)
+	_crew_sprites[member] = sprite
 
 
 func get_size() -> Vector2:
@@ -143,6 +157,9 @@ func _process(delta: float) -> void:
 
 
 func _sync_crew() -> void:
+	for member in state.crew:
+		if not _crew_sprites.has(member):
+			_add_sprite(member)
 	for member: CrewMember in _crew_sprites.keys():
 		var sprite: Sprite2D = _crew_sprites[member]
 		if not state.crew.has(member):
@@ -324,10 +341,12 @@ func _draw_crew_health() -> void:
 		var head := state.layout.tile_center(member.tile_position()).round()
 		if member.activity != "":
 			ActivityIcons.draw(self, head + Vector2(-3, -18 + (1 if fmod(_time * 2.0, 1.0) < 0.5 else 0)), member.activity)
-		if member.hp >= CrewMember.MAX_HP:
+		if member.is_captain() and not hostile:
+			HudStyle.star(self, head + Vector2(3, -9))
+		if member.hp >= member.max_hp:
 			continue
 		var p := head + Vector2(-5, -10)
-		var ratio := member.hp / CrewMember.MAX_HP
+		var ratio := member.hp / member.max_hp
 		var color := Color("#5DCAA5") if ratio > 0.6 else (Color("#FAC775") if ratio > 0.3 else COLOR_DAMAGE)
 		draw_rect(Rect2(p, Vector2(10, 2)), Color(0, 0, 0, 0.7))
 		draw_rect(Rect2(p, Vector2(roundf(10 * ratio), 2)), color)
@@ -463,7 +482,7 @@ func _draw_tile_frame(center: Vector2, color: Color, corners_only: bool) -> void
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not state or not (event is InputEventMouseButton):
+	if not state or not visible or not (event is InputEventMouseButton):
 		return
 	if hostile:
 		_hostile_input(event)

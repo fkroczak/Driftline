@@ -1,5 +1,6 @@
 {
-  "pulslaser": {"name": "Pulslaser", "power": 1, "charge": 8.0, "shots": 2, "damage": 1},
-  "schwerer_laser": {"name": "Schwerlaser", "power": 2, "charge": 11.0, "shots": 1, "damage": 2},
-  "bordkanone": {"name": "Bordkanone", "power": 1, "charge": 10.0, "shots": 1, "damage": 1}
+  "_doc": "Waffenwerte. power: Energiebalken, charge: Ladezeit in s, shots: Schüsse je Salve, damage: Hüllenschaden je Schuss. Chancen je Treffer (0..1): system = System im Raum verliert Balken (sonst nur Hülle), fire = Feuer, breach = Hüllenbruch.",
+  "pulslaser": {"name": "Pulslaser", "power": 1, "charge": 8.0, "shots": 2, "damage": 1, "system": 0.3, "fire": 0.1, "breach": 0.05},
+  "schwerer_laser": {"name": "Schwerlaser", "power": 2, "charge": 11.0, "shots": 1, "damage": 2, "system": 0.7, "fire": 0.3, "breach": 0.15},
+  "bordkanone": {"name": "Bordkanone", "power": 1, "charge": 10.0, "shots": 1, "damage": 1, "system": 0.4, "fire": 0.15, "breach": 0.1}
 }

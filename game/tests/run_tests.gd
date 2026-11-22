@@ -540,27 +540,47 @@ func test_heavy_enemy_layout_is_valid() -> void:
 # --- Sternenkarte und Run ---
 
 
-func test_star_map_always_leads_to_boss() -> void:
-	for s in range(1, 60):
-		var map := StarMap.generate(s)
-		check(map.columns.size() == StarMap.JUMPS + 1, "Seed %d: falsche Spaltenzahl" % s)
-		check(map.node(map.boss_id()).type == "boss" and map.node(map.start_id()).type == "start", "Seed %d: Start oder Boss fehlt" % s)
+func test_star_map_is_connected_and_planar() -> void:
+	for seed_value in range(1, 60):
+		var map := StarMap.generate(seed_value)
+		var count := map.nodes.size()
+		check(count >= StarMap.MIN_NODES and count <= StarMap.MAX_NODES, "Seed %d: %d Systeme" % [seed_value, count])
+		check(map.node(map.start_id()).type == "start" and map.node(map.boss_id()).type == "boss", "Seed %d: Start oder Boss fehlt" % seed_value)
+		var steps := map.distance(map.start_id(), map.boss_id())
+		check(steps >= StarMap.MIN_PATH and steps <= StarMap.MAX_PATH, "Seed %d: kürzester Weg %d Sprünge" % [seed_value, steps])
 		for n in map.nodes:
-			if n.type != "boss":
-				check(not n.links.is_empty(), "Seed %d: Knoten %d ist eine Sackgasse" % [s, n.id])
-			if n.type != "start":
-				check(not map.incoming(n.id).is_empty(), "Seed %d: Knoten %d ist unerreichbar" % [s, n.id])
+			check(map.distance(map.start_id(), n.id) >= 0, "Seed %d: Knoten %d unerreichbar" % [seed_value, n.id])
+			check(not n.links.has(n.id), "Seed %d: Knoten %d mit sich selbst verbunden" % [seed_value, n.id])
 			for to: int in n.links:
-				check(map.node(to).column == n.column + 1, "Seed %d: Verbindung überspringt eine Spalte" % s)
-		# Verbindungen zwischen zwei Spalten kreuzen sich nicht
-		for c in StarMap.JUMPS:
-			var pairs := []
-			for i in map.columns[c].size():
-				for to: int in map.node(map.columns[c][i]).links:
-					pairs.append([i, map.columns[c + 1].find(to)])
-			for p: Array in pairs:
-				for q: Array in pairs:
-					check(not (p[0] < q[0] and p[1] > q[1]), "Seed %d: Verbindungen kreuzen sich in Spalte %d" % [s, c])
+				check(map.node(to).links.has(n.id), "Seed %d: Verbindung %d→%d nur in eine Richtung" % [seed_value, n.id, to])
+		# Verbindungen kreuzen sich nicht
+		var segs := []
+		for n in map.nodes:
+			for to: int in n.links:
+				if to > n.id:
+					segs.append([n.id, to])
+		for i in segs.size():
+			for j in range(i + 1, segs.size()):
+				var p: Array = segs[i]
+				var q: Array = segs[j]
+				if p[0] in q or p[1] in q:
+					continue
+				var hit: Variant = Geometry2D.segment_intersects_segment(map.node(p[0]).pos, map.node(p[1]).pos, map.node(q[0]).pos, map.node(q[1]).pos)
+				check(hit == null, "Seed %d: Verbindungen %s und %s kreuzen sich" % [seed_value, p, q])
+
+
+func test_star_maps_differ() -> void:
+	var a := StarMap.generate(11)
+	var b := StarMap.generate(12)
+	var same := a.nodes.size() == b.nodes.size()
+	if same:
+		for i in a.nodes.size():
+			same = same and a.nodes[i].pos.is_equal_approx(b.nodes[i].pos)
+	check(not same, "Zwei Seeds ergeben dieselbe Karte")
+	var run := RunState.new(5)
+	var first := run.map.nodes.duplicate(true)
+	run.next_sector()
+	check(run.map.nodes != first, "Nächster Sektor hat dieselbe Karte")
 
 
 func test_star_map_is_deterministic() -> void:
@@ -572,17 +592,31 @@ func test_star_map_is_deterministic() -> void:
 			"Gleicher Seed, anderer Knoten %d" % i)
 
 
-func test_run_jumps_only_along_links() -> void:
+## Ein Knoten, der nicht mit `id` verbunden ist.
+func _unlinked(run: RunState, id: int) -> int:
+	for n in run.map.nodes:
+		if n.id != id and not run.map.node(id).links.has(n.id):
+			return n.id
+	return -1
+
+
+func test_run_jumps_only_along_links_and_back() -> void:
 	var run := RunState.new(77)
+	run.front = -5.0  # Jäger aus dem Spiel lassen
+	var start := run.current
 	var linked: int = run.node().links[0]
-	var far: int = run.map.columns[2][0]
-	check(not run.jump_to(far), "Sprung über zwei Spalten möglich")
+	run.map.node(linked).type = "leer"
+	check(not run.jump_to(_unlinked(run, start)), "Sprung zu einem nicht verbundenen System möglich")
 	check(run.jump_to(linked) and run.current == linked and run.jumps_done() == 1, "Sprung zum verbundenen Knoten klappt nicht")
+	check(run.can_jump_to(start) and run.jump_to(start) and run.jumps_done() == 2, "Zurückspringen geht nicht")
+	check(run.dialog.is_empty() and not run.needs_battle(), "Besuchtes System löst erneut etwas aus")
+	run.map.node(linked).type = "kampf"
+	run.visited.erase(linked)
+	run.jump_to(linked)
 	if run.needs_battle():
-		var next: int = run.node().links[0]
-		check(not run.jump_to(next), "Weiterspringen trotz wartendem Gegner")
+		check(not run.jump_to(start), "Weiterspringen trotz wartendem Gegner")
 		run.finish_battle("sieg")
-		check(run.jump_to(next), "Nach dem Sieg geht es nicht weiter")
+		check(run.jump_to(start), "Nach dem Sieg geht es nicht weiter")
 
 
 func test_hull_and_dead_crew_persist_across_jumps() -> void:
@@ -643,31 +677,156 @@ func test_energy_setting_survives_jump() -> void:
 	check(ship.get_system("antrieb").power == engine and engine > 0, "Energieverteilung geht beim Sprung verloren")
 
 
-func test_enemy_stages_follow_jump_number() -> void:
+func test_enemy_stages_follow_progress() -> void:
 	var run := RunState.new(9)
-	for id: int in run.map.columns[1]:
-		var spec := run.enemy_spec(id)
-		check(spec.ship.ends_with("piraten_kutter.json") and spec.hull_bonus == 0, "Sprung 1: nur der einfache Kutter")
+	for n in run.map.nodes:
+		if n.column <= 3 and n.type != "start":
+			var spec := run.enemy_spec(n.id)
+			check(spec.ship.ends_with("piraten_kutter.json") and spec.hull_bonus == 0, "Vorne auf der Karte nur der einfache Kutter")
 	var boss := run.create_enemy(run.map.boss_id())
 	check(boss.layout.display_name == "Piraten-Flaggschiff", "Boss heißt nicht Piraten-Flaggschiff")
 	check(boss.max_hull == 24 and boss.hull == 24, "Boss hat nicht 18 + 6 Hülle: %d" % boss.max_hull)
 	check(boss.crew.size() == 3, "Boss ohne Besatzung")
-	check(run.enemy_spec(run.map.columns[5][0]) == run.enemy_spec(run.map.columns[5][0]), "Gegner am Knoten ist nicht fest")
+	var some: int = run.map.nodes[run.map.nodes.size() / 2].id
+	check(run.enemy_spec(some) == run.enemy_spec(some), "Gegner am Knoten ist nicht fest")
+	run.sector = 2
+	check(run.create_enemy(run.map.boss_id()).max_hull == 28, "Boss wird im zweiten Sektor nicht stärker")
 
 
-func test_defeat_ends_run_and_boss_victory_wins() -> void:
+func test_defeat_ends_run_and_boss_leads_to_next_sector() -> void:
 	var run := RunState.new(3)
 	run.jump_to(run.node().links[0])
+	run.pending_battle[run.current] = {}
 	run.finish_battle("niederlage")
 	check(run.result == "verloren", "Niederlage beendet den Run nicht")
 	check(not run.can_jump_to(run.node().links[0]), "Nach der Niederlage geht es weiter")
 	run = RunState.new(3)
 	run.current = run.map.boss_id()
-	check(run.needs_battle(), "Boss wartet nicht")
+	check(run.needs_battle() and run.is_boss_battle(), "Boss wartet nicht")
 	run.finish_battle("entkommen")
+	check(run.fleeing and not run.needs_battle() and run.can_jump_to(run.node().links[0]), "Nach der Flucht geht der Sprung nicht")
+	run.fleeing = false  # wie nach Weg- und Zurückspringen
 	check(run.needs_battle() and run.result == "", "Nach der Flucht vor dem Boss ist der Boss weg")
+	var fuel := run.fuel
 	run.finish_battle("sieg")
-	check(run.result == "geschafft", "Sieg über den Boss beendet den Run nicht")
+	check(run.sector_cleared and run.result == "" and run.fuel > fuel, "Boss-Sieg führt nicht in den nächsten Sektor oder bringt keinen Treibstoff")
+	check(not run.needs_battle() and not run.can_jump_to(run.node().links[0]), "Nach dem Boss geht es auf der alten Karte weiter")
+	run.next_sector()
+	check(run.sector == 2 and run.current == run.map.start_id() and run.jumps_done() == 0 and not run.sector_cleared, "Nächster Sektor beginnt nicht am Start")
+	check(run.front == RunState.FRONT_START, "Jägerfront beginnt nicht von vorn")
+	run.sector = RunState.HUNT_SECTORS
+	run.current = run.map.boss_id()
+	run.finish_battle("sieg")
+	check(run.result == "geschafft", "Sieg über den letzten Boss beendet den Run nicht")
+
+
+func test_hunter_front_advances_and_attacks() -> void:
+	var run := RunState.new(21)
+	run.fuel = 50
+	var start := run.current
+	var next: int = run.node().links[0]
+	run.map.node(next).type = "leer"
+	run.jump_to(next)
+	check(is_equal_approx(run.front, RunState.FRONT_START + RunState.FRONT_STEP), "Front rückt nicht vor")
+	check(not run.needs_battle(), "Leeres System vor der Front löst einen Kampf aus")
+	# Hin und her springen, bis die Front die Systeme erreicht
+	var guard := 0
+	while not run.is_overrun(start) and guard < 20:
+		run.jump_to(start if run.current != start else next)
+		if run.needs_battle():
+			run.finish_battle("sieg")
+		guard += 1
+	check(run.is_overrun(start), "Front erreicht den Start nie")
+	var target := start if run.current != start else next
+	if run.current == start:
+		run.front += 1.0  # beide Systeme sicher hinter der Front
+	run.jump_to(target)
+	check(run.hunter_battle and run.needs_battle(), "Hinter der Front greifen die Jäger nicht an")
+	check(run.create_enemy().layout.display_name == "Jäger-Fregatte", "Gegner hinter der Front ist nicht die Jäger-Fregatte")
+	var scrap := run.scrap
+	run.finish_battle("sieg")
+	check(not run.hunter_battle and not run.needs_battle() and run.scrap > scrap, "Sieg über die Jäger bringt keine Beute oder endet nicht")
+	check(run.jumps_until_overrun(run.map.boss_id()) == 0 or run.jumps_until_overrun(run.map.boss_id()) > 0, "Vorwarnung für die Front fehlt")
+	var fresh := RunState.new(21)
+	var hits := 0
+	for k in RunState.HUNT_JUMPS:
+		if fresh.is_overrun(fresh.map.boss_id(), RunState.FRONT_START + k * RunState.FRONT_STEP):
+			hits += 1
+	check(hits == 0, "Front erreicht den Boss vor %d Sprüngen" % RunState.HUNT_JUMPS)
+	check(fresh.is_overrun(fresh.map.boss_id(), RunState.FRONT_START + (RunState.HUNT_JUMPS + 1) * RunState.FRONT_STEP), "Front erreicht den Boss nach 11 Sprüngen nicht")
+
+
+func test_endless_mode_has_exit_and_no_front() -> void:
+	var run := RunState.new(31, RunState.MODE_ENDLESS)
+	check(run.map.count_type("boss") == 0 and run.map.node(run.map.exit_id()).type == "ausgang", "Endlos-Karte ohne Ausgang oder mit Boss")
+	run.front = 5.0
+	check(not run.is_overrun(run.map.exit_id()), "Front im Endlos-Modus")
+	# Direkt neben den Ausgang stellen und hineinspringen
+	var exit_id := run.map.exit_id()
+	run.current = run.map.node(exit_id).links[0]
+	run.map.node(run.current).type = "leer"
+	run.fuel = 5
+	check(run.jump_to(exit_id), "Sprung zum Ausgang nicht möglich")
+	check(run.sector == 2 and run.current == run.map.start_id() and run.score() == 2, "Ausgang führt nicht in Sektor 2")
+
+
+func test_hits_damage_systems_only_by_chance() -> void:
+	var ship := _quiet_state()
+	var room := ship.layout.room_index_by_id("waffen")
+	var laser := Weapon.create("pulslaser")
+	var heavy := Weapon.create("schwerer_laser")
+	check(laser.system_chance < heavy.system_chance, "Schwerlaser trifft Systeme nicht häufiger als der Pulslaser")
+	var damaged := 0
+	for i in 200:
+		ship.systems["waffen"].damage = 0
+		ship.hull = ship.max_hull
+		if ship.take_hit(room, 1, laser) > 0:
+			damaged += 1
+	check(ship.hull == ship.max_hull - 1, "Treffer kostet keine Hülle")
+	check(damaged > 30 and damaged < 100, "Pulslaser beschädigt das System %d von 200 Mal (erwartet etwa 60)" % damaged)
+
+
+func test_species_change_crew() -> void:
+	var ship := _quiet_state()
+	var human := ship.add_crew("Mensch", "mensch", Vector2i(6, 6))
+	var rock := ship.add_crew("Stein", "petrani", Vector2i(6, 7))
+	var bot := ship.add_crew("Bot", "androide", Vector2i(8, 1))
+	check(rock.max_hp == 140.0 and rock.hp == 140.0 and rock.speed < human.speed, "Petrani-Werte fehlen")
+	check(bot.repair_factor() > human.repair_factor() and not bot.breathes(), "Androiden-Werte fehlen")
+	check(CrewMember.new("X", "gibtsnicht", Vector2i.ZERO).species == "mensch", "Unbekannte Spezies wird nicht zum Menschen")
+	# Feuer und Luft
+	var room := ship.layout.room_index_at(rock.tile)
+	ship.oxygen[room] = 0.0
+	for t in ship.layout.room_tiles(room):
+		ship.fires[t] = 1.0
+	ship._update_crew_health(1.0)
+	check(rock.hp == 140.0, "Petrani nehmen Schaden durch Feuer oder Luftmangel")
+	check(human.hp < CrewMember.MAX_HP, "Mensch nimmt keinen Schaden")
+	check(Species.ids().size() == 6, "Nicht sechs Spezies")
+	for id in Species.ids():
+		check(not Species.traits(id).is_empty() and (Species.value(id, "names", []) as Array).size() >= 3, "%s ohne Texte oder Namen" % id)
+
+
+func test_captain_is_marked() -> void:
+	var run := RunState.new(4)
+	var captains := run.ship.crew.filter(func(m: CrewMember) -> bool: return m.is_captain())
+	check(captains.size() == 1 and captains[0].display_name == "Mara Voss", "Captain nicht markiert")
+	check(run.ship.crew[1].best_system() == "waffen", "Bestes System falsch")
+
+
+func test_drive_charges_faster_outside_combat() -> void:
+	var run := RunState.new(4)
+	var ship := run.ship
+	check(not ship.in_combat, "Schiff startet im Kampfmodus")
+	for i in 100:
+		ship.update(0.1)
+	check(ship.jump_charge >= 0.6, "Antrieb lädt außerhalb des Kampfs nicht (%.2f nach 10 s)" % ship.jump_charge)
+	check(ship.weapons.all(func(w: Weapon) -> bool: return w.charge == 0.0), "Waffen laden außerhalb des Kampfs")
+	var enemy := run.create_enemy(run.map.boss_id())
+	Battle.new(ship, enemy, 1)
+	check(ship.in_combat, "Kampf schaltet nicht in den Kampfmodus")
+	run.finish_battle("entkommen")
+	check(not ship.in_combat, "Nach dem Kampf bleibt der Kampfmodus")
 
 
 ## Run mit offenem Ereignis (ohne Sprung), für Ereignistests.
@@ -679,9 +838,9 @@ func _event_run(id: String) -> RunState:
 
 func test_stations_on_every_map() -> void:
 	for s in range(1, 40):
-		var map := StarMap.generate(s)
-		check(map.count_type("haendler") == 2 and map.count_type("reparatur") == 1, "Seed %d: nicht 2 Händler und 1 Reparaturstation" % s)
 		var run := RunState.new(s)
+		var map := run.map
+		check(map.count_type("haendler") == 2 and map.count_type("reparatur") == 1, "Seed %d: nicht 2 Händler und 1 Reparaturstation" % s)
 		for n in map.nodes:
 			if n.type == "ereignis":
 				check(run.node_events.get(n.id, "") != "", "Seed %d: Ereignisknoten %d ohne Ereignis" % [s, n.id])
@@ -796,6 +955,7 @@ func test_crew_join_and_loss_from_events() -> void:
 	var run := RunState.new(8)
 	run._apply({"crew_add": 1})
 	check(run.ship.crew.size() == 4, "Neue Crew kommt nicht an Bord")
+	check(Species.known(run.ship.crew[3].species), "Neue Crew ohne gültige Spezies")
 	var tiles := {}
 	for m in run.ship.crew:
 		tiles[m.tile] = true
@@ -929,4 +1089,49 @@ func test_broken_or_newer_save_is_never_overwritten() -> void:
 	check(kept.size() == 2, "Kaputter und neuerer Stand nicht beide beiseitegelegt (%d)" % kept.size())
 	for n: String in kept:
 		DirAccess.remove_absolute("user://" + n)
+	SaveGame.clear()
+
+
+func test_version_1_save_is_migrated() -> void:
+	_save_paths()
+	var run := _played_run()
+	var data := SaveGame.to_dict(run)
+	# So sah ein Stand der Version 1 aus: Spalten, Verbindungen nur nach rechts, kein Modus
+	data.version = 1
+	for key in ["mode", "sector", "jumps", "total_jumps", "front", "hunter_battle", "sector_cleared"]:
+		data.run.erase(key)
+	for n: Dictionary in data.run.map.nodes:
+		n.column = 3
+		n.links = n.links.filter(func(to: int) -> bool: return to > n.id)
+	for c: Dictionary in data.ship.crew:
+		c.erase("role")
+	var f := FileAccess.open(SaveGame.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(JSON.from_native(data)))
+	f.close()
+	var loaded := SaveGame.load_run()
+	check(loaded != null, "Stand der Version 1 lädt nicht")
+	if loaded == null:
+		return
+	check(loaded.mode == RunState.MODE_HUNT and loaded.sector == 1 and loaded.jumps_done() == 3, "Modus, Sektor oder Sprünge nicht ergänzt")
+	check(is_equal_approx(loaded.front, RunState.FRONT_START + 3 * RunState.FRONT_STEP), "Front nicht aus den Sprüngen berechnet")
+	for n in loaded.map.nodes:
+		for to: int in n.links:
+			check(loaded.map.node(to).links.has(n.id), "Verbindungen nach der Migration nur in eine Richtung")
+	check(loaded.ship.crew[0].is_captain(), "Captain nach der Migration nicht markiert")
+	SaveGame.clear()
+
+
+func test_each_mode_has_its_own_slot() -> void:
+	_save_paths()
+	var hunt := _played_run()
+	var endless := RunState.new(99, RunState.MODE_ENDLESS)
+	endless.scrap = 55
+	check(SaveGame.save(hunt) and SaveGame.save(endless), "Speichern fehlgeschlagen")
+	var a := SaveGame.load_run(RunState.MODE_HUNT)
+	var b := SaveGame.load_run(RunState.MODE_ENDLESS)
+	check(a != null and a.mode == RunState.MODE_HUNT and a.scrap == 17, "Jagd-Slot falsch")
+	check(b != null and b.mode == RunState.MODE_ENDLESS and b.scrap == 55, "Endlos-Slot falsch")
+	check(SaveGame.summary(RunState.MODE_ENDLESS).get("sector", 0) == 1, "Kurzbeschreibung fehlt")
+	SaveGame.clear(RunState.MODE_ENDLESS)
+	check(not SaveGame.exists(RunState.MODE_ENDLESS) and SaveGame.exists(RunState.MODE_HUNT), "Löschen trifft den falschen Slot")
 	SaveGame.clear()

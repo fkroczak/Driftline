@@ -1,53 +1,85 @@
 extends Node
-## Autoload „Game“: hält den laufenden Run über Szenenwechsel hinweg, wechselt
-## zwischen Sternenkarte und Kampf und speichert den Run (siehe SaveGame).
+## Autoload „Game“: hält den laufenden Run über Szenenwechsel hinweg, wechselt zwischen
+## Hauptmenü und Schiff, speichert den Run (je Modus ein Slot, siehe SaveGame) und die Bestwerte.
 
-const MAP_SCENE := "res://scenes/map.tscn"
-const BATTLE_SCENE := "res://scenes/battle.tscn"
+const TITLE_SCENE := "res://scenes/title.tscn"
+const SHIP_SCENE := "res://scenes/ship.tscn"
+const HIGHSCORE_PATH := "user://highscore.json"
 
 var run: RunState
-## Der Run kam beim Start aus dem Spielstand (die Karte setzt dann einen offenen Kampf fort).
-var resumed := false
+## Modus, den das Hauptmenü zuletzt gestartet oder fortgesetzt hat.
+var mode := RunState.MODE_HUNT
+## Darf gerade gespeichert werden? Im Kampf und während eines Sprungs nicht (der Stand davor gilt).
+var can_save := true
 
 
-## Startet einen Run, falls keiner läuft: erst aus dem Spielstand, sonst neu.
+## Liefert den laufenden Run: erst aus dem Spielstand des Modus, sonst neu.
 func ensure_run() -> RunState:
 	if run == null:
-		run = SaveGame.load_run()
-		resumed = run != null
+		run = SaveGame.load_run(mode)
 		if run == null:
-			new_run()
+			new_run(mode)
 	return run
 
 
-func new_run(seed_value := 0) -> RunState:
-	run = RunState.new(seed_value)
-	resumed = false
+func new_run(p_mode := mode, seed_value := 0) -> RunState:
+	mode = p_mode
+	SaveGame.clear(mode)
+	run = RunState.new(seed_value, mode)
 	save()
 	return run
 
 
-## Speichert den Run; ein beendeter Run wird gelöscht, damit der nächste Start neu beginnt.
+## Setzt den gespeicherten Run eines Modus fort (oder beginnt einen neuen, falls keiner da ist).
+func continue_run(p_mode: String) -> RunState:
+	mode = p_mode
+	run = null
+	return ensure_run()
+
+
+## Speichert den Run; ein beendeter Run wird gelöscht und als Bestwert vermerkt.
 func save() -> void:
 	if run == null:
 		return
 	if run.result != "":
-		SaveGame.clear()
+		record_score(run)
+		SaveGame.clear(run.mode)
 	else:
 		SaveGame.save(run)
 
 
-func to_map() -> void:
-	get_tree().change_scene_to_file(MAP_SCENE)
+## Bester erreichter Sektor je Modus (Endlos: Punktzahl, Jagd: wie weit man kam).
+func best_score(p_mode: String) -> int:
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(HIGHSCORE_PATH)) if FileAccess.file_exists(HIGHSCORE_PATH) else null
+	return int((data as Dictionary).get(p_mode, 0)) if data is Dictionary else 0
 
 
-func to_battle() -> void:
-	get_tree().change_scene_to_file(BATTLE_SCENE)
+func record_score(r: RunState) -> void:
+	var data: Dictionary = {}
+	if FileAccess.file_exists(HIGHSCORE_PATH):
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(HIGHSCORE_PATH))
+		if parsed is Dictionary:
+			data = parsed
+	var score := r.score()
+	if r.mode == RunState.MODE_HUNT and r.result == "geschafft":
+		score = RunState.HUNT_SECTORS + 1  # alle Sektoren geschafft
+	if score > int(data.get(r.mode, 0)):
+		data[r.mode] = score
+		var f := FileAccess.open(HIGHSCORE_PATH, FileAccess.WRITE)
+		if f:
+			f.store_string(JSON.stringify(data))
 
 
-## Beim Verlassen der App auf der Sternenkarte sichern (im Kampf gilt der Stand davor).
+func to_title() -> void:
+	get_tree().change_scene_to_file(TITLE_SCENE)
+
+
+func to_ship() -> void:
+	get_tree().change_scene_to_file(SHIP_SCENE)
+
+
+## Beim Verlassen der App sichern, außer mitten im Kampf oder Sprung.
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_FOCUS_OUT]:
-		var scene := get_tree().current_scene
-		if scene and scene.scene_file_path == MAP_SCENE:
+		if run != null and can_save:
 			save()

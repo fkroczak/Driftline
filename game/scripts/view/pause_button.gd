@@ -8,8 +8,8 @@ signal toggled_pause
 signal toggled_auto
 
 const LONG_PRESS_MS := 400
-const COLOR_BG := Color("#161B2B", 0.88)
-const COLOR_EDGE := Color("#363E58")
+const COLOR_BG := HudStyle.COLOR_BG
+const COLOR_EDGE := HudStyle.COLOR_EDGE
 const COLOR_ICON := Color("#FDE6BF")
 const COLOR_ACTIVE := Color("#5DCAA5")
 const COLOR_OFF := Color("#5A6370")

@@ -1,7 +1,17 @@
 class_name RunState
 extends RefCounted
-## Ein Run durch ein Universum: Sternenkarte, Position, eigenes Schiff, Treibstoff und Rohstoffe,
+## Ein Run: Modus, Sektor, Sternenkarte, Position, eigenes Schiff, Treibstoff und Rohstoffe,
 ## offene Dialoge (Ereignis, Händler, Reparaturstation). Reine Logik, keine Nodes.
+##
+## Modi:
+## - "jagd" (Die Jagd): HUNT_SECTORS Sektoren mit je einem Boss am Ausgang. Die Jägerfront rückt
+##   mit jedem Sprung um FRONT_STEP von links vor; nach HUNT_JUMPS Sprüngen hat sie den Ausgang
+##   erreicht. Springen kann man trotzdem, solange Treibstoff da ist, aber jedes System hinter der
+##   Front ist von den Jägern besetzt: Wer dort ankommt, muss gegen eine Jäger-Fregatte kämpfen
+##   (`hunter_battle`), Händler und Ereignisse sind dort weg. Nach dem Sieg über den Boss geht es
+##   in den nächsten Sektor (`sector_cleared`, dann `next_sector`), nach dem letzten ist der Run geschafft.
+## - "endlos" (Endloses Universum): keine Front, kein Boss. Am Ausgang geht es sofort in den
+##   nächsten Sektor; die Gegner werden mit jedem Sektor stärker. Punktzahl = erreichter Sektor.
 ##
 ## Das Schiff ist ein einziger ShipState, der von Kampf zu Kampf weitergereicht wird.
 ## Nichts wird automatisch repariert (siehe ShipState.end_combat): Hülle, Systemschäden, Lecks,
@@ -29,15 +39,37 @@ const MAX_CREW := 8
 ## Schiffszeit während eines Sprungs: Feuer breitet sich aus, Lecks lassen Luft entweichen,
 ## Crew arbeitet nur dort, wo sie gerade steht.
 const JUMP_SHIP_TIME := 8.0
-const CREW_NAMES := ["Tess Okafor", "Ruben Lind", "Nia Sato", "Pavel Dorn", "Elin Marsh", "Kofi Brandt",
-	"Lena Vasquez", "Ivo Kern", "Suri Haldane", "Mats Ober"]
+const MODE_HUNT := "jagd"
+const MODE_ENDLESS := "endlos"
+## Jagd: so viele Sprünge, bis die Front den Ausgang erreicht, und so viele Sektoren bis zum Ziel.
+const HUNT_JUMPS := 10
+const HUNT_SECTORS := 4
+## Lage der Jägerfront (x auf der Karte, 0..1) am Sektorstart und ihr Vorrücken je Sprung.
+const FRONT_START := -0.12
+const FRONT_STEP := 0.1
+## Wellenform der Front (Ausschlag in x).
+const FRONT_WAVE := 0.025
 
 var seed_value := 0
+var mode := MODE_HUNT
+## Aktueller Sektor (Universum), ab 1.
+var sector := 1
 var map: StarMap
 var ship: ShipState
 var events: EventBook
 ## Aktueller Knoten (ID in map.nodes).
 var current := 0
+## Sprünge im aktuellen Sektor und im ganzen Run.
+var jumps := 0
+var total_jumps := 0
+## Jägerfront (nur Jagd): x-Lage auf der Karte.
+var front := FRONT_START
+## Am aktuellen Knoten greifen die Jäger an (Knoten liegt hinter der Front).
+var hunter_battle := false
+## Boss besiegt, der Sprung in den nächsten Sektor steht an.
+var sector_cleared := false
+## Gerade aus einem Kampf geflohen: Der Sprung zum gewählten Ziel folgt sofort (jump_to).
+var fleeing := false
 ## Besuchte Knoten -> true.
 var visited: Dictionary = {}
 ## Knoten, deren Kampf vorbei ist (gewonnen oder entkommen) -> Ergebnis.
@@ -49,7 +81,7 @@ var node_events: Dictionary = {}
 var fuel := 0
 var scrap := 0
 var flags: Dictionary = {}
-## "" solange der Run läuft, sonst "geschafft" (Boss besiegt) oder "verloren".
+## "" solange der Run läuft, sonst "geschafft" (letzter Boss besiegt) oder "verloren".
 var result := ""
 var dialog: Dictionary = {}
 ## Beute des letzten Kampfs als Text (für das Banner).
@@ -63,24 +95,45 @@ var _ctx: Dictionary = {}
 var _shop_note := ""
 
 
-func _init(p_seed := 0) -> void:
+func _init(p_seed := 0, p_mode := MODE_HUNT) -> void:
 	seed_value = p_seed if p_seed != 0 else randi()
+	mode = p_mode if p_mode in [MODE_HUNT, MODE_ENDLESS] else MODE_HUNT
 	_rng.seed = seed_value
-	map = StarMap.generate(seed_value)
-	current = map.start_id()
-	visited[current] = true
 	ship = create_player_ship()
 	events = EventBook.load_default()
 	_enemy_table = _load_json(ENEMIES_PATH)
 	rules = _load_json(RUN_PATH)
 	fuel = int(rules.get("start_fuel", 6))
 	scrap = int(rules.get("start_scrap", 10))
+	_setup_sector()
+
+
+## Neue Karte für den aktuellen Sektor; Schiff, Crew und Ressourcen bleiben.
+func _setup_sector() -> void:
+	map = StarMap.generate(hash([seed_value, sector]), "boss" if mode == MODE_HUNT else "ausgang")
+	current = map.start_id()
+	visited = {current: true}
+	cleared = {}
+	pending_battle = {}
+	node_events = {}
+	jumps = 0
+	front = FRONT_START
+	hunter_battle = false
+	sector_cleared = false
 	var used := {}
 	for n in map.nodes:
 		if n.type == "ereignis":
 			var id := events.pick("ereignis", _rng, used)
 			node_events[n.id] = id
 			used[id] = true
+
+
+## Sprung in den nächsten Sektor (nach dem Boss bzw. am Ausgang im Endlos-Modus).
+func next_sector() -> void:
+	sector += 1
+	ship.end_combat()
+	ship.jump_charge = 0.0
+	_setup_sector()
 
 
 static func _load_json(path: String) -> Dictionary:
@@ -93,9 +146,11 @@ static func create_player_ship() -> ShipState:
 	for error in layout.validate():
 		push_error("%s: %s" % [PLAYER_SHIP, error])
 	var s := ShipState.new(layout)
-	s.add_crew("Mara Voss", "mensch", Vector2i(9, 3), {"cockpit": 3.0, "waffen": 1.0})
+	var captain := s.add_crew("Mara Voss", "mensch", Vector2i(9, 3), {"cockpit": 3.0, "waffen": 1.0})
+	captain.role = CrewMember.ROLE_CAPTAIN
 	s.add_crew("Jonas Reil", "mensch", Vector2i(6, 6), {"waffen": 3.0, "schilde": 1.0})
 	s.add_crew("Ilka Brandt", "mensch", Vector2i(6, 0), {"schilde": 2.0, "antrieb": 2.0})
+	s.in_combat = false
 	return s
 
 
@@ -103,13 +158,40 @@ func node() -> Dictionary:
 	return map.node(current)
 
 
-## Bisher gesprungen (= Spalte des aktuellen Knotens).
+## Sprünge im aktuellen Sektor.
 func jumps_done() -> int:
-	return node().column
+	return jumps
 
 
 func jump_cost() -> int:
 	return int(rules.get("jump_cost", 1))
+
+
+func is_hunt() -> bool:
+	return mode == MODE_HUNT
+
+
+## Lage der Front auf Höhe y (leicht gewellt).
+func front_at(y: float, at_front := front) -> float:
+	return at_front + FRONT_WAVE * sin(y * TAU * 1.5 + sector * 1.7)
+
+
+## Liegt der Knoten hinter der Jägerfront? (Nur Jagd.)
+func is_overrun(id: int, at_front := front) -> bool:
+	if mode != MODE_HUNT:
+		return false
+	var p: Vector2 = map.node(id).pos
+	return p.x <= front_at(p.y, at_front)
+
+
+## Wie viele Sprünge noch, bis die Front den Knoten erreicht (0 = schon überrannt, -1 = nie).
+func jumps_until_overrun(id: int) -> int:
+	if mode != MODE_HUNT:
+		return -1
+	for k in 30:
+		if is_overrun(id, front + k * FRONT_STEP):
+			return k
+	return -1
 
 
 ## Ein Notruf-Ereignis wartet an diesem Knoten (auf der Karte sichtbar).
@@ -118,20 +200,38 @@ func is_beacon(id: int) -> bool:
 
 
 func can_jump_to(id: int) -> bool:
-	return result == "" and dialog.is_empty() and not needs_battle() and fuel >= jump_cost() and node().links.has(id)
+	return result == "" and not sector_cleared and dialog.is_empty() and not needs_battle() \
+		and fuel >= jump_cost() and node().links.has(id)
 
 
-## Springt zum Knoten. Die Crew bringt das Schiff unterwegs in Ordnung. Am Ziel öffnet sich
-## je nach Typ ein Dialog (Ereignis, Händler, Reparaturstation).
+## Springt zum Knoten (auch zurück zu besuchten). Die Front rückt vor. Am Ziel öffnet sich je nach
+## Typ ein Dialog (Ereignis beim ersten Besuch, Händler, Reparaturstation), hinter der Front greifen
+## die Jäger an, und am Ausgang im Endlos-Modus geht es in den nächsten Sektor.
 func jump_to(id: int) -> bool:
 	if not can_jump_to(id):
 		return false
 	fuel -= jump_cost()
+	fleeing = false
 	ship.end_combat()
 	_pass_ship_time(JUMP_SHIP_TIME)
+	ship.jump_charge = 0.0  # am Ziel lädt der Antrieb neu
 	current = id
+	jumps += 1
+	total_jumps += 1
+	if mode == MODE_HUNT:
+		front += FRONT_STEP
+	var first_visit := not visited.has(id)
 	visited[id] = true
-	_open_node_dialog()
+	if result != "":
+		return true
+	if is_overrun(id):
+		hunter_battle = true
+		return true
+	if mode == MODE_ENDLESS and node().type == "ausgang":
+		next_sector()
+		return true
+	if first_visit or node().type in ["haendler", "reparatur"]:
+		_open_node_dialog()
 	return true
 
 
@@ -160,7 +260,7 @@ func _open_node_dialog() -> void:
 
 ## Ohne Treibstoff festsitzen: Notsignal senden.
 func can_send_distress() -> bool:
-	return result == "" and dialog.is_empty() and not needs_battle() and fuel < jump_cost() and node().type != "boss"
+	return result == "" and not sector_cleared and dialog.is_empty() and not needs_battle() and fuel < jump_cost() and node().type != "boss"
 
 
 func send_distress() -> bool:
@@ -171,17 +271,23 @@ func send_distress() -> bool:
 
 
 ## Am aktuellen Knoten wartet ein Gegner, der noch nicht besiegt oder abgehängt ist.
-## Wer vor dem Boss flieht, bleibt vor ihm stehen: Der Boss wartet weiter.
+## Wer vor dem Boss flieht, springt weg; der Boss wartet weiter am Ausgang.
 func needs_battle() -> bool:
-	if result != "" or not dialog.is_empty():
+	if result != "" or sector_cleared or fleeing or not dialog.is_empty():
 		return false
-	if pending_battle.has(current):
+	if hunter_battle or pending_battle.has(current):
 		return true
 	var type: String = node().type
 	return (type == "kampf" or type == "boss") and not cleared.has(current)
 
 
+## Der wartende Gegner ist der Boss (nicht die Jäger und kein Ereigniskampf davor).
+func is_boss_battle() -> bool:
+	return needs_battle() and not hunter_battle and not pending_battle.has(current) and node().type == "boss"
+
+
 ## Ergebnis eines Kampfs am aktuellen Knoten: "sieg", "entkommen" oder "niederlage".
+## Nach einer Flucht folgt der Sprung (jump_to) zum gewählten Ziel.
 func finish_battle(outcome: String) -> void:
 	last_reward = ""
 	match outcome:
@@ -189,26 +295,46 @@ func finish_battle(outcome: String) -> void:
 			result = "verloren"
 		"sieg":
 			var parts: Array[String] = []
-			if node().type == "boss":
-				result = "geschafft"
+			if hunter_battle:
+				hunter_battle = false
+				parts = _apply(_roll_loot(_enemy_table.get("hunter", {}).get("reward", {})))
+			elif is_boss_battle():
+				parts = _apply(_roll_loot(_enemy_table.get("boss", {}).get("reward", {})))
+				cleared[current] = outcome
+				if sector >= HUNT_SECTORS:
+					result = "geschafft"
+				else:
+					sector_cleared = true
 			else:
-				var reward := _stage_for(node().column).get("reward", {}) as Dictionary
-				var loot := {}
-				for key: String in reward:
-					var span: Array = reward[key]
-					loot[key] = _rng.randi_range(int(span[0]), int(span[1]))
+				var loot := _roll_loot(_stage_for(_depth(node().column)).get("reward", {}))
+				loot["scrap"] = int(loot.get("scrap", 0)) + (sector - 1) * int(_enemy_table.get("scrap_per_sector", 0))
 				parts = _apply(loot)
 				if pending_battle.has(current):
 					parts.append_array(_apply(pending_battle[current]))
-			pending_battle.erase(current)
-			cleared[current] = outcome
+				pending_battle.erase(current)
+				cleared[current] = outcome
 			last_reward = " · ".join(parts)
 			ship.end_combat()
 		"entkommen":
 			pending_battle.erase(current)
+			hunter_battle = false
+			fleeing = true
 			if node().type != "boss":
 				cleared[current] = outcome
 			ship.end_combat()
+
+
+func _roll_loot(reward: Dictionary) -> Dictionary:
+	var loot := {}
+	for key: String in reward:
+		var span: Array = reward[key]
+		loot[key] = _rng.randi_range(int(span[0]), int(span[1]))
+	return loot
+
+
+## Punktzahl für die Bestenliste: erreichter Sektor (Endlos) bzw. geschaffte Sektoren (Jagd).
+func score() -> int:
+	return sector
 
 
 # --- Dialoge ---
@@ -468,11 +594,12 @@ func _apply(effects: Dictionary) -> Array[String]:
 		if ship.crew.size() >= MAX_CREW:
 			parts.append("Kein Platz für weitere Crew")
 			break
+		var species: String = effects.get("species", Species.pick(_rng))
 		var taken := ship.crew.map(func(m: CrewMember) -> String: return m.display_name)
-		var free := CREW_NAMES.filter(func(n: String) -> bool: return not taken.has(n))
+		var free: Array = (Species.value(species, "names", []) as Array).filter(func(n: String) -> bool: return not taken.has(n))
 		var name: String = free[_rng.randi() % free.size()] if not free.is_empty() else "Neuling"
-		if ship.add_crew_anywhere(name, "mensch"):
-			parts.append("%s kommt an Bord" % name)
+		if ship.add_crew_anywhere(name, species):
+			parts.append("%s (%s) kommt an Bord" % [name, Species.display_name(species)])
 	if effects.has("flag"):
 		flags[effects.flag] = true
 		parts.append(_flag_text(effects.flag))
@@ -494,31 +621,45 @@ static func _flag_text(flag: String) -> String:
 # --- Gegner ---
 
 
-func _stage_for(column: int) -> Dictionary:
+## Fortschritt für die Gegnerstufe: Lage auf der Karte plus Sektor.
+func _depth(column: int) -> int:
+	return column + (sector - 1) * int(_enemy_table.get("depth_per_sector", 3))
+
+
+func _stage_for(depth: int) -> Dictionary:
 	var stage := {}
 	for s: Dictionary in _enemy_table.get("stages", []):
-		if column >= int(s.get("from_jump", 0)):
+		if depth >= int(s.get("from_jump", 0)):
 			stage = s
 	return stage
 
 
 ## Welcher Gegner am Knoten wartet: {ship (Pfad), name, hull_bonus}. Pro Knoten fest,
-## damit ein neu geladener Kampf denselben Gegner zeigt.
+## damit ein neu geladener Kampf denselben Gegner zeigt. Hinter der Front sind es die Jäger.
 func enemy_spec(id := -1) -> Dictionary:
 	if id < 0:
 		id = current
 	var n := map.node(id)
+	var per_sector := (sector - 1) * int(_enemy_table.get("hull_per_sector", 0))
+	if id == current and hunter_battle:
+		var hunter: Dictionary = _enemy_table.get("hunter", {})
+		var extra := maxi(jumps - HUNT_JUMPS, 0) * int(hunter.get("hull_per_late_jump", 0))
+		return {
+			"ship": SHIPS_DIR % hunter.get("ship", "jaeger_fregatte"),
+			"name": hunter.get("name", ""),
+			"hull_bonus": int(hunter.get("hull_bonus", 0)) + per_sector + extra,
+		}
 	if n.type == "boss":
 		var boss: Dictionary = _enemy_table.get("boss", {})
 		return {
 			"ship": SHIPS_DIR % boss.get("ship", "piraten_kutter_schwer"),
 			"name": boss.get("name", ""),
-			"hull_bonus": int(boss.get("hull_bonus", 0)),
+			"hull_bonus": int(boss.get("hull_bonus", 0)) + (sector - 1) * int(boss.get("hull_per_sector", 0)),
 		}
-	var stage := _stage_for(n.column)
+	var stage := _stage_for(_depth(n.column))
 	var pool: Array = stage.get("pool", [["piraten_kutter", 1.0]])
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([seed_value, id])
+	rng.seed = hash([seed_value, sector, id])
 	var total := 0.0
 	for entry: Array in pool:
 		total += float(entry[1])
@@ -529,7 +670,7 @@ func enemy_spec(id := -1) -> Dictionary:
 		if roll <= 0.0:
 			pick = entry[0]
 			break
-	return {"ship": SHIPS_DIR % pick, "name": "", "hull_bonus": int(stage.get("hull_bonus", 0))}
+	return {"ship": SHIPS_DIR % pick, "name": "", "hull_bonus": int(stage.get("hull_bonus", 0)) + per_sector}
 
 
 ## Baut das Gegnerschiff für den Knoten samt Besatzung (Kapitänin, Schütze, Mechaniker).
