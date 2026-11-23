@@ -1,6 +1,6 @@
 # Hullbound
 
-Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realistischer Pixel-Art. Du führst ein Schiff mit Crew aus sechs Spezies durch prozedural erzeugte Universen: Energie verteilen, kämpfen, reparieren, ausbauen, Planeten erkunden. Prototyp Phase 1 (Kampf) fertig, Phase 2 (ein ganzer Run) in Arbeit; früherer Arbeitstitel: Driftline.
+Raumschiff-Roguelike für Android und iOS in Draufsicht, inspiriert von FTL, mit realistischer Pixel-Art. Du führst ein Schiff mit Crew aus sechs Spezies durch prozedural erzeugte Universen: Energie verteilen, kämpfen, reparieren, ausbauen, Planeten erkunden. Prototyp Phase 1 (Kampf) fertig, Phase 2 (ein ganzer Run) in Arbeit; früherer Arbeitstitel: Driftline.
 
 ## Inhalt
 
@@ -18,7 +18,7 @@ Raumschiff-Roguelike für Android in Draufsicht, inspiriert von FTL, mit realist
 
 ## Eckdaten
 
-- **Engine:** Godot 4, Export als Android-App (Querformat)
+- **Engine:** Godot 4, Export als Android-App und iOS-App (Querformat)
 - **Spielmodi:** „Die Jagd“ (4 Sektoren, die Jägerfront holt dich nach 10 Sprüngen ein, Endboss je Sektor) und „Endloses Universum“ (Sektoren ohne Ende, Rekord; Fraktionen folgen)
 - **Ressourcen:** Treibstoff ist Währung und kostet 1 pro Sprung; Rohstoffe für Upgrades und Reparatur
 - **Stil:** realistische HD-Pixel-Art, Palette mit ca. 64 Farben, dunkle Konturen

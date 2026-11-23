@@ -181,3 +181,21 @@ Nach etwa 5 Minuten liegt die APK unter **Releases** als Vorabversion; am Handy 
 Einmalig: Builds vor dieser Umstellung hatten jeweils einen zufälligen Schlüssel. Die alte Version also ein letztes Mal deinstallieren (es gibt noch keine Spielstände, es geht nichts verloren).
 
 Lokal aus dem Editor: Exportvorlagen und Android SDK in Godot einrichten, Handy per USB anschließen, oben rechts auf das Android-Symbol klicken (Remote Debug).
+
+## iOS-IPA
+
+Gebaut wird wie bei Android nur auf ausdrücklichen Wunsch, auf einem macOS-Runner mit Xcode (Workflow `.github/workflows/ios-ipa.yml`, Preset „iOS“ in `export_presets.cfg`):
+
+- **Tag pushen** (geht von jedem Branch): `git tag ipa-0.3 && git push origin ipa-0.3`
+- **Knopf auf GitHub:** Actions → „iOS-IPA bauen“ → „Run workflow“. Erscheint erst, wenn der Workflow auf `main` liegt.
+
+Godot exportiert ein Xcode-Projekt, `xcodebuild` baut daraus die App **ohne Signatur**, und die IPA landet als Vorabversion unter **Releases**. Versionsname wie bei Android (`config/version` plus Laufnummer), Bundle-ID `io.hullbound.prototype`, läuft auf iPhone und iPad ab iOS 14 im Querformat.
+
+**Aufs iPhone:** Apple installiert nur signierte Apps. Ohne Entwicklerkonto geht das per Sideloading mit der eigenen Apple-ID:
+
+- **Sideloadly** (Mac/Windows, iPhone per USB) oder **AltStore/SideStore**: IPA auswählen, mit Apple-ID anmelden, installieren.
+- Auf dem iPhone einmalig *Einstellungen → Allgemein → VPN und Geräteverwaltung* dem Entwicklerzertifikat vertrauen; ab iOS 16 außerdem *Datenschutz & Sicherheit → Entwicklermodus* einschalten.
+- Mit einer kostenlosen Apple-ID läuft die App 7 Tage, dann neu signieren (AltStore/SideStore erledigt das automatisch). Mit dem Apple Developer Program (99 €/Jahr) 1 Jahr, und TestFlight wird möglich.
+- **Updates:** Neue IPA mit derselben Bundle-ID drüberinstallieren, der Spielstand (`user://`) bleibt.
+
+**Bekannt:** Auf iPhones mit Notch oder Dynamic Island kann der Rand der HUD-Leisten im Querformat knapp unter der Aussparung liegen; die sichere Zone (`DisplayServer.get_display_safe_area()`) wird noch nicht berücksichtigt.
