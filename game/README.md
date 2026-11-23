@@ -164,14 +164,18 @@ Basisauflösung 384 × 216, ganzzahlig hochskaliert (1080p: 5×), Breite passt s
 
 Ein Raum ist bei 5× auf einem 1080p-Handy 140 px groß (ca. 56 dp, GDD: mindestens 48 dp), eine Kachel 70 px. Hintergrund: Sternenfeld in drei Ebenen (`scripts/view/starfield.gd`).
 
+## Release (Android + iOS)
+
+Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Workflow `.github/workflows/android-apk.yml`). Jedes Release baut immer beide Apps; veröffentlicht wird nur, wenn beide geklappt haben:
+
+- **Tag pushen** (geht von jedem Branch): `git tag release-0.2 && git push origin release-0.2` (alte `apk-…`-Tags gehen auch)
+- **Knopf auf GitHub:** Actions → „Release bauen (Android + iOS)“ → „Run workflow“.
+
+Nach etwa 10 Minuten liegen APK und IPA unter **Releases** als Vorabversion.
+
+**iOS:** Die IPA ist unsigniert (kein Apple-Entwicklerkonto). Aufs iPhone kommt sie mit AltStore oder Sideloadly und der eigenen Apple-ID; mit kostenloser Apple-ID muss sie alle 7 Tage neu signiert werden. Gebaut wird auf einem macOS-Runner: Godot exportiert das Xcode-Projekt (Preset „iOS“, App-Symbol `assets/icon_ios.png`), `xcodebuild` baut es ohne Signatur. Für TestFlight bräuchte es später ein Apple-Entwicklerkonto und Zertifikate als Secrets.
+
 ## Android-APK
-
-Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Workflow `.github/workflows/android-apk.yml`):
-
-- **Tag pushen** (geht von jedem Branch): `git tag apk-0.2 && git push origin apk-0.2`
-- **Knopf auf GitHub:** Actions → „Android-APK bauen“ → „Run workflow“. Erscheint erst, wenn der Workflow auf `main` liegt.
-
-Nach etwa 5 Minuten liegt die APK unter **Releases** als Vorabversion; am Handy herunterladen und installieren.
 
 **Updates:** Jede neue APK installiert sich als Update über die vorige, ohne Deinstallieren. Dafür sorgen zwei Dinge:
 

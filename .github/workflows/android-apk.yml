@@ -1,28 +1,35 @@
-# Baut eine Android-Debug-APK – nur auf ausdrücklichen Wunsch:
-#  - Actions → „Android-APK bauen“ → „Run workflow“ (Branch wählbar)
-#  - oder ein Tag „apk-…“ pushen, z. B. git tag apk-0.1 && git push origin apk-0.1
-# Die APK landet als Vorabversion unter „Releases“ und lässt sich dort direkt am Handy laden.
-name: Android-APK bauen
+# Dateiname bleibt android-apk.yml: GitHub zählt die Laufnummer je Datei, und die
+# Laufnummer ist der versionCode der APK. Eine neue Datei finge wieder bei 1 an,
+# dann ließe sich die neue APK nicht mehr über die alte installieren.
+# Baut bei jedem Release beide Apps, Android (APK) und iOS (IPA), und veröffentlicht sie
+# gemeinsam als Vorabversion unter „Releases“. Nur auf ausdrücklichen Wunsch:
+#  - Actions → „Release bauen (Android + iOS)“ → „Run workflow“ (Branch wählbar)
+#  - oder ein Tag pushen, z. B. git tag release-0.2 && git push origin release-0.2
+#    (alte „apk-…“-Tags gehen weiter und bauen ebenfalls beide)
+# Das Release entsteht nur, wenn beide Builds geklappt haben.
+name: Release bauen (Android + iOS)
 
 on:
   workflow_dispatch:
   push:
-    tags: ["apk-*"]
+    tags: ["release-*", "apk-*"]
 
 permissions:
   contents: write
 
 concurrency:
-  group: android-apk-${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   GODOT_VERSION: "4.7.2"
 
 jobs:
-  apk:
+  android:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.name }}
     steps:
       - uses: actions/checkout@v5
 
@@ -81,6 +88,7 @@ jobs:
           sed -i 's/^ *//' ~/.config/godot/editor_settings-${major_minor}.tres
 
       - name: Versionsnummer setzen
+        id: version
         # versionCode zählt mit jedem Build hoch (Android verlangt das für Updates),
         # der Versionsname wird z. B. 0.2.17 und steht im Spiel auf der Sternenkarte.
         run: |
@@ -90,6 +98,7 @@ jobs:
           sed -i "s/^config\/version=.*/config\/version=\"${name}\"/" game/project.godot
           grep -E '^version/(code|name)=' game/export_presets.cfg
           echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
 
       - name: Logiktests
         run: |
@@ -104,25 +113,102 @@ jobs:
           mkdir -p build
           "$GODOT" --headless --path game --export-debug "Android" ../build/hullbound-debug.apk
           test -s build/hullbound-debug.apk
-          name="hullbound-${VERSION_NAME}-debug.apk"
-          mv build/hullbound-debug.apk "build/$name"
-          echo "APK=build/$name" >> "$GITHUB_ENV"
+          mv build/hullbound-debug.apk "build/hullbound-${VERSION_NAME}-debug.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hullbound-debug-apk
-          path: ${{ env.APK }}
+          name: hullbound-android
+          path: build/*.apk
           retention-days: 14
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Godot-Exportvorlage (iOS) aus dem Cache
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-templates-ios-${{ env.GODOT_VERSION }}
+
+      - name: Godot installieren
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -sSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
+          echo "GODOT=$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot" >> "$GITHUB_ENV"
+          if [ "${{ steps.templates.outputs.cache-hit }}" != "true" ]; then
+            curl -sSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+            unzip -q templates.tpz "templates/ios.zip" "templates/version.txt" -d "$RUNNER_TEMP/tpl"
+            dest="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+            mkdir -p "$dest"
+            mv "$RUNNER_TEMP"/tpl/templates/ios.zip "$RUNNER_TEMP"/tpl/templates/version.txt "$dest/"
+          fi
+
+      - name: Versionsnummer setzen
+        # Gleiche Nummer wie die APK aus diesem Lauf (z. B. 0.2.17, Build 17).
+        run: |
+          base=$(sed -n 's/^config\/version="\(.*\)"/\1/p' game/project.godot)
+          name="${base}.${GITHUB_RUN_NUMBER}"
+          sed -i '' "s/^application\/short_version=.*/application\/short_version=\"${name}\"/; s/^application\/version=.*/application\/version=\"${GITHUB_RUN_NUMBER}\"/" game/export_presets.cfg
+          sed -i '' "s/^config\/version=.*/config\/version=\"${name}\"/" game/project.godot
+          grep -E '^application/(short_)?version=' game/export_presets.cfg
+          echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Xcode-Projekt exportieren
+        run: |
+          "$GODOT" --headless --path game --import
+          mkdir -p build/ios
+          "$GODOT" --headless --path game --export-release "iOS" ../build/ios/hullbound.ipa
+          test -d build/ios/hullbound.xcodeproj
+
+      - name: IPA bauen (unsigniert)
+        # Ohne Apple-Entwicklerkonto wird nicht signiert. Die IPA lässt sich mit
+        # AltStore oder Sideloadly mit der eigenen Apple-ID aufs iPhone bringen.
+        run: |
+          xcodebuild -project build/ios/hullbound.xcodeproj -scheme hullbound \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" \
+            build | tail -n 40
+          app=build/dd/Build/Products/Release-iphoneos/hullbound.app
+          test -d "$app"
+          mkdir -p build/ipa/Payload
+          cp -R "$app" build/ipa/Payload/
+          (cd build/ipa && zip -qry "../hullbound-${VERSION_NAME}-unsigned.ipa" Payload)
+          test -s "build/hullbound-${VERSION_NAME}-unsigned.ipa"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hullbound-ios
+          path: build/*.ipa
+          retention-days: 14
+
+  release:
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Als Vorabversion veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('apk-build-{0}', github.run_number) }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('release-build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }}
-          name: Hullbound ${{ env.VERSION_NAME }}
+          name: Hullbound ${{ needs.android.outputs.version }}
           prerelease: true
-          files: ${{ env.APK }}
+          files: |
+            dist/*.apk
+            dist/*.ipa
           body: |
-            Version ${{ env.VERSION_NAME }} (Build ${{ github.run_number }}) vom Branch `${{ github.ref_name }}`, Commit ${{ github.sha }}.
-            Auf dem Handy herunterladen und öffnen; sie installiert sich als Update über die vorige Version.
-            Beim ersten Mal „Aus dieser Quelle installieren“ erlauben.
+            Version ${{ needs.android.outputs.version }} (Build ${{ github.run_number }}) vom Branch `${{ github.ref_name }}`, Commit ${{ github.sha }}.
+
+            **Android:** APK auf dem Handy herunterladen und öffnen; sie installiert sich als Update über die vorige Version. Beim ersten Mal „Aus dieser Quelle installieren“ erlauben.
+
+            **iOS:** Die IPA ist unsigniert. Mit AltStore oder Sideloadly und der eigenen Apple-ID aufs iPhone bringen (kostenlose Apple-ID: alle 7 Tage neu signieren).
