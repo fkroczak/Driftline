@@ -58,6 +58,8 @@ var _auto_paused := false
 @onready var effects: Effects = $World/Effects
 @onready var crew_panel: CrewPanel = $HUD/CrewPanel
 @onready var crew_card: CrewCard = $HUD/CrewCard
+## Person, deren Karte gezeigt wird (nur bei Auswahl über die Crew-Liste).
+var _card_member: CrewMember
 @onready var power_panel: PowerPanel = $HUD/PowerPanel
 @onready var weapon_panel: WeaponPanel = $HUD/WeaponPanel
 @onready var door_panel: DoorPanel = $HUD/DoorPanel
@@ -842,13 +844,24 @@ func _on_banner_input(event: InputEvent) -> void:
 	banner.visible = false  # Banner wegtippen
 
 
+## Antippen in der Crew-Liste wählt die Person und zeigt ihre Karte. Ist sie schon (übers Schiff)
+## gewählt, aber ohne Karte, kommt nur die Karte dazu; erneutes Antippen hebt die Auswahl auf.
 func _on_crew_selected(member: CrewMember) -> void:
-	ship_view.select(null if member == ship_view.selected else member)
+	if member == ship_view.selected and crew_card.member != member:
+		_card_member = member
+		crew_card.show_member(member)
+		return
+	_card_member = null if member == ship_view.selected else member
+	ship_view.select(_card_member)
 
 
+## Die Crew-Karte erscheint nur bei Auswahl über die Crew-Liste, damit sie beim Antippen im
+## Schiff nicht das Schiff verdeckt.
 func _on_selection_changed(member: CrewMember, _room_idx: int) -> void:
 	crew_panel.selected = member
-	crew_card.show_member(member)
+	if member != _card_member:
+		_card_member = null
+	crew_card.show_member(_card_member)
 	_on_order_selection(0 if member else -1)
 	_update_info()
 
