@@ -34,7 +34,6 @@ const COLOR_VISITED := Color("#5DCAA5")
 const COLOR_REACH := Color("#FAC775")
 const COLOR_UNKNOWN := Color("#C4CAD3")
 const COLOR_BOSS := Color("#E24B4A")
-const COLOR_JUMPS := Color("#F09595")
 const COLOR_FUEL := Color("#EF9F27")
 const COLOR_SCRAP := Color("#A9B0BB")
 const COLOR_SHOP := Color("#EF9F27")
@@ -394,15 +393,11 @@ func _draw_top_bar() -> void:
 	var ratio := float(ship.hull) / maxf(ship.max_hull, 1)
 	var hull_color := COLOR_VISITED if ratio > 0.5 else (COLOR_WARN if ratio > 0.25 else COLOR_BOSS)
 	var fuel_color := COLOR_BOSS if run.fuel < run.jump_cost() else (COLOR_WARN if run.fuel <= 2 else COLOR_FUEL)
-	var jumps := "SPRÜNGE %d" % run.jumps_done()
-	if run.is_hunt():
-		jumps += "/%d" % RunState.HUNT_JUMPS
 	# Text, Farbe, Symbol (Treibstoff, Rohstoffe und Hülle als Symbol statt Wort)
 	var items := [
 		["%d" % run.fuel, fuel_color, "fuel"],
 		["%d" % run.scrap, COLOR_SCRAP, "scrap"],
 		["%d/%d" % [ship.hull, ship.max_hull], hull_color, "hull"],
-		[jumps, COLOR_BOSS if run.is_hunt() and run.jumps_done() >= RunState.HUNT_JUMPS else COLOR_JUMPS, ""],
 		["SEKTOR %d" % run.sector if run.is_hunt() else "SEKTOR %d · ENDLOS" % run.sector, COLOR_REPAIR, ""],
 	]
 	var widths: Array[float] = []

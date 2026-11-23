@@ -18,7 +18,7 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 ### Die Jagd
 
 - **4 Sektoren**, je mit einem Boss am Ausgang (rechts auf der Karte). Nach dem Sieg über den Boss springt das Schiff von selbst in den nächsten Sektor (neue Karte, Front von vorn). Nach dem vierten ist der Run geschafft.
-- **Jägerfront:** Sie rückt mit jedem Sprung um 0,1 Kartenbreite von links vor (rote Fläche, gestrichelt die Lage nach dem nächsten Sprung). Nach 10 Sprüngen hat sie den Ausgang erreicht, daher der Zähler „SPRUNG n/10“.
+- **Jägerfront:** Sie rückt mit jedem Sprung um 0,1 Kartenbreite von links vor (rote Fläche, gestrichelt die Lage nach dem nächsten Sprung). Nach 10 Sprüngen hat sie den Ausgang erreicht. Einen Sprungzähler gibt es nicht mehr, die Front auf der Karte zeigt die Lage.
 - **Springen kann man trotzdem, solange Treibstoff da ist.** Jedes System hinter der Front ist von den Jägern besetzt: Wer dort ankommt (auch zurück in besuchte Systeme), kämpft gegen eine **Jäger-Fregatte** (Hülle 22, Reaktor 9, Pulslaser, Schwerlaser und Bordkanone). Ab Sprung 11 kommen je Sprung 2 Hülle dazu. Händler und Ereignisse hinter der Front sind weg. Der Sieg bringt wenig Beute (4–8 Rohstoffe); die Flucht ist der Notausgang.
 - **Vorwarnung:** Das Infofeld auf der Karte zeigt „Jäger in 1/2 Sprüngen hier“.
 
@@ -31,7 +31,7 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 ### Sternenkarte
 
 - **Jede Karte ist anders** (`StarMap`, Seed aus Run und Sektor): 20–25 Systeme frei verteilt mit Mindestabstand, Start ganz links, Ausgang ganz rechts. Verbindungen aus Delaunay-Dreiecken: Der Spannbaum hält alles zusammen, lange Kanten fallen weg, und von den übrigen fällt rund ein Drittel zufällig weg. Nichts kreuzt sich, und der kürzeste Weg zum Ausgang braucht 5 bis 8 Sprünge. Verbindungen gelten in beide Richtungen: Man kann zurückspringen (ein besuchtes System löst nichts erneut aus; Händler und Reparaturstation öffnen wieder).
-- **Darstellung:** Grün = besucht, gelb = erreichbar (nur mit geladenem Antrieb), weiß = unerforscht, rot = von Jägern besetzt, roter Rhombus = Boss, blauer Ring = Ausgang. Oben Treibstoff (Kanister), Rohstoffe (Zahnrad), Hülle (Rumpf-Symbol), Sprünge und Sektor, unten rechts ZURÜCK.
+- **Darstellung:** Grün = besucht, gelb = erreichbar (nur mit geladenem Antrieb), weiß = unerforscht, rot = von Jägern besetzt, roter Rhombus = Boss, blauer Ring = Ausgang. Oben Treibstoff (Kanister), Rohstoffe (Zahnrad), Hülle (Rumpf-Symbol) und Sektor, unten rechts ZURÜCK.
 - **Systeme:** je Karte 2 Händler (einer in der linken, einer in der rechten Hälfte) und 1 Reparaturstation (Mitte), immer sichtbar. Der Rest: 45 % Kampf, 42 % Ereignis, 13 % leer. Notrufe (rote Ringe) zeigt die Karte nur bis 2 Sprünge weit; alles andere bleibt „unerforscht“.
 - **Ressourcen** (`data/run.json`): Start mit 6 Treibstoff und 10 Rohstoffen. Jeder Sprung kostet 1 Treibstoff. Ohne Treibstoff erscheint auf der Karte der Knopf **NOTSIGNAL**: Es antwortet ein Händler, Piraten (Kampf um ihre Tanks) oder eine Gildenpatrouille.
 - **Beute:** Nach jedem Sieg Rohstoffe und manchmal Treibstoff, je nach Stufe (`reward` in `data/enemies.json`). Der Boss bringt 20–30 Rohstoffe und 3–4 Treibstoff für den nächsten Sektor.
@@ -88,12 +88,12 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 - **Pause** (Knopf oben neben „?“, am Desktop auch die Leertaste): Der Kampf steht, alles bleibt bedienbar (Energie, Ziele, Crew, Türen, Schleusen). Antippen setzt fort.
 - **Auto-Pause** (am Start an, kleines „A“ am Pauseknopf; gedrückt halten schaltet um): Wer eine Crew-Figur oder Waffenkarte auswählt, hält den Kampf an. Mit dem Befehl oder beim Abwählen läuft er weiter. Eine selbst gesetzte Pause bleibt, bis man fortsetzt.
 
-- **Bildschirm** (nach dem Mockup `art/pixel/hud_kampf_pixel.png`): oben links Hülle (Rumpf-Symbol und Segmente), Schildschichten (Schild-Symbol und Kreise), Luft und Ausweichen (Pfeil); oben Mitte Treibstoff (Kanister), Rohstoffe (Zahnrad), Sektor und Sprünge, als Symbole statt Wörtern; oben rechts SPRUNG (mit Ladebalken), KARTE, Pause und „?“; links die Crew-Liste; unten ENERGIE, WAFFEN und TÜREN, jeweils in blau gerahmten Kästen. Die Infozeile steht über den unteren Kästen.
+- **Bildschirm** (nach dem Mockup `art/pixel/hud_kampf_pixel.png`): oben links Hülle (Rumpf-Symbol und Segmente), Schildschichten (Schild-Symbol und Kreise), Luft und Ausweichen (Pfeil); oben Mitte Treibstoff (Kanister) und Rohstoffe (Zahnrad) als Symbole statt Wörtern (der Sektor steht auf der Sternenkarte); oben rechts SPRUNG (mit Ladebalken), KARTE, Pause und „?“; links die Crew-Liste; unten ENERGIE, WAFFEN und TÜREN, jeweils in blau gerahmten Kästen. Die Infozeile steht über den unteren Kästen.
 - **Symbole:** Der „?“-Knopf oben rechts öffnet eine Legende (Kampf pausiert). Eine Energiespalte oder einen eigenen Raum antippen zeigt in der Infozeile, was das System tut.
 - **Hülle:** Segmente und Zahl oben links für das eigene Schiff, über dem Gegner für ihn. Frisch verlorene Punkte glühen kurz rot.
 
 - **Energie** (Leiste unten): Spalte antippen = 1 Balken mehr, gedrückt halten oder Rechtsklick = 1 Balken weniger. Ganz links der Reaktor: gelb = frei, rot = zerstört. Bei Systemen: grün = versorgt, rot = beschädigt.
-- **Startverteilung** (Reaktor 6, bewusst knapp): Lebenserhaltung 1, Schilde 2, Waffen 3. Antrieb, Sensoren und Medbay bleiben aus, bis du umschichtest, zum Beispiel den Schweren Laser ab, damit der Antrieb Ausweichen bringt oder die Medbay heilt.
+- **Startverteilung** (Reaktor 7, knapp): Lebenserhaltung 1, Schilde 2, Waffen 3, Antrieb 1 (ohne Energie im Antrieb kein Sprung). Sensoren und Medbay bleiben aus, bis du umschichtest.
 - **Waffen** (Karten unten, nummeriert): Mit Energie lädt eine Waffe, ohne entlädt sie sich. Geladen feuert sie selbst auf ihr Ziel; ohne Ziel blinkt die Karte. Gedrückt halten oder Rechtsklick schaltet eine Waffe ein oder aus.
 - **Zielen, alle Waffen:** einen Gegnerraum antippen (knapp daneben zählt auch)
 - **Zielen, einzeln:** Waffenkarte antippen (rot umrandet), dann einen Gegnerraum. Den aktuellen Zielraum der Waffe erneut antippen hebt das Ziel auf. Fadenkreuze im Gegnerschiff tragen die Waffennummer.

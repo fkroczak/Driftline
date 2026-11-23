@@ -220,7 +220,7 @@ Beide Modi nutzen dieselben Bausteine; der Jagd-Modus wird zuerst gebaut, weil e
 Pro Universum gibt es 20–25 Sprungziele, aber nur 10 Sprünge, bevor die Jägerflotte dich einholt.
 
 - Der Ausgang zum nächsten Universum ist von Anfang an auf der Karte sichtbar; der Weg dorthin muss geplant werden
-- Ein Zähler zeigt die Sprünge (n/10), die Front der Jäger rückt auf der Karte sichtbar von links vor (je Sprung ein Zehntel der Karte)
+- Die Front der Jäger rückt auf der Karte sichtbar von links vor (je Sprung ein Zehntel der Karte)
 - Springen kann man, solange Treibstoff da ist; jedes System hinter der Front ist von Jägern besetzt und bedeutet einen harten Kampf (Händler und Ereignisse dort sind weg)
 - Nach Sprung 10 kein sofortiges Game Over: Jeder weitere Sprung landet hinter der Front, die Jäger werden je Sprung stärker
 - Am Ausgang wartet der Endboss des Universums; nach dem Sieg folgt der FTL-Sprung ins nächste Universum

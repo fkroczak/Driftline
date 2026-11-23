@@ -285,9 +285,9 @@ func test_enemy_layout_is_valid() -> void:
 
 func test_start_power_fits_reactor() -> void:
 	var state := ShipState.new(_layout())
-	check(state.reactor_output() == 6, "Reaktor sollte 6 liefern, liefert %d" % state.reactor_output())
-	check(state.power_used() == 6, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
-	check(state.level("antrieb") == 0, "Antrieb sollte am Start aus sein (Energie ist knapp)")
+	check(state.reactor_output() == 7, "Reaktor sollte 7 liefern, liefert %d" % state.reactor_output())
+	check(state.power_used() == 7, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
+	check(state.level("antrieb") == 1, "Antrieb sollte am Start 1 Balken haben (Sprung braucht Energie)")
 	check(state.weapons[0].powered and state.weapons[1].powered, "Beide Waffen sollten Energie haben")
 	check(state.shield_layers == 1, "Eine Schildschicht erwartet")
 
@@ -328,8 +328,8 @@ func test_damage_cuts_power_and_repair_restores_it() -> void:
 func test_reactor_damage_lowers_output() -> void:
 	var state := ShipState.new(_layout())
 	state.take_hit(state.layout.room_index_by_id("reaktor"), 2)
-	check(state.reactor_output() == 4, "Reaktorschaden senkt die Leistung nicht")
-	check(state.power_used() <= 4, "Systeme verbrauchen mehr als der Reaktor liefert")
+	check(state.reactor_output() == 5, "Reaktorschaden senkt die Leistung nicht")
+	check(state.power_used() <= 5, "Systeme verbrauchen mehr als der Reaktor liefert")
 	check(state.level("lebenserhaltung") == 1 and state.level("schilde") == 2, "Wichtige Systeme zuerst versorgen")
 
 
@@ -592,7 +592,8 @@ func test_jump_ends_battle() -> void:
 	var battle := Battle.new(player, _enemy_ship(), 4)
 	check(not battle.player_jump(), "Sprung ohne Ladung möglich")
 	player.jump_charge = 1.0
-	player.remove_power("waffen")
+	while player.remove_power("antrieb"):
+		pass
 	check(not battle.player_jump(), "Sprung ohne Energie im Antrieb möglich")
 	player.add_power("antrieb")
 	check(battle.player_jump() and battle.outcome == "entkommen", "Geladener Sprung beendet den Kampf nicht")
@@ -887,10 +888,11 @@ func test_drive_charges_faster_outside_combat() -> void:
 	var run := RunState.new(4)
 	var ship := run.ship
 	check(not ship.in_combat, "Schiff startet im Kampfmodus")
+	while ship.remove_power("antrieb"):
+		pass
 	for i in 30:
 		ship.update(0.1)
 	check(ship.jump_charge == 0.0, "Antrieb lädt ohne Energie")
-	ship.remove_power("waffen")
 	ship.add_power("antrieb")
 	for i in 100:
 		ship.update(0.1)

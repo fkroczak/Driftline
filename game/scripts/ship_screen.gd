@@ -150,7 +150,7 @@ func _enter_node() -> void:
 		return
 	_phase = "ruhe"
 	if run.jumps_done() == 0:
-		_show_hint("Sektor %d · Energie in den Antrieb, Pilot ins Cockpit · dann SPRUNG" % run.sector, 4.0)
+		_show_hint("Sektor %d · Antrieb lädt · dann SPRUNG antippen und Ziel wählen" % run.sector, 4.0)
 
 
 func _start_battle() -> void:
