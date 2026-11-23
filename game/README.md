@@ -168,12 +168,12 @@ Ein Raum ist bei 5× auf einem 1080p-Handy 140 px groß (ca. 56 dp, GDD: mindest
 
 Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Workflow `.github/workflows/android-apk.yml`). Jedes Release baut immer beide Apps; veröffentlicht wird nur, wenn beide geklappt haben:
 
-- **Tag pushen** (geht von jedem Branch): `git tag release-0.2 && git push origin release-0.2` (alte `apk-…`-Tags gehen auch)
+- **Tag pushen** (geht von jedem Branch): `git tag release-0.3 && git push origin release-0.3` (alte `apk-…`-Tags gehen auch)
 - **Knopf auf GitHub:** Actions → „Release bauen (Android + iOS)“ → „Run workflow“.
 
 Nach etwa 10 Minuten liegen APK und IPA unter **Releases** als Vorabversion.
 
-**iOS:** Die IPA ist unsigniert (kein Apple-Entwicklerkonto). Aufs iPhone kommt sie mit AltStore oder Sideloadly und der eigenen Apple-ID; mit kostenloser Apple-ID muss sie alle 7 Tage neu signiert werden. Gebaut wird auf einem macOS-Runner: Godot exportiert das Xcode-Projekt (Preset „iOS“, App-Symbol `assets/icon_ios.png`), `xcodebuild` baut es ohne Signatur. Für TestFlight bräuchte es später ein Apple-Entwicklerkonto und Zertifikate als Secrets.
+Der iOS-Teil ist derselbe Ablauf wie `ios-ipa.yml` (wird aufgerufen, nur ohne eigenes Release); Details und Installation siehe **iOS-IPA** unten. Der Workflow-Dateiname `android-apk.yml` bleibt, weil GitHub die Laufnummer (= Android-`versionCode`) je Datei zählt.
 
 ## Android-APK
 
@@ -185,3 +185,21 @@ Nach etwa 10 Minuten liegen APK und IPA unter **Releases** als Vorabversion.
 Einmalig: Builds vor dieser Umstellung hatten jeweils einen zufälligen Schlüssel. Die alte Version also ein letztes Mal deinstallieren (es gibt noch keine Spielstände, es geht nichts verloren).
 
 Lokal aus dem Editor: Exportvorlagen und Android SDK in Godot einrichten, Handy per USB anschließen, oben rechts auf das Android-Symbol klicken (Remote Debug).
+
+## iOS-IPA
+
+Wird bei jedem Release (siehe oben) mitgebaut, auf einem macOS-Runner mit Xcode (Workflow `.github/workflows/ios-ipa.yml`, Preset „iOS“ in `export_presets.cfg`). Nur die IPA allein:
+
+- **Tag pushen** (geht von jedem Branch): `git tag ipa-0.3 && git push origin ipa-0.3`
+- **Knopf auf GitHub:** Actions → „iOS-IPA bauen“ → „Run workflow“.
+
+Godot exportiert ein Xcode-Projekt, `xcodebuild` baut daraus die App **ohne Signatur**, und die IPA landet als Vorabversion unter **Releases**. Versionsname wie bei Android (`config/version` plus Laufnummer), Bundle-ID `io.hullbound.prototype`, läuft auf iPhone und iPad ab iOS 14 im Querformat.
+
+**Aufs iPhone:** Apple installiert nur signierte Apps. Ohne Entwicklerkonto geht das per Sideloading mit der eigenen Apple-ID:
+
+- **Sideloadly** (Mac/Windows, iPhone per USB) oder **AltStore/SideStore**: IPA auswählen, mit Apple-ID anmelden, installieren.
+- Auf dem iPhone einmalig *Einstellungen → Allgemein → VPN und Geräteverwaltung* dem Entwicklerzertifikat vertrauen; ab iOS 16 außerdem *Datenschutz & Sicherheit → Entwicklermodus* einschalten.
+- Mit einer kostenlosen Apple-ID läuft die App 7 Tage, dann neu signieren (AltStore/SideStore erledigt das automatisch). Mit dem Apple Developer Program (99 €/Jahr) 1 Jahr, und TestFlight wird möglich.
+- **Updates:** Neue IPA mit derselben Bundle-ID drüberinstallieren, der Spielstand (`user://`) bleibt.
+
+**Bekannt:** Auf iPhones mit Notch oder Dynamic Island kann der Rand der HUD-Leisten im Querformat knapp unter der Aussparung liegen; die sichere Zone (`DisplayServer.get_display_safe_area()`) wird noch nicht berücksichtigt.

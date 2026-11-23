@@ -122,70 +122,10 @@ jobs:
           retention-days: 14
 
   ios:
-    runs-on: macos-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Godot-Exportvorlage (iOS) aus dem Cache
-        id: templates
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable
-          key: godot-templates-ios-${{ env.GODOT_VERSION }}
-
-      - name: Godot installieren
-        run: |
-          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
-          curl -sSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
-          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
-          echo "GODOT=$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot" >> "$GITHUB_ENV"
-          if [ "${{ steps.templates.outputs.cache-hit }}" != "true" ]; then
-            curl -sSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-            unzip -q templates.tpz "templates/ios.zip" "templates/version.txt" -d "$RUNNER_TEMP/tpl"
-            dest="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
-            mkdir -p "$dest"
-            mv "$RUNNER_TEMP"/tpl/templates/ios.zip "$RUNNER_TEMP"/tpl/templates/version.txt "$dest/"
-          fi
-
-      - name: Versionsnummer setzen
-        # Gleiche Nummer wie die APK aus diesem Lauf (z. B. 0.2.17, Build 17).
-        run: |
-          base=$(sed -n 's/^config\/version="\(.*\)"/\1/p' game/project.godot)
-          name="${base}.${GITHUB_RUN_NUMBER}"
-          sed -i '' "s/^application\/short_version=.*/application\/short_version=\"${name}\"/; s/^application\/version=.*/application\/version=\"${GITHUB_RUN_NUMBER}\"/" game/export_presets.cfg
-          sed -i '' "s/^config\/version=.*/config\/version=\"${name}\"/" game/project.godot
-          grep -E '^application/(short_)?version=' game/export_presets.cfg
-          echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
-
-      - name: Xcode-Projekt exportieren
-        run: |
-          "$GODOT" --headless --path game --import
-          mkdir -p build/ios
-          "$GODOT" --headless --path game --export-release "iOS" ../build/ios/hullbound.ipa
-          test -d build/ios/hullbound.xcodeproj
-
-      - name: IPA bauen (unsigniert)
-        # Ohne Apple-Entwicklerkonto wird nicht signiert. Die IPA lässt sich mit
-        # AltStore oder Sideloadly mit der eigenen Apple-ID aufs iPhone bringen.
-        run: |
-          xcodebuild -project build/ios/hullbound.xcodeproj -scheme hullbound \
-            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
-            -derivedDataPath build/dd \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" \
-            build | tail -n 40
-          app=build/dd/Build/Products/Release-iphoneos/hullbound.app
-          test -d "$app"
-          mkdir -p build/ipa/Payload
-          cp -R "$app" build/ipa/Payload/
-          (cd build/ipa && zip -qry "../hullbound-${VERSION_NAME}-unsigned.ipa" Payload)
-          test -s "build/hullbound-${VERSION_NAME}-unsigned.ipa"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hullbound-ios
-          path: build/*.ipa
-          retention-days: 14
+    # Derselbe Ablauf wie „iOS-IPA bauen“ (ios-ipa.yml), nur ohne eigenes Release
+    uses: ./.github/workflows/ios-ipa.yml
+    with:
+      called_from_release: true
 
   release:
     needs: [android, ios]

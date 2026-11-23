@@ -1,0 +1,122 @@
+# Baut eine unsignierte iOS-App (.ipa) auf einem macOS-Runner. Läuft bei jedem Release
+# automatisch mit (android-apk.yml ruft diesen Workflow auf). Einzeln nur auf Wunsch:
+#  - Actions → „iOS-IPA bauen“ → „Run workflow“ (Branch wählbar)
+#  - oder ein Tag „ipa-…“ pushen, z. B. git tag ipa-0.1 && git push origin ipa-0.1
+# Die IPA ist nicht signiert. Aufs iPhone kommt sie per AltStore, SideStore oder Sideloadly,
+# die sie mit der eigenen (auch kostenlosen) Apple-ID signieren. Siehe game/README.md.
+name: iOS-IPA bauen
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      called_from_release:
+        description: Vom Release-Workflow aufgerufen (dann ohne Tests und ohne eigenes Release)
+        type: boolean
+        default: false
+  push:
+    tags: ["ipa-*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Godot-Exportvorlagen aus dem Cache
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-templates-ios-${{ env.GODOT_VERSION }}
+
+      - name: Godot installieren
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -sSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
+          echo "GODOT=$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot" >> "$GITHUB_ENV"
+          if [ "${{ steps.templates.outputs.cache-hit }}" != "true" ]; then
+            curl -sSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+            unzip -q templates.tpz -d "$RUNNER_TEMP/tpl"
+            dest="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+            mkdir -p "$dest"
+            mv "$RUNNER_TEMP"/tpl/templates/ios.zip "$RUNNER_TEMP"/tpl/templates/version.txt "$dest/"
+          fi
+
+      - name: Versionsnummer setzen
+        # Gleiches Schema wie bei Android: z. B. 0.3.17, die Build-Nummer zählt hoch.
+        run: |
+          base=$(sed -n 's/^config\/version="\(.*\)"/\1/p' game/project.godot)
+          name="${base}.${GITHUB_RUN_NUMBER}"
+          sed -i '' "s/^application\/short_version=.*/application\/short_version=\"${name}\"/; s/^application\/version=.*/application\/version=\"${GITHUB_RUN_NUMBER}\"/" game/export_presets.cfg
+          sed -i '' "s/^config\/version=.*/config\/version=\"${name}\"/" game/project.godot
+          grep -E '^application/(short_)?version=' game/export_presets.cfg
+          echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Logiktests
+        if: ${{ !inputs.called_from_release }}  # laufen im Release schon beim Android-Build
+        run: |
+          "$GODOT" --headless --path game --import
+          set -o pipefail
+          "$GODOT" --headless --path game --script res://tests/run_tests.gd 2>&1 | tee test.log
+          if grep -q "SCRIPT ERROR" test.log; then echo "Skriptfehler in den Tests"; exit 1; fi
+
+      - name: Xcode-Projekt exportieren
+        run: |
+          "$GODOT" --headless --path game --import
+          mkdir -p build/ios
+          "$GODOT" --headless --path game --export-release "iOS" ../build/ios/Hullbound.ipa
+          ls -la build/ios
+          proj=$(find build/ios -maxdepth 1 -name "*.xcodeproj" | head -n 1)
+          test -n "$proj"
+          echo "XCODEPROJ=$proj" >> "$GITHUB_ENV"
+
+      - name: App ohne Signatur bauen
+        run: |
+          scheme=$(basename "$XCODEPROJ" .xcodeproj)
+          xcodebuild -project "$XCODEPROJ" -scheme "$scheme" -configuration Release \
+            -sdk iphoneos -destination "generic/platform=iOS" \
+            -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            build | tail -n 40
+          app=$(find build/dd/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$app"
+          mkdir -p build/ipa/Payload
+          cp -R "$app" build/ipa/Payload/
+          name="hullbound-${VERSION_NAME}-unsigned.ipa"
+          (cd build/ipa && zip -qry "../$name" Payload)
+          test -s "build/$name"
+          echo "IPA=build/$name" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hullbound-ios-ipa
+          path: ${{ env.IPA }}
+          retention-days: 14
+
+      - name: Als Vorabversion veröffentlichen
+        if: ${{ !inputs.called_from_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('ipa-build-{0}', github.run_number) }}
+          target_commitish: ${{ github.sha }}
+          name: Hullbound ${{ env.VERSION_NAME }} (iOS)
+          prerelease: true
+          files: ${{ env.IPA }}
+          body: |
+            iOS-Version ${{ env.VERSION_NAME }} (Build ${{ github.run_number }}) vom Branch `${{ github.ref_name }}`, Commit ${{ github.sha }}.
+            Die IPA ist **nicht signiert**. Installation per AltStore, SideStore oder Sideloadly mit der eigenen Apple-ID
+            (kostenlose Apple-ID: alle 7 Tage neu signieren). Gleiche Bundle-ID, darum bleibt der Spielstand bei Updates erhalten.

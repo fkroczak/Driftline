@@ -9,6 +9,7 @@ config/name="Hullbound"
 config/description="Raumschiff-Roguelike – Prototyp Phase 2"
 config/version="0.3"
 run/main_scene="res://scenes/title.tscn"
+config/icon="res://icon.png"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
