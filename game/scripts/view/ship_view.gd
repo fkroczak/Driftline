@@ -67,6 +67,9 @@ var aim_selected := -1
 
 var _press_pos := Vector2.ZERO
 var _press_time := 0
+## Nur ein Loslassen zählt, dessen Drücken auch hier ankam. Sonst löst das Loslassen nach einer
+## Dialog-Option (der Dialog ist dann schon zu) einen Tipp an alter Stelle aus, etwa an der Schleuse.
+var _pressed := false
 var _ship_texture: Texture2D
 var _crew_sprites := {}  # CrewMember -> Sprite2D
 var _time := 0.0
@@ -495,7 +498,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.pressed:
 		_press_pos = make_input_local(event).position
 		_press_time = Time.get_ticks_msec()
-	else:
+		_pressed = true
+	elif _pressed:
+		_pressed = false
 		tap(_press_pos, Time.get_ticks_msec() - _press_time >= LONG_PRESS_MS)
 	get_viewport().set_input_as_handled()
 
@@ -509,7 +514,11 @@ func _hostile_input(event: InputEventMouseButton) -> void:
 		return
 	get_viewport().set_input_as_handled()
 	if event.pressed:
+		_pressed = true
 		return
+	if not _pressed:
+		return
+	_pressed = false
 	var room := state.layout.room_index_at(state.layout.local_to_tile(local))
 	if room < 0:
 		# Knapp daneben: nächsten Raum nehmen, damit der Daumen nicht genau treffen muss
@@ -539,7 +548,9 @@ func tap(local_pos: Vector2, long_press := false) -> void:
 	if near:
 		_set_selection(null if near == selected else near, -1)
 		return
-	if _toggle_hatch(local_pos):
+	# Mit ausgewählter Figur gilt ein Tipp in einen Raum als Laufbefehl, auch an der Außenwand:
+	# Schleusen öffnen sich dann nicht aus Versehen.
+	if _toggle_hatch(local_pos, selected == null or room < 0):
 		return
 	if selected and room >= 0:
 		# Kachel nur reserviert (jemand ist unterwegs dorthin): freie Kachel im Raum nehmen
@@ -550,9 +561,9 @@ func tap(local_pos: Vector2, long_press := false) -> void:
 
 
 ## Tür oder Luftschleuse in der Nähe umschalten. Wahr, wenn etwas getroffen wurde.
-func _toggle_hatch(local_pos: Vector2) -> bool:
+func _toggle_hatch(local_pos: Vector2, airlocks := true) -> bool:
 	for i in state.layout.airlocks.size():
-		if airlock_point(i).distance_to(local_pos) <= AIRLOCK_HIT:
+		if airlocks and airlock_point(i).distance_to(local_pos) <= AIRLOCK_HIT:
 			hatch_toggled.emit("airlock", state.toggle_airlock(i))
 			return true
 	var best: Array = []

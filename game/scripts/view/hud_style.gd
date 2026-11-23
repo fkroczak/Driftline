@@ -42,3 +42,27 @@ static func star(ci: CanvasItem, pos: Vector2, color := COLOR_GOLD) -> void:
 	ci.draw_rect(Rect2(pos + Vector2(2, 0), Vector2(1, 5)), color)
 	ci.draw_rect(Rect2(pos + Vector2(0, 2), Vector2(5, 1)), color)
 	ci.draw_rect(Rect2(pos + Vector2(1, 1), Vector2(3, 3)), color)
+
+
+## Pixel-Symbole (7×7) statt Wörtern, damit die Anzeige ohne Sprache auskommt.
+const ICONS := {
+	# Kanister mit Querstreifen
+	"fuel": [".XX....", "XXXXXX.", "X.XXXXX", "XX.XXXX", "XXX.XXX", "XXXX.XX", "XXXXXXX"],
+	# Zahnrad
+	"scrap": [".X.X.X.", "XXXXXXX", ".XX.XX.", "XX...XX", ".XX.XX.", "XXXXXXX", ".X.X.X."],
+	# Schiffsrumpf von oben, Bug rechts
+	"hull": ["XX.....", ".XXXX..", "XXXXXXX", "XXXXXXX", ".XXXX..", "XX.....", "......."],
+	# Schild
+	"shield": ["XXXXXXX", "X.XXX.X", "XXXXXXX", ".XXXXX.", ".XXXXX.", "..XXX..", "...X..."],
+	# Ausweichen: Pfeil schräg nach oben
+	"evade": ["..XXXXX", "....XXX", "...X.XX", "..X...X", ".X.....", "X......", "......."],
+}
+
+
+static func icon(ci: CanvasItem, pos: Vector2, kind: String, color: Color) -> void:
+	var rows: Array = ICONS.get(kind, [])
+	for y in rows.size():
+		var row: String = rows[y]
+		for x in row.length():
+			if row[x] == "X":
+				ci.draw_rect(Rect2(pos + Vector2(x, y), Vector2.ONE), color)

@@ -1,6 +1,7 @@
 class_name CrewCard
 extends Control
-## Crew-Karte: erscheint, solange eine Person ausgewählt ist. Zeigt Name, Captain-Stern,
+## Crew-Karte: erscheint, solange eine Person ausgewählt ist, direkt rechts neben ihrem Eintrag
+## in der Crew-Liste (ein kleiner Pfeil zeigt auf den Eintrag). Zeigt Name, Captain-Stern,
 ## Spezies mit ihren Stärken und Schwächen, Lebenspunkte und die Erfahrung je System
 ## (Punkte wie unter dem Porträt, 5 = Meister). Nimmt keine Eingaben an, damit man weiter ins
 ## Schiff tippen kann.
@@ -11,6 +12,8 @@ const LINE := 9.0
 const SKILLS := ["cockpit", "waffen", "schilde", "antrieb", "sensoren"]
 
 var member: CrewMember
+## Höhe des Pfeils am linken Rand (lokal), zeigt auf den Eintrag in der Crew-Liste.
+var pointer_y := -1.0
 
 
 func _ready() -> void:
@@ -39,6 +42,9 @@ func _draw() -> void:
 	if not member:
 		return
 	HudStyle.box(self, Rect2(Vector2.ZERO, size), HudStyle.COLOR_OK)
+	if pointer_y >= 0.0:
+		var py := roundf(clampf(pointer_y, 4.0, size.y - 4.0))
+		draw_colored_polygon(PackedVector2Array([Vector2(1, py - 3), Vector2(-3, py), Vector2(1, py + 3)]), HudStyle.COLOR_OK)
 	var y := 4.0 + 7.0
 	var x := 5.0
 	if member.is_captain():

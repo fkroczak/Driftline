@@ -397,22 +397,27 @@ func _draw_top_bar() -> void:
 	var jumps := "SPRÜNGE %d" % run.jumps_done()
 	if run.is_hunt():
 		jumps += "/%d" % RunState.HUNT_JUMPS
+	# Text, Farbe, Symbol (Treibstoff, Rohstoffe und Hülle als Symbol statt Wort)
 	var items := [
-		["TREIBSTOFF %d" % run.fuel, fuel_color],
-		["ROHSTOFFE %d" % run.scrap, COLOR_SCRAP],
-		["HÜLLE %d/%d" % [ship.hull, ship.max_hull], hull_color],
-		[jumps, COLOR_BOSS if run.is_hunt() and run.jumps_done() >= RunState.HUNT_JUMPS else COLOR_JUMPS],
-		["SEKTOR %d" % run.sector if run.is_hunt() else "SEKTOR %d · ENDLOS" % run.sector, COLOR_REPAIR],
+		["%d" % run.fuel, fuel_color, "fuel"],
+		["%d" % run.scrap, COLOR_SCRAP, "scrap"],
+		["%d/%d" % [ship.hull, ship.max_hull], hull_color, "hull"],
+		[jumps, COLOR_BOSS if run.is_hunt() and run.jumps_done() >= RunState.HUNT_JUMPS else COLOR_JUMPS, ""],
+		["SEKTOR %d" % run.sector if run.is_hunt() else "SEKTOR %d · ENDLOS" % run.sector, COLOR_REPAIR, ""],
 	]
 	var widths: Array[float] = []
 	var total := 0.0
 	for item: Array in items:
-		widths.append(font.get_string_size(item[0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x)
+		widths.append(font.get_string_size(item[0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x + (9.0 if item[2] != "" else 0.0))
 		total += widths.back()
 	var gap := clampf((size.x - 12.0 - total) / (items.size() - 1), 6.0, 24.0)
 	var x := 6.0
 	for i in items.size():
-		draw_string(font, Vector2(x, 10), items[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, items[i][1])
+		var tx := x
+		if items[i][2] != "":
+			HudStyle.icon(self, Vector2(x, 3), items[i][2], items[i][1])
+			tx += 9.0
+		draw_string(font, Vector2(tx, 10), items[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, items[i][1])
 		x += widths[i] + gap
 
 

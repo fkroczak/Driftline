@@ -20,8 +20,9 @@ extends RefCounted
 ##
 ## Sprungantrieb: Mit Energie im Antrieb und einer Person im Cockpit lädt der Sprung
 ## (JUMP_TIME Sekunden je Balken Antrieb geteilt). Voll geladen kann das Schiff fliehen.
-## Außerhalb des Kampfs (in_combat = false) lädt er schneller und auch ohne Energie im Antrieb
-## (PEACE_JUMP_TIME, geteilt durch 1 + Balken Antrieb); Waffen laden dann nicht.
+## Außerhalb des Kampfs (in_combat = false) lädt er schneller (PEACE_JUMP_TIME, geteilt durch
+## 1 + Balken Antrieb); Waffen laden dann nicht. Springen geht immer nur mit Energie im Antrieb
+## und besetztem Cockpit.
 ##
 ## Treffer: Die Hülle verliert immer Punkte. Das System im Raum nimmt nur mit der
 ## Systemchance der Waffe Schaden (data/weapons.json: system), Feuer und Hüllenbrüche ebenso
@@ -259,8 +260,9 @@ func can_charge_jump() -> bool:
 	return level("antrieb") > 0 and level("cockpit") > 0 and operator_of_system("cockpit") != null
 
 
+## Sprung möglich: geladen, Antrieb hat Energie, Cockpit besetzt.
 func jump_ready() -> bool:
-	return jump_charge >= 1.0 and operator_of_system("cockpit") != null
+	return jump_charge >= 1.0 and can_charge_jump()
 
 
 func is_destroyed() -> bool:
@@ -551,7 +553,7 @@ func _update_combat(delta: float) -> void:
 	else:
 		shield_progress = 0.0
 	if not in_combat:
-		if level("cockpit") > 0 and operator_of_system("cockpit") != null:
+		if can_charge_jump():
 			jump_charge = minf(jump_charge + delta * (1 + level("antrieb")) * skill_factor("antrieb") / PEACE_JUMP_TIME, 1.0)
 	elif can_charge_jump():
 		jump_charge = minf(jump_charge + delta * level("antrieb") * skill_factor("antrieb") / JUMP_TIME, 1.0)

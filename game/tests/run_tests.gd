@@ -526,6 +526,9 @@ func test_jump_ends_battle() -> void:
 	var battle := Battle.new(player, _enemy_ship(), 4)
 	check(not battle.player_jump(), "Sprung ohne Ladung möglich")
 	player.jump_charge = 1.0
+	player.remove_power("waffen")
+	check(not battle.player_jump(), "Sprung ohne Energie im Antrieb möglich")
+	player.add_power("antrieb")
 	check(battle.player_jump() and battle.outcome == "entkommen", "Geladener Sprung beendet den Kampf nicht")
 
 
@@ -818,6 +821,11 @@ func test_drive_charges_faster_outside_combat() -> void:
 	var run := RunState.new(4)
 	var ship := run.ship
 	check(not ship.in_combat, "Schiff startet im Kampfmodus")
+	for i in 30:
+		ship.update(0.1)
+	check(ship.jump_charge == 0.0, "Antrieb lädt ohne Energie")
+	ship.remove_power("waffen")
+	ship.add_power("antrieb")
 	for i in 100:
 		ship.update(0.1)
 	check(ship.jump_charge >= 0.6, "Antrieb lädt außerhalb des Kampfs nicht (%.2f nach 10 s)" % ship.jump_charge)
