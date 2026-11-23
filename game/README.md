@@ -164,14 +164,18 @@ Basisauflösung 384 × 216, ganzzahlig hochskaliert (1080p: 5×), Breite passt s
 
 Ein Raum ist bei 5× auf einem 1080p-Handy 140 px groß (ca. 56 dp, GDD: mindestens 48 dp), eine Kachel 70 px. Hintergrund: Sternenfeld in drei Ebenen (`scripts/view/starfield.gd`).
 
+## Release (Android + iOS)
+
+Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Workflow `.github/workflows/android-apk.yml`). Jedes Release baut immer beide Apps; veröffentlicht wird nur, wenn beide geklappt haben:
+
+- **Tag pushen** (geht von jedem Branch): `git tag release-0.3 && git push origin release-0.3` (alte `apk-…`-Tags gehen auch)
+- **Knopf auf GitHub:** Actions → „Release bauen (Android + iOS)“ → „Run workflow“.
+
+Nach etwa 10 Minuten liegen APK und IPA unter **Releases** als Vorabversion.
+
+Der iOS-Teil ist derselbe Ablauf wie `ios-ipa.yml` (wird aufgerufen, nur ohne eigenes Release); Details und Installation siehe **iOS-IPA** unten. Der Workflow-Dateiname `android-apk.yml` bleibt, weil GitHub die Laufnummer (= Android-`versionCode`) je Datei zählt.
+
 ## Android-APK
-
-Gebaut wird nur auf ausdrücklichen Wunsch, nicht bei jedem Push oder Merge (Workflow `.github/workflows/android-apk.yml`):
-
-- **Tag pushen** (geht von jedem Branch): `git tag apk-0.2 && git push origin apk-0.2`
-- **Knopf auf GitHub:** Actions → „Android-APK bauen“ → „Run workflow“. Erscheint erst, wenn der Workflow auf `main` liegt.
-
-Nach etwa 5 Minuten liegt die APK unter **Releases** als Vorabversion; am Handy herunterladen und installieren.
 
 **Updates:** Jede neue APK installiert sich als Update über die vorige, ohne Deinstallieren. Dafür sorgen zwei Dinge:
 
@@ -184,10 +188,10 @@ Lokal aus dem Editor: Exportvorlagen und Android SDK in Godot einrichten, Handy 
 
 ## iOS-IPA
 
-Gebaut wird wie bei Android nur auf ausdrücklichen Wunsch, auf einem macOS-Runner mit Xcode (Workflow `.github/workflows/ios-ipa.yml`, Preset „iOS“ in `export_presets.cfg`):
+Wird bei jedem Release (siehe oben) mitgebaut, auf einem macOS-Runner mit Xcode (Workflow `.github/workflows/ios-ipa.yml`, Preset „iOS“ in `export_presets.cfg`). Nur die IPA allein:
 
 - **Tag pushen** (geht von jedem Branch): `git tag ipa-0.3 && git push origin ipa-0.3`
-- **Knopf auf GitHub:** Actions → „iOS-IPA bauen“ → „Run workflow“. Erscheint erst, wenn der Workflow auf `main` liegt.
+- **Knopf auf GitHub:** Actions → „iOS-IPA bauen“ → „Run workflow“.
 
 Godot exportiert ein Xcode-Projekt, `xcodebuild` baut daraus die App **ohne Signatur**, und die IPA landet als Vorabversion unter **Releases**. Versionsname wie bei Android (`config/version` plus Laufnummer), Bundle-ID `io.hullbound.prototype`, läuft auf iPhone und iPad ab iOS 14 im Querformat.
 

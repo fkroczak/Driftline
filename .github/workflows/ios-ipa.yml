@@ -1,4 +1,5 @@
-# Baut eine unsignierte iOS-App (.ipa) auf einem macOS-Runner – nur auf ausdrücklichen Wunsch:
+# Baut eine unsignierte iOS-App (.ipa) auf einem macOS-Runner. Läuft bei jedem Release
+# automatisch mit (android-apk.yml ruft diesen Workflow auf). Einzeln nur auf Wunsch:
 #  - Actions → „iOS-IPA bauen“ → „Run workflow“ (Branch wählbar)
 #  - oder ein Tag „ipa-…“ pushen, z. B. git tag ipa-0.1 && git push origin ipa-0.1
 # Die IPA ist nicht signiert. Aufs iPhone kommt sie per AltStore, SideStore oder Sideloadly,
@@ -7,6 +8,12 @@ name: iOS-IPA bauen
 
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      called_from_release:
+        description: Vom Release-Workflow aufgerufen (dann ohne Tests und ohne eigenes Release)
+        type: boolean
+        default: false
   push:
     tags: ["ipa-*"]
 
@@ -59,6 +66,7 @@ jobs:
           echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
 
       - name: Logiktests
+        if: ${{ !inputs.called_from_release }}  # laufen im Release schon beim Android-Build
         run: |
           "$GODOT" --headless --path game --import
           set -o pipefail
@@ -67,6 +75,7 @@ jobs:
 
       - name: Xcode-Projekt exportieren
         run: |
+          "$GODOT" --headless --path game --import
           mkdir -p build/ios
           "$GODOT" --headless --path game --export-release "iOS" ../build/ios/Hullbound.ipa
           ls -la build/ios
@@ -99,6 +108,7 @@ jobs:
           retention-days: 14
 
       - name: Als Vorabversion veröffentlichen
+        if: ${{ !inputs.called_from_release }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('ipa-build-{0}', github.run_number) }}
