@@ -1,8 +1,8 @@
 class_name JumpButton
 extends Control
 ## Sprungknopf oben rechts (wie im Mockup): „SPRUNG“ mit Ladebalken des Sprungantriebs.
-## Nach jedem Sprung lädt der Antrieb neu: außerhalb des Kampfs schnell (auch ohne Energie),
-## im Kampf langsam und nur mit Energie im Antrieb. Ist er voll, blinkt der Knopf; Antippen öffnet
+## Nach jedem Sprung lädt der Antrieb neu: außerhalb des Kampfs schnell, im Kampf langsam.
+## Laden und Springen gehen nur mit Energie im Antrieb und besetztem Cockpit. Ist er voll, blinkt der Knopf; Antippen öffnet
 ## die Sternenkarte zur Zielwahl. Lädt er nicht, steht der Grund in der zweiten Zeile.
 
 signal jump_requested
@@ -25,15 +25,15 @@ func deny() -> void:
 
 ## Warum der Sprung (noch) nicht geht, "" = bereit.
 func reason() -> String:
-	if state.jump_ready():
-		if run and run.fuel < run.jump_cost():
-			return "kein Treibstoff"
-		return ""
 	if state.operator_of_system("cockpit") == null or state.level("cockpit") <= 0:
 		return "Pilot?"
-	if state.in_combat and state.level("antrieb") <= 0:
+	if state.level("antrieb") <= 0:
 		return "Antrieb?"
-	return "%d %%" % floori(state.jump_charge * 100.0)
+	if not state.jump_ready():
+		return "%d %%" % floori(state.jump_charge * 100.0)
+	if run and run.fuel < run.jump_cost():
+		return "kein Treibstoff"
+	return ""
 
 
 func _process(delta: float) -> void:

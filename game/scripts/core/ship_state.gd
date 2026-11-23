@@ -20,8 +20,9 @@ extends RefCounted
 ##
 ## Sprungantrieb: Mit Energie im Antrieb und einer Person im Cockpit lädt der Sprung
 ## (JUMP_TIME Sekunden je Balken Antrieb geteilt). Voll geladen kann das Schiff fliehen.
-## Außerhalb des Kampfs (in_combat = false) lädt er schneller und auch ohne Energie im Antrieb
-## (PEACE_JUMP_TIME, geteilt durch 1 + Balken Antrieb); Waffen laden dann nicht.
+## Außerhalb des Kampfs (in_combat = false) lädt er schneller (PEACE_JUMP_TIME, geteilt durch
+## 1 + Balken Antrieb); Waffen laden dann nicht. Springen geht immer nur mit Energie im Antrieb
+## und besetztem Cockpit.
 ##
 ## Treffer: Die Hülle verliert immer Punkte. Das System im Raum nimmt nur mit der
 ## Systemchance der Waffe Schaden (data/weapons.json: system), Feuer und Hüllenbrüche ebenso
@@ -37,8 +38,13 @@ extends RefCounted
 ## 2. Sitzt dort jemand weniger Erfahrenes, tauschen beide den Platz,
 ##    außer diese Person wurde ausdrücklich an die Konsole geschickt.
 ## 3. Wer an der Konsole sitzt, sammelt Erfahrung im System des Raums.
+## 4. Wer löscht, flickt oder repariert, sammelt Erfahrung in "reparatur" und arbeitet danach
+##    schneller (CrewMember.REPAIR_LEVEL_BONUS je Stufe).
 
-const XP_PER_SECOND := 1.0 / 60.0
+## Erfahrung an Konsolen: 1 Stufe in 2 Minuten (Mensch lernt 25 % schneller).
+const XP_PER_SECOND := 1.0 / 120.0
+## Erfahrung beim Löschen, Flicken und Reparieren (Fertigkeit "reparatur"): 1 Stufe je Minute Arbeit.
+const REPAIR_XP_PER_SECOND := 1.0 / 60.0
 const POWER_PRIORITY := ["lebenserhaltung", "schilde", "waffen", "antrieb", "sensoren", "medbay"]
 ## Sekunden je Schildschicht ohne Besatzung an der Konsole.
 const SHIELD_RECHARGE := 3.0
@@ -259,8 +265,9 @@ func can_charge_jump() -> bool:
 	return level("antrieb") > 0 and level("cockpit") > 0 and operator_of_system("cockpit") != null
 
 
+## Sprung möglich: geladen, Antrieb hat Energie, Cockpit besetzt.
 func jump_ready() -> bool:
-	return jump_charge >= 1.0 and operator_of_system("cockpit") != null
+	return jump_charge >= 1.0 and can_charge_jump()
 
 
 func is_destroyed() -> bool:
@@ -551,7 +558,7 @@ func _update_combat(delta: float) -> void:
 	else:
 		shield_progress = 0.0
 	if not in_combat:
-		if level("cockpit") > 0 and operator_of_system("cockpit") != null:
+		if can_charge_jump():
 			jump_charge = minf(jump_charge + delta * (1 + level("antrieb")) * skill_factor("antrieb") / PEACE_JUMP_TIME, 1.0)
 	elif can_charge_jump():
 		jump_charge = minf(jump_charge + delta * level("antrieb") * skill_factor("antrieb") / JUMP_TIME, 1.0)
@@ -624,6 +631,9 @@ func update(delta: float) -> void:
 			var room := layout.room_index_at(member.tile)
 			member.gain_experience(layout.rooms[room].system, delta * XP_PER_SECOND)
 	_update_combat(delta)
+	for member in crew:
+		if member.activity in ["loeschen", "flicken", "reparieren"]:
+			member.gain_experience(CrewMember.REPAIR_SKILL, delta * REPAIR_XP_PER_SECOND)
 
 
 ## Crewmitglied, das gerade (überwiegend) auf dieser Kachel steht.

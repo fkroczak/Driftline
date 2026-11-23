@@ -63,10 +63,15 @@ var focused_room := -1
 var last_order: CrewMember
 ## Gegnerschiff: Waffen des Spielers (für die Fadenkreuze) und gerade gewählte Waffe.
 var aim_weapons: Array[Weapon] = []
+## Ladebalken des Sprungantriebs unter dem Schiff (Gegner auf der Flucht).
+var show_jump := false
 var aim_selected := -1
 
 var _press_pos := Vector2.ZERO
 var _press_time := 0
+## Nur ein Loslassen zählt, dessen Drücken auch hier ankam. Sonst löst das Loslassen nach einer
+## Dialog-Option (der Dialog ist dann schon zu) einen Tipp an alter Stelle aus, etwa an der Schleuse.
+var _pressed := false
 var _ship_texture: Texture2D
 var _crew_sprites := {}  # CrewMember -> Sprite2D
 var _time := 0.0
@@ -197,6 +202,8 @@ func _draw() -> void:
 	_draw_damage()
 	_draw_breaches()
 	_draw_fires()
+	if show_jump:
+		_draw_jump_bar()
 	if focused_room >= 0:
 		var rect := layout.room_rect(focused_room).grow(-1)
 		draw_rect(rect, COLOR_ROOM, true)
@@ -244,6 +251,20 @@ func _draw_engines() -> void:
 		var core := Rect2(p + Vector2(0 if dir > 0 else -core_len, -1), Vector2(core_len, 2))
 		draw_rect(outer, Color(colors[0], 0.75))
 		draw_rect(core, colors[1])
+
+
+## Fluchtanzeige: Ladebalken unter dem Schiff mit blinkendem Rahmen. Lädt er nicht (Antrieb ohne
+## Energie, Cockpit leer), bleibt der Balken grau.
+func _draw_jump_bar() -> void:
+	var w := 44.0
+	var rect := Rect2(Vector2(roundf((get_size().x - w) / 2.0), get_size().y + 2.0), Vector2(w, 4))
+	var charging := state.can_charge_jump()
+	var color := HudStyle.COLOR_WARN if charging else HudStyle.COLOR_DIM
+	draw_rect(rect.grow(1), Color("#0A0B16", 0.9))
+	draw_rect(rect, HudStyle.COLOR_OFF)
+	draw_rect(Rect2(rect.position, Vector2(roundf(w * state.jump_charge), rect.size.y)), color)
+	if charging and fmod(_time, 0.6) < 0.3:
+		draw_rect(rect.grow(1), HudStyle.COLOR_BAD, false, 1.0)
 
 
 ## Luftschleusen: Luke mit gelbem Warnstreifen; offen schwarz mit rot blinkendem Rand.
@@ -495,7 +516,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.pressed:
 		_press_pos = make_input_local(event).position
 		_press_time = Time.get_ticks_msec()
-	else:
+		_pressed = true
+	elif _pressed:
+		_pressed = false
 		tap(_press_pos, Time.get_ticks_msec() - _press_time >= LONG_PRESS_MS)
 	get_viewport().set_input_as_handled()
 
@@ -509,7 +532,11 @@ func _hostile_input(event: InputEventMouseButton) -> void:
 		return
 	get_viewport().set_input_as_handled()
 	if event.pressed:
+		_pressed = true
 		return
+	if not _pressed:
+		return
+	_pressed = false
 	var room := state.layout.room_index_at(state.layout.local_to_tile(local))
 	if room < 0:
 		# Knapp daneben: nächsten Raum nehmen, damit der Daumen nicht genau treffen muss
@@ -539,7 +566,9 @@ func tap(local_pos: Vector2, long_press := false) -> void:
 	if near:
 		_set_selection(null if near == selected else near, -1)
 		return
-	if _toggle_hatch(local_pos):
+	# Mit ausgewählter Figur gilt ein Tipp in einen Raum als Laufbefehl, auch an der Außenwand:
+	# Schleusen öffnen sich dann nicht aus Versehen.
+	if _toggle_hatch(local_pos, selected == null or room < 0):
 		return
 	if selected and room >= 0:
 		# Kachel nur reserviert (jemand ist unterwegs dorthin): freie Kachel im Raum nehmen
@@ -550,9 +579,9 @@ func tap(local_pos: Vector2, long_press := false) -> void:
 
 
 ## Tür oder Luftschleuse in der Nähe umschalten. Wahr, wenn etwas getroffen wurde.
-func _toggle_hatch(local_pos: Vector2) -> bool:
+func _toggle_hatch(local_pos: Vector2, airlocks := true) -> bool:
 	for i in state.layout.airlocks.size():
-		if airlock_point(i).distance_to(local_pos) <= AIRLOCK_HIT:
+		if airlocks and airlock_point(i).distance_to(local_pos) <= AIRLOCK_HIT:
 			hatch_toggled.emit("airlock", state.toggle_airlock(i))
 			return true
 	var best: Array = []

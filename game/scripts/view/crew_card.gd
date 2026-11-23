@@ -1,16 +1,19 @@
 class_name CrewCard
 extends Control
-## Crew-Karte: erscheint, solange eine Person ausgewählt ist. Zeigt Name, Captain-Stern,
+## Crew-Karte: erscheint, solange eine Person ausgewählt ist, direkt rechts neben ihrem Eintrag
+## in der Crew-Liste (ein kleiner Pfeil zeigt auf den Eintrag). Zeigt Name, Captain-Stern,
 ## Spezies mit ihren Stärken und Schwächen, Lebenspunkte und die Erfahrung je System
 ## (Punkte wie unter dem Porträt, 5 = Meister). Nimmt keine Eingaben an, damit man weiter ins
 ## Schiff tippen kann.
 
-const W := 132.0
+const W := 140.0
 const LINE := 9.0
-## Systeme mit Konsole, an denen Crew Erfahrung sammelt.
-const SKILLS := ["cockpit", "waffen", "schilde", "antrieb", "sensoren"]
+## Systeme mit Konsole, an denen Crew Erfahrung sammelt, und die Reparatur (lernt man bei der Arbeit).
+const SKILLS := ["cockpit", "waffen", "schilde", "antrieb", "sensoren", CrewMember.REPAIR_SKILL]
 
 var member: CrewMember
+## Höhe des Pfeils am linken Rand (lokal), zeigt auf den Eintrag in der Crew-Liste.
+var pointer_y := -1.0
 
 
 func _ready() -> void:
@@ -39,6 +42,9 @@ func _draw() -> void:
 	if not member:
 		return
 	HudStyle.box(self, Rect2(Vector2.ZERO, size), HudStyle.COLOR_OK)
+	if pointer_y >= 0.0:
+		var py := roundf(clampf(pointer_y, 4.0, size.y - 4.0))
+		draw_colored_polygon(PackedVector2Array([Vector2(1, py - 3), Vector2(-3, py), Vector2(1, py + 3)]), HudStyle.COLOR_OK)
 	var y := 4.0 + 7.0
 	var x := 5.0
 	if member.is_captain():
@@ -65,8 +71,8 @@ func _draw() -> void:
 		var system: String = SKILLS[i]
 		var col := i % 2
 		var row := i / 2
-		var p := Vector2(5 + col * 64, y + LINE * (row + 1))
+		var p := Vector2(5 + col * 68, y + LINE * (row + 1))
 		var lvl := member.level(system)
-		HudStyle.text(self, p, SystemInfo.display_name(system), HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, 38)
+		HudStyle.text(self, p, "Reparatur" if system == CrewMember.REPAIR_SKILL else SystemInfo.display_name(system), HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, 44)
 		for dot in int(CrewMember.MAX_EXPERIENCE):
-			draw_rect(Rect2(p + Vector2(40 + dot * 4, -5), Vector2(3, 3)), HudStyle.COLOR_GOLD if dot < lvl else HudStyle.COLOR_OFF)
+			draw_rect(Rect2(p + Vector2(45 + dot * 4, -5), Vector2(3, 3)), HudStyle.COLOR_GOLD if dot < lvl else HudStyle.COLOR_OFF)

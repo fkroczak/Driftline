@@ -286,7 +286,7 @@ func is_boss_battle() -> bool:
 	return needs_battle() and not hunter_battle and not pending_battle.has(current) and node().type == "boss"
 
 
-## Ergebnis eines Kampfs am aktuellen Knoten: "sieg", "entkommen" oder "niederlage".
+## Ergebnis eines Kampfs am aktuellen Knoten: "sieg", "entkommen", "gegner_entkommen" oder "niederlage".
 ## Nach einer Flucht folgt der Sprung (jump_to) zum gewählten Ziel.
 func finish_battle(outcome: String) -> void:
 	last_reward = ""
@@ -314,6 +314,12 @@ func finish_battle(outcome: String) -> void:
 				pending_battle.erase(current)
 				cleared[current] = outcome
 			last_reward = " · ".join(parts)
+			ship.end_combat()
+		"gegner_entkommen":
+			# Der Gegner ist weggesprungen: keine Beute, das System ist danach ruhig.
+			pending_battle.erase(current)
+			hunter_battle = false
+			cleared[current] = outcome
 			ship.end_combat()
 		"entkommen":
 			pending_battle.erase(current)

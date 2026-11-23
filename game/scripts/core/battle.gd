@@ -13,20 +13,36 @@ extends RefCounted
 ## - repaired, destroyed: own_ship (betrifft das Schiff des Spielers)
 ## - target: weapon, room (Zielwechsel einer Spielerwaffe)
 ## - fire_started, extinguished, breach, breach_fixed, crew_died: own_ship, tile, room
+## - enemy_flee: Gegner lädt den Sprungantrieb (er will fliehen); enemy_jumped: er ist weg
 ## Kampfende: Hülle auf 0 oder ganze Besatzung tot (destroyed mit reason "hull"/"crew").
+##
+## Für den Gegner gelten dieselben Regeln wie für den Spieler: Sein Sprungantrieb lädt nur mit
+## Energie im Antrieb und besetztem Cockpit. Er lädt aber erst, wenn er fliehen will: Fällt seine
+## Hülle auf FLEE_HULL oder darunter, entscheidet er sich einmal mit FLEE_CHANCE zur Flucht.
+## Wer ihn halten will, trifft Antrieb oder Cockpit oder schaltet den Piloten aus; ist der Antrieb
+## geladen, springt er weg (outcome "gegner_entkommen", keine Beute). Boss und Jäger fliehen nie.
 
 const FLIGHT_TIME := 0.9
 ## Abstand zwischen den Schüssen einer Salve.
 const SALVO_GAP := 0.18
 ## Gegner wählt nach so vielen Sekunden frühestens ein neues Ziel.
 const ENEMY_RETARGET := 6.0
+## Anteil der Hülle, ab dem der Gegner an Flucht denkt, und die Chance, dass er es tut.
+const FLEE_HULL := 0.4
+const FLEE_CHANCE := 0.6
 
 var player: ShipState
 var enemy: ShipState
 var projectiles: Array[Dictionary] = []
 var events: Array[Dictionary] = []
-## "" solange gekämpft wird, sonst "sieg", "niederlage" oder "entkommen" (Fluchtsprung).
+## "" solange gekämpft wird, sonst "sieg", "niederlage", "entkommen" (Fluchtsprung) oder
+## "gegner_entkommen" (der Gegner ist weggesprungen).
 var outcome := ""
+## Darf der Gegner fliehen? (nicht Boss und Jäger)
+var enemy_may_flee := true
+## Gegner hat sich zur Flucht entschieden und lädt den Sprungantrieb.
+var enemy_fleeing := false
+var _flee_decided := false
 
 var _rng := RandomNumberGenerator.new()
 var _enemy_retarget := 0.0
@@ -70,6 +86,23 @@ func player_jump() -> bool:
 	return true
 
 
+## Gegner-Flucht: Entscheidung bei wenig Hülle, Laden nach denselben Regeln wie beim Spieler.
+func _enemy_flight() -> void:
+	if not enemy_fleeing:
+		enemy.jump_charge = 0.0  # ohne Fluchtabsicht lädt er nicht
+		if enemy_may_flee and not _flee_decided and enemy.max_hull > 0 \
+				and float(enemy.hull) / enemy.max_hull <= FLEE_HULL and not enemy.is_destroyed():
+			_flee_decided = true
+			if _rng.randf() < FLEE_CHANCE:
+				enemy_fleeing = true
+				_emit({"type": "enemy_flee"})
+		return
+	if enemy.jump_ready() and not enemy.is_destroyed() and not enemy.is_crew_dead():
+		outcome = "gegner_entkommen"
+		projectiles.clear()
+		_emit({"type": "enemy_jumped"})
+
+
 func player_has_target() -> bool:
 	for w in player.weapons:
 		if w.target >= 0:
@@ -85,6 +118,9 @@ func update(delta: float) -> void:
 	_collect_ship_events(player, true)
 	_collect_ship_events(enemy, false)
 	_enemy_ai(delta)
+	_enemy_flight()
+	if outcome != "":
+		return
 	_fire_ready(player, true)
 	_fire_ready(enemy, false)
 	_move_projectiles(delta)
@@ -210,6 +246,8 @@ func _enemy_crew() -> void:
 	# Die Person an der unwichtigsten Konsole (letzte im Crew-Array) repariert.
 	if enemy.crew.is_empty():
 		return
+	if enemy_fleeing:
+		_enemy_pilot()
 	var engineer: CrewMember = enemy.crew.back()
 	if engineer.is_moving():
 		return
@@ -218,3 +256,17 @@ func _enemy_crew() -> void:
 		enemy.order_move(engineer, damaged)
 	elif damaged < 0 and engineer.home_tile != Vector2i(-1, -1) and engineer.tile != engineer.home_tile:
 		enemy.order_move_to_tile(engineer, engineer.home_tile)
+
+
+## Auf der Flucht: Ist das Cockpit leer (Pilot tot oder unterwegs), geht jemand hin.
+func _enemy_pilot() -> void:
+	var room := enemy.layout.room_of_system("cockpit")
+	var console: Variant = enemy.layout.console_of(room) if room >= 0 else null
+	if console == null or enemy.operator_of_system("cockpit") != null:
+		return
+	for member in enemy.crew:
+		if member.destination() == console:
+			return  # schon unterwegs
+	var pilot: CrewMember = enemy.crew[0]
+	pilot.home_tile = console
+	enemy.order_move_to_tile(pilot, console, true)

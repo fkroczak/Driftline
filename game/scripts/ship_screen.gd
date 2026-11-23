@@ -158,6 +158,7 @@ func _start_battle() -> void:
 	Game.can_save = false
 	enemy = run.create_enemy()
 	battle = Battle.new(state, enemy)
+	battle.enemy_may_flee = not run.hunter_battle and not run.is_boss_battle()
 	effects.battle = battle
 	enemy_view.setup(enemy)
 	enemy_view.aim_weapons = state.weapons
@@ -201,7 +202,7 @@ func _on_jump_requested() -> void:
 			"Pilot?":
 				_show_hint("Sprung: Jemand muss ins Cockpit")
 			"Antrieb?":
-				_show_hint("Sprung: Im Kampf braucht der Antrieb Energie")
+				_show_hint("Sprung: Der Antrieb braucht Energie")
 			_:
 				_show_hint("Sprungantrieb lädt noch (%s)" % why)
 		return
@@ -228,6 +229,11 @@ func _map_hint() -> String:
 	if run.can_send_distress():
 		return "Kein Treibstoff mehr: Notsignal senden und hoffen, dass Freunde antworten"
 	if not state.jump_ready():
+		match jump_button.reason():
+			"Pilot?":
+				return "Cockpit nicht besetzt: Karte nur ansehen · ZURÜCK zum Schiff"
+			"Antrieb?":
+				return "Antrieb ohne Energie: Karte nur ansehen · ZURÜCK zum Schiff"
 		return "Antrieb lädt noch: Karte nur ansehen · ZURÜCK zum Schiff"
 	if _phase == "kampf":
 		return "Flucht: Ziel antippen, nochmal antippen springt"
@@ -245,7 +251,13 @@ func _on_map_node(id: int) -> void:
 		elif not run.node().links.has(id):
 			map_view.hint = "Zu weit weg: nur direkt verbundene Ziele"
 		elif not state.jump_ready():
-			map_view.hint = "Antrieb lädt noch (%d %%)" % floori(state.jump_charge * 100.0)
+			match jump_button.reason():
+				"Pilot?":
+					map_view.hint = "Sprung: Jemand muss ins Cockpit"
+				"Antrieb?":
+					map_view.hint = "Sprung: Der Antrieb braucht Energie"
+				_:
+					map_view.hint = "Antrieb lädt noch (%d %%)" % floori(state.jump_charge * 100.0)
 		elif run.fuel < run.jump_cost():
 			map_view.hint = "Kein Treibstoff für den Sprung: Notsignal senden"
 		return
@@ -456,7 +468,7 @@ func _layout() -> void:
 	weapon_panel.position = Vector2(weapons_x, BOTTOM_PANEL_Y)
 	info.position = Vector2(left, INFO_Y)
 	info.size.x = view_size.x - left - 4
-	crew_card.position = Vector2(view_size.x - CrewCard.W - 4, 30)
+	_place_crew_card()
 	for c: Control in [damage_flash, warp_flash, banner, legend, pause_overlay, dialog, map_view]:
 		c.position = Vector2.ZERO
 		c.size = view_size
@@ -466,9 +478,27 @@ func _layout() -> void:
 # --- Laufende Zeit ---
 
 
+## Crew-Karte direkt neben dem Eintrag der Person in der Crew-Liste (nicht über dem Gegner).
+func _place_crew_card() -> void:
+	var member := crew_card.member
+	if not crew_card.visible or not member:
+		return
+	var idx := state.crew.find(member)
+	if idx < 0:
+		crew_card.show_member(null)
+		return
+	var slot := crew_panel.slot()
+	var entry_y := crew_panel.position.y + idx * (slot.y + CrewPanel.GAP)
+	var y := clampf(entry_y - 2.0, TOP + 2.0, BOTTOM_PANEL_Y - crew_card.size.y - 4.0)
+	crew_card.position = Vector2(crew_panel.position.x + slot.x + 4.0, y).floor()
+	crew_card.pointer_y = entry_y + slot.y / 2.0 - crew_card.position.y
+
+
 func _process(delta: float) -> void:
 	_time += delta
 	_update_info()
+	_place_crew_card()
+	enemy_view.show_jump = battle != null and battle.enemy_fleeing
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende":
 		return  # Spiel steht, Befehle gehen trotzdem
 	if battle:
@@ -565,6 +595,10 @@ func _on_battle_event(e: Dictionary) -> void:
 					effects.float_text(pos, "REPARIERT", Color("#5DCAA5"))
 		"destroyed":
 			_on_destroyed(e.own_ship, e.reason)
+		"enemy_flee":
+			_show_hint("Gegner lädt den Sprungantrieb! Antrieb oder Cockpit treffen", 4.0)
+		"enemy_jumped":
+			_on_enemy_jumped()
 
 
 ## Weltposition einer Kachel aus einem Schiffs-Ereignis (tile, own_ship).
@@ -712,6 +746,24 @@ func _on_destroyed(own_ship: bool, reason: String) -> void:
 	tween.tween_callback(_battle_over.bind(outcome, reason))
 
 
+## Gegner springt weg: Blase, Aufleuchten, nach rechts davon. Danach Ruhe ohne Beute.
+func _on_enemy_jumped() -> void:
+	_manual_pause = false
+	_auto_paused = false
+	_apply_pause()
+	ship_view.select(null)
+	weapon_panel.select(-1)
+	var e := enemy_view.shield_ellipse()
+	effects.warp_bubble(enemy_view, e[0], e[1], WARP_OUT * 0.6, true)
+	var tween := create_tween()
+	tween.tween_property(enemy_view, "modulate", Color(1.6, 1.7, 2.0, 1.0), WARP_OUT * 0.5)
+	tween.tween_property(enemy_view, "position", _enemy_base + Vector2(get_viewport_rect().size.x, 0), WARP_OUT * 0.5) \
+		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func() -> void:
+		enemy_view.modulate = Color.WHITE
+		_battle_over("gegner_entkommen", ""))
+
+
 func _update_explosions(delta: float) -> void:
 	for x in _explosion_queue:
 		x.delay -= delta
@@ -732,6 +784,8 @@ func _battle_over(outcome: String, reason: String) -> void:
 		_show_run_over()
 		return
 	var text := ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Besatzung ausgeschaltet"
+	if outcome == "gegner_entkommen":
+		text = "%s ist entkommen – keine Beute" % name
 	if run.result == "geschafft":
 		_show_run_over()
 		return
@@ -830,6 +884,10 @@ func _update_info() -> void:
 				info.text = "Noch %d %s · Crew in beschädigte Räume schicken" % [left, "Schaden" if left == 1 else "Schäden"]
 			elif state.jump_ready():
 				info.text = "Antrieb bereit · SPRUNG antippen und Ziel wählen"
+			elif state.level("antrieb") <= 0:
+				info.text = "Antrieb ohne Energie · kein Sprung möglich"
+			elif state.operator_of_system("cockpit") == null:
+				info.text = "Cockpit leer · kein Sprung möglich"
 			else:
 				info.text = "Antrieb lädt · mehr Energie im Antrieb lädt schneller"
 		else:

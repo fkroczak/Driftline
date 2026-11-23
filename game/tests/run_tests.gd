@@ -163,10 +163,76 @@ func test_console_builds_experience() -> void:
 	var cockpit := state.layout.room_index_by_id("cockpit")
 	var member := state.add_crew("A", "mensch", state.layout.console_of(cockpit))
 	_settle(state, 61.0)
-	check(member.level("cockpit") == 1, "Nach einer Minute an der Konsole keine Stufe 1")
-	for i in 600:
+	check(member.level("cockpit") == 0, "Lernen an der Konsole zu schnell (Stufe 1 nach einer Minute)")
+	_settle(state, 40.0)  # Mensch: 2 min / 1,25 = 96 s je Stufe
+	check(member.level("cockpit") == 1, "Nach gut 1,5 Minuten an der Konsole keine Stufe 1")
+	for i in 1200:
 		state.update(1.0)
 	check(member.level("cockpit") == int(CrewMember.MAX_EXPERIENCE), "Erfahrung nicht gedeckelt")
+
+
+func test_repairing_builds_skill_and_speed() -> void:
+	var state := _quiet_state()
+	var schilde := state.layout.room_index_by_id("schilde")
+	var member := state.add_crew("A", "mensch", state.layout.rooms[schilde].pos)
+	var base := member.repair_factor()
+	for i in 70:
+		state.take_hit(schilde, 0)
+		state.get_system("schilde").damage = 2
+		state.update(1.0)
+	check(member.level(CrewMember.REPAIR_SKILL) >= 1, "Reparieren bringt keine Erfahrung")
+	check(member.repair_factor() > base, "Erfahrene Crew repariert nicht schneller")
+	check(member.best_system() != CrewMember.REPAIR_SKILL, "Reparatur zählt als Konsolen-System")
+
+
+func _flee_battle() -> Battle:
+	var player := _quiet_state()
+	var enemy := _enemy_ship()
+	var battle := Battle.new(player, enemy, 3)
+	for w in enemy.weapons:
+		w.powered = false
+	enemy.hull = 1
+	return battle
+
+
+func test_enemy_flees_with_engine_and_pilot() -> void:
+	var fled := 0
+	for seed_value in range(1, 21):
+		var battle := _flee_battle()
+		battle._rng.seed = seed_value
+		for i in 600:
+			battle.update(0.1)
+			if battle.outcome != "":
+				break
+		if battle.outcome == "gegner_entkommen":
+			fled += 1
+	check(fled > 4 and fled < 20, "Gegner flieht nie oder immer (%d von 20)" % fled)
+
+
+func test_enemy_cannot_flee_without_engine() -> void:
+	var battle := _flee_battle()
+	battle.enemy_fleeing = true
+	battle._flee_decided = true
+	while battle.enemy.remove_power("antrieb"):
+		pass
+	for i in 900:
+		battle.update(0.1)
+	check(battle.outcome == "" and battle.enemy.jump_charge == 0.0, "Gegner lädt ohne Energie im Antrieb")
+
+
+func test_boss_never_flees() -> void:
+	var battle := _flee_battle()
+	battle.enemy_may_flee = false
+	for i in 900:
+		battle.update(0.1)
+	check(not battle.enemy_fleeing and battle.outcome == "", "Boss flieht")
+
+
+func test_enemy_escape_gives_no_loot() -> void:
+	var run := RunState.new(4)
+	var scrap := run.scrap
+	run.finish_battle("gegner_entkommen")
+	check(run.scrap == scrap and run.result == "" and run.cleared.has(run.current), "Flucht des Gegners falsch verbucht")
 
 
 func test_crew_hit_is_forgiving() -> void:
@@ -219,9 +285,9 @@ func test_enemy_layout_is_valid() -> void:
 
 func test_start_power_fits_reactor() -> void:
 	var state := ShipState.new(_layout())
-	check(state.reactor_output() == 6, "Reaktor sollte 6 liefern, liefert %d" % state.reactor_output())
-	check(state.power_used() == 6, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
-	check(state.level("antrieb") == 0, "Antrieb sollte am Start aus sein (Energie ist knapp)")
+	check(state.reactor_output() == 7, "Reaktor sollte 7 liefern, liefert %d" % state.reactor_output())
+	check(state.power_used() == 7, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
+	check(state.level("antrieb") == 1, "Antrieb sollte am Start 1 Balken haben (Sprung braucht Energie)")
 	check(state.weapons[0].powered and state.weapons[1].powered, "Beide Waffen sollten Energie haben")
 	check(state.shield_layers == 1, "Eine Schildschicht erwartet")
 
@@ -262,8 +328,8 @@ func test_damage_cuts_power_and_repair_restores_it() -> void:
 func test_reactor_damage_lowers_output() -> void:
 	var state := ShipState.new(_layout())
 	state.take_hit(state.layout.room_index_by_id("reaktor"), 2)
-	check(state.reactor_output() == 4, "Reaktorschaden senkt die Leistung nicht")
-	check(state.power_used() <= 4, "Systeme verbrauchen mehr als der Reaktor liefert")
+	check(state.reactor_output() == 5, "Reaktorschaden senkt die Leistung nicht")
+	check(state.power_used() <= 5, "Systeme verbrauchen mehr als der Reaktor liefert")
 	check(state.level("lebenserhaltung") == 1 and state.level("schilde") == 2, "Wichtige Systeme zuerst versorgen")
 
 
@@ -526,6 +592,10 @@ func test_jump_ends_battle() -> void:
 	var battle := Battle.new(player, _enemy_ship(), 4)
 	check(not battle.player_jump(), "Sprung ohne Ladung möglich")
 	player.jump_charge = 1.0
+	while player.remove_power("antrieb"):
+		pass
+	check(not battle.player_jump(), "Sprung ohne Energie im Antrieb möglich")
+	player.add_power("antrieb")
 	check(battle.player_jump() and battle.outcome == "entkommen", "Geladener Sprung beendet den Kampf nicht")
 
 
@@ -818,6 +888,12 @@ func test_drive_charges_faster_outside_combat() -> void:
 	var run := RunState.new(4)
 	var ship := run.ship
 	check(not ship.in_combat, "Schiff startet im Kampfmodus")
+	while ship.remove_power("antrieb"):
+		pass
+	for i in 30:
+		ship.update(0.1)
+	check(ship.jump_charge == 0.0, "Antrieb lädt ohne Energie")
+	ship.add_power("antrieb")
 	for i in 100:
 		ship.update(0.1)
 	check(ship.jump_charge >= 0.6, "Antrieb lädt außerhalb des Kampfs nicht (%.2f nach 10 s)" % ship.jump_charge)
