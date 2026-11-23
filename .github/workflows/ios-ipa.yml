@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
   push:
     tags: ["ipa-*"]
+    branches: ["ccr-570a856f-p85a4v"]  # TEST, wird wieder entfernt
 
 permissions:
   contents: write
