@@ -8,6 +8,10 @@ const MAX_EXPERIENCE := 5.0
 ## Lebenspunkte eines Menschen; andere Spezies haben eigene Werte (max_hp).
 const MAX_HP := 100.0
 const ROLE_CAPTAIN := "captain"
+## Fertigkeit fürs Löschen, Flicken und Reparieren (lernt man bei der Arbeit, nicht an Konsolen).
+const REPAIR_SKILL := "reparatur"
+## Je Stufe Reparatur so viel schneller (Stufe 5 = +50 %).
+const REPAIR_LEVEL_BONUS := 0.1
 
 var display_name: String
 var species: String
@@ -47,9 +51,9 @@ func is_captain() -> bool:
 	return role == ROLE_CAPTAIN
 
 
-## Tempo beim Löschen, Flicken und Reparieren (1 = Mensch).
+## Tempo beim Löschen, Flicken und Reparieren (1 = Mensch ohne Erfahrung): Spezies mal Erfahrung.
 func repair_factor() -> float:
-	return float(Species.value(species, "repair", 1.0))
+	return float(Species.value(species, "repair", 1.0)) * (1.0 + REPAIR_LEVEL_BONUS * level(REPAIR_SKILL))
 
 
 func breathes() -> bool:
@@ -76,6 +80,8 @@ func console_factor(system: String) -> float:
 func best_system() -> String:
 	var best := ""
 	for system: String in experience:
+		if system == REPAIR_SKILL:
+			continue
 		if best == "" or experience[system] > experience[best]:
 			best = system
 	return best
@@ -100,7 +106,8 @@ func level(system: String) -> int:
 
 
 func gain_experience(system: String, amount: float) -> void:
-	amount *= float(Species.value(species, "learn", 1.0))
+	if system != REPAIR_SKILL:
+		amount *= float(Species.value(species, "learn", 1.0))  # gilt an Konsolen
 	experience[system] = minf(experience.get(system, 0.0) + amount, MAX_EXPERIENCE)
 
 

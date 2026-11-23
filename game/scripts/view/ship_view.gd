@@ -63,6 +63,8 @@ var focused_room := -1
 var last_order: CrewMember
 ## Gegnerschiff: Waffen des Spielers (für die Fadenkreuze) und gerade gewählte Waffe.
 var aim_weapons: Array[Weapon] = []
+## Ladebalken des Sprungantriebs unter dem Schiff (Gegner auf der Flucht).
+var show_jump := false
 var aim_selected := -1
 
 var _press_pos := Vector2.ZERO
@@ -200,6 +202,8 @@ func _draw() -> void:
 	_draw_damage()
 	_draw_breaches()
 	_draw_fires()
+	if show_jump:
+		_draw_jump_bar()
 	if focused_room >= 0:
 		var rect := layout.room_rect(focused_room).grow(-1)
 		draw_rect(rect, COLOR_ROOM, true)
@@ -247,6 +251,20 @@ func _draw_engines() -> void:
 		var core := Rect2(p + Vector2(0 if dir > 0 else -core_len, -1), Vector2(core_len, 2))
 		draw_rect(outer, Color(colors[0], 0.75))
 		draw_rect(core, colors[1])
+
+
+## Fluchtanzeige: Ladebalken unter dem Schiff mit blinkendem Rahmen. Lädt er nicht (Antrieb ohne
+## Energie, Cockpit leer), bleibt der Balken grau.
+func _draw_jump_bar() -> void:
+	var w := 44.0
+	var rect := Rect2(Vector2(roundf((get_size().x - w) / 2.0), get_size().y + 2.0), Vector2(w, 4))
+	var charging := state.can_charge_jump()
+	var color := HudStyle.COLOR_WARN if charging else HudStyle.COLOR_DIM
+	draw_rect(rect.grow(1), Color("#0A0B16", 0.9))
+	draw_rect(rect, HudStyle.COLOR_OFF)
+	draw_rect(Rect2(rect.position, Vector2(roundf(w * state.jump_charge), rect.size.y)), color)
+	if charging and fmod(_time, 0.6) < 0.3:
+		draw_rect(rect.grow(1), HudStyle.COLOR_BAD, false, 1.0)
 
 
 ## Luftschleusen: Luke mit gelbem Warnstreifen; offen schwarz mit rot blinkendem Rand.

@@ -38,8 +38,13 @@ extends RefCounted
 ## 2. Sitzt dort jemand weniger Erfahrenes, tauschen beide den Platz,
 ##    außer diese Person wurde ausdrücklich an die Konsole geschickt.
 ## 3. Wer an der Konsole sitzt, sammelt Erfahrung im System des Raums.
+## 4. Wer löscht, flickt oder repariert, sammelt Erfahrung in "reparatur" und arbeitet danach
+##    schneller (CrewMember.REPAIR_LEVEL_BONUS je Stufe).
 
-const XP_PER_SECOND := 1.0 / 60.0
+## Erfahrung an Konsolen: 1 Stufe in 2 Minuten (Mensch lernt 25 % schneller).
+const XP_PER_SECOND := 1.0 / 120.0
+## Erfahrung beim Löschen, Flicken und Reparieren (Fertigkeit "reparatur"): 1 Stufe je Minute Arbeit.
+const REPAIR_XP_PER_SECOND := 1.0 / 60.0
 const POWER_PRIORITY := ["lebenserhaltung", "schilde", "waffen", "antrieb", "sensoren", "medbay"]
 ## Sekunden je Schildschicht ohne Besatzung an der Konsole.
 const SHIELD_RECHARGE := 3.0
@@ -626,6 +631,9 @@ func update(delta: float) -> void:
 			var room := layout.room_index_at(member.tile)
 			member.gain_experience(layout.rooms[room].system, delta * XP_PER_SECOND)
 	_update_combat(delta)
+	for member in crew:
+		if member.activity in ["loeschen", "flicken", "reparieren"]:
+			member.gain_experience(CrewMember.REPAIR_SKILL, delta * REPAIR_XP_PER_SECOND)
 
 
 ## Crewmitglied, das gerade (überwiegend) auf dieser Kachel steht.

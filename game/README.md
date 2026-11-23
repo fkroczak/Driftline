@@ -13,6 +13,7 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 - **Am Ziel:** Ereignis, Händler oder Reparaturstation als Dialog über dem Schiff (das Spiel steht so lange), oder der Kampf beginnt.
 - **Nach einem Sieg** muss nichts bestätigt werden: Das Banner mit der Beute blendet nach gut 2 s von selbst aus (Antippen schließt es früher), das Schiff ist wieder in Ruhe und der Antrieb lädt.
 - **Flucht:** Im Kampf SPRUNG, sobald der Antrieb geladen ist, dann ein Ziel auf der Karte wählen. Der Kampf pausiert, solange die Karte offen ist.
+- **Gegner fliehen auch:** Für sie gelten dieselben Regeln (Antrieb mit Energie, Pilot im Cockpit). Fällt die Hülle eines Gegners auf 40 % oder weniger, entscheidet er sich einmal mit 60 % zur Flucht (`FLEE_HULL`, `FLEE_CHANCE` in `scripts/core/battle.gd`). Dann erscheint ein Hinweis und unter seinem Schiff ein Ladebalken (rot blinkend, solange er lädt; grau, wenn Antrieb oder Pilot fehlen). Ist er geladen, springt der Gegner weg: keine Beute, das System ist danach ruhig. Taktik: Antrieb oder Cockpit treffen, den Piloten ausschalten (die Gegner-Crew schickt dann jemand anderen ins Cockpit) oder ihn vorher zerstören. Boss und Jäger fliehen nie.
 
 ### Die Jagd
 
@@ -61,13 +62,13 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 - **Konsolen** (Antrieb, Schilde, Sensoren, Waffen, Cockpit; kleine Leiste an der Kachel, grün = besetzt):
   1. Ist die Konsole frei, setzt sich die erfahrenste Person im Raum hin.
   2. Sitzt dort jemand weniger Erfahrenes, tauschen beide, außer diese Person wurde ausdrücklich an die Konsole geschickt.
-  3. An der Konsole steigt die Erfahrung im System (1 Stufe pro Minute, höchstens 5). Die Punkte unter dem Porträt zeigen die Stufe im aktuellen Raum.
+  3. An der Konsole steigt die Erfahrung im System (1 Stufe in 2 Minuten, Menschen 25 % schneller, höchstens 5). Die Punkte unter dem Porträt zeigen die Stufe im aktuellen Raum.
   4. Eine besetzte Konsole beschleunigt das System: +10 % plus 5 % je Erfahrungsstufe (Schilde laden, Waffen laden, Ausweichen).
-- **Arbeit im Raum** (automatisch, wer im Raum steht): erst Feuer löschen, dann Hüllenbrüche flicken (5 s), dann das System reparieren (1 Balken in 4 s). Mehrere Personen arbeiten schneller. Beschädigte Räume pulsieren rot, der gelbe Balken zeigt den Fortschritt.
+- **Arbeit im Raum** (automatisch, wer im Raum steht): erst Feuer löschen, dann Hüllenbrüche flicken (5 s), dann das System reparieren (1 Balken in 4 s). Mehrere Personen arbeiten schneller. **Wer löscht, flickt oder repariert, lernt dabei** (Fertigkeit Reparatur, 1 Stufe je Minute Arbeit, höchstens 5) und arbeitet je Stufe 10 % schneller (Stufe 5: +50 %, zusätzlich zum Spezieswert). Beschädigte Räume pulsieren rot, der gelbe Balken zeigt den Fortschritt.
 - **Tätigkeit sichtbar:** Symbol über dem Kopf und in der Crew-Liste: Tropfen = löscht (Schaum spritzt zum Feuer), Hammer = flickt Leck, Schraubenschlüssel = repariert (Funken, Figur hämmert), grünes Plus = wird in der Medbay geheilt.
 - **Crew-Liste** (links, wie im Mockup): Porträt, Vorname und Lebensbalken je Person. Auf schmalen Bildschirmen (unter 440 px Breite, also 16:9) nur Porträts.
 - **Captain:** Mara Voss trägt einen goldenen Stern in der Crew-Liste, über dem Kopf im Schiff und auf der Crew-Karte.
-- **Crew-Karte:** Solange eine Person ausgewählt ist, zeigt eine Karte direkt neben ihrem Eintrag in der Crew-Liste (Pfeil zeigt darauf, nicht mehr über dem Gegner) Name, Captain, Spezies, Lebenspunkte, die Stärken und Schwächen der Spezies und die Erfahrung in Cockpit, Waffen, Schilden, Antrieb und Sensoren (je bis 5 Punkte). Die Karte nimmt keine Eingaben an; man tippt weiter ins Schiff.
+- **Crew-Karte:** Solange eine Person ausgewählt ist, zeigt eine Karte direkt neben ihrem Eintrag in der Crew-Liste (Pfeil zeigt darauf, nicht mehr über dem Gegner) Name, Captain, Spezies, Lebenspunkte, die Stärken und Schwächen der Spezies und die Erfahrung in Cockpit, Waffen, Schilden, Antrieb, Sensoren und Reparatur (je bis 5 Punkte). Die Karte nimmt keine Eingaben an; man tippt weiter ins Schiff.
 - **Spezies** (`data/species.json`, eigene Namen aus dem GDD, Werte angelehnt an das Genre-Vorbild):
 
   | Spezies | LP | Tempo | Reparatur | Besonderheit |

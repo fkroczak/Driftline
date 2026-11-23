@@ -6,10 +6,10 @@ extends Control
 ## (Punkte wie unter dem Porträt, 5 = Meister). Nimmt keine Eingaben an, damit man weiter ins
 ## Schiff tippen kann.
 
-const W := 132.0
+const W := 140.0
 const LINE := 9.0
-## Systeme mit Konsole, an denen Crew Erfahrung sammelt.
-const SKILLS := ["cockpit", "waffen", "schilde", "antrieb", "sensoren"]
+## Systeme mit Konsole, an denen Crew Erfahrung sammelt, und die Reparatur (lernt man bei der Arbeit).
+const SKILLS := ["cockpit", "waffen", "schilde", "antrieb", "sensoren", CrewMember.REPAIR_SKILL]
 
 var member: CrewMember
 ## Höhe des Pfeils am linken Rand (lokal), zeigt auf den Eintrag in der Crew-Liste.
@@ -71,8 +71,8 @@ func _draw() -> void:
 		var system: String = SKILLS[i]
 		var col := i % 2
 		var row := i / 2
-		var p := Vector2(5 + col * 64, y + LINE * (row + 1))
+		var p := Vector2(5 + col * 68, y + LINE * (row + 1))
 		var lvl := member.level(system)
-		HudStyle.text(self, p, SystemInfo.display_name(system), HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, 38)
+		HudStyle.text(self, p, "Reparatur" if system == CrewMember.REPAIR_SKILL else SystemInfo.display_name(system), HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, 44)
 		for dot in int(CrewMember.MAX_EXPERIENCE):
-			draw_rect(Rect2(p + Vector2(40 + dot * 4, -5), Vector2(3, 3)), HudStyle.COLOR_GOLD if dot < lvl else HudStyle.COLOR_OFF)
+			draw_rect(Rect2(p + Vector2(45 + dot * 4, -5), Vector2(3, 3)), HudStyle.COLOR_GOLD if dot < lvl else HudStyle.COLOR_OFF)

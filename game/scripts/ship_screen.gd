@@ -158,6 +158,7 @@ func _start_battle() -> void:
 	Game.can_save = false
 	enemy = run.create_enemy()
 	battle = Battle.new(state, enemy)
+	battle.enemy_may_flee = not run.hunter_battle and not run.is_boss_battle()
 	effects.battle = battle
 	enemy_view.setup(enemy)
 	enemy_view.aim_weapons = state.weapons
@@ -497,6 +498,7 @@ func _process(delta: float) -> void:
 	_time += delta
 	_update_info()
 	_place_crew_card()
+	enemy_view.show_jump = battle != null and battle.enemy_fleeing
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende":
 		return  # Spiel steht, Befehle gehen trotzdem
 	if battle:
@@ -593,6 +595,10 @@ func _on_battle_event(e: Dictionary) -> void:
 					effects.float_text(pos, "REPARIERT", Color("#5DCAA5"))
 		"destroyed":
 			_on_destroyed(e.own_ship, e.reason)
+		"enemy_flee":
+			_show_hint("Gegner lädt den Sprungantrieb! Antrieb oder Cockpit treffen", 4.0)
+		"enemy_jumped":
+			_on_enemy_jumped()
 
 
 ## Weltposition einer Kachel aus einem Schiffs-Ereignis (tile, own_ship).
@@ -740,6 +746,24 @@ func _on_destroyed(own_ship: bool, reason: String) -> void:
 	tween.tween_callback(_battle_over.bind(outcome, reason))
 
 
+## Gegner springt weg: Blase, Aufleuchten, nach rechts davon. Danach Ruhe ohne Beute.
+func _on_enemy_jumped() -> void:
+	_manual_pause = false
+	_auto_paused = false
+	_apply_pause()
+	ship_view.select(null)
+	weapon_panel.select(-1)
+	var e := enemy_view.shield_ellipse()
+	effects.warp_bubble(enemy_view, e[0], e[1], WARP_OUT * 0.6, true)
+	var tween := create_tween()
+	tween.tween_property(enemy_view, "modulate", Color(1.6, 1.7, 2.0, 1.0), WARP_OUT * 0.5)
+	tween.tween_property(enemy_view, "position", _enemy_base + Vector2(get_viewport_rect().size.x, 0), WARP_OUT * 0.5) \
+		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func() -> void:
+		enemy_view.modulate = Color.WHITE
+		_battle_over("gegner_entkommen", ""))
+
+
 func _update_explosions(delta: float) -> void:
 	for x in _explosion_queue:
 		x.delay -= delta
@@ -760,6 +784,8 @@ func _battle_over(outcome: String, reason: String) -> void:
 		_show_run_over()
 		return
 	var text := ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Besatzung ausgeschaltet"
+	if outcome == "gegner_entkommen":
+		text = "%s ist entkommen – keine Beute" % name
 	if run.result == "geschafft":
 		_show_run_over()
 		return
