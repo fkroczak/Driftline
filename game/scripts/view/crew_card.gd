@@ -1,7 +1,7 @@
 class_name CrewCard
 extends Control
-## Crew-Karte: erscheint, wenn eine Person über die Crew-Liste gewählt wird (nicht beim Antippen im Schiff),
-## direkt rechts neben ihrem Eintrag (ein kleiner Pfeil zeigt auf den Eintrag). Zeigt Name, Captain-Stern,
+## Crew-Karte für schmale Bildschirme (Crew-Liste nur mit Porträts): erscheint bei Auswahl über die Liste
+## rechts neben dem Eintrag (ein kleiner Pfeil zeigt darauf). Breite Liste: Infokasten in CrewPanel. Zeigt Name, Captain-Stern,
 ## Spezies mit ihren Stärken und Schwächen, Lebenspunkte und die Erfahrung je System
 ## (Punkte wie unter dem Porträt, 5 = Meister). Nimmt keine Eingaben an, damit man weiter ins
 ## Schiff tippen kann.

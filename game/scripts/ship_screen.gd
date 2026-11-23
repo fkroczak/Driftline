@@ -437,6 +437,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func _layout() -> void:
 	var view_size := get_viewport_rect().size
 	crew_panel.compact = view_size.x < WIDE_SCREEN
+	_show_card()
 	status_bar.position = Vector2(2, 2)
 	help_button.size = Vector2(18, 24)
 	pause_button.size = Vector2(20, 24)
@@ -450,6 +451,7 @@ func _layout() -> void:
 	resource_bar.size.x = clampf(jump_button.position.x - res_left - 3, 60.0, 130.0)
 	resource_bar.position = Vector2(res_left, 2)
 	crew_panel.position = Vector2(2, TOP + 2.0)
+	crew_panel.max_height = BOTTOM_PANEL_Y - 3.0 - crew_panel.position.y
 	var left := crew_panel.position.x + crew_panel.slot().x + 2.0
 	var ship_size := ship_view.get_size()
 	var play_h := BOTTOM_PANEL_Y - TOP - 12.0
@@ -847,23 +849,28 @@ func _on_banner_input(event: InputEvent) -> void:
 ## Antippen in der Crew-Liste wählt die Person und zeigt ihre Karte. Ist sie schon (übers Schiff)
 ## gewählt, aber ohne Karte, kommt nur die Karte dazu; erneutes Antippen hebt die Auswahl auf.
 func _on_crew_selected(member: CrewMember) -> void:
-	if member == ship_view.selected and crew_card.member != member:
+	if member == ship_view.selected and _card_member != member:
 		_card_member = member
-		crew_card.show_member(member)
+		_show_card()
 		return
 	_card_member = null if member == ship_view.selected else member
 	ship_view.select(_card_member)
 
 
-## Die Crew-Karte erscheint nur bei Auswahl über die Crew-Liste, damit sie beim Antippen im
-## Schiff nicht das Schiff verdeckt.
+## Die Crew-Infos erscheinen nur bei Auswahl über die Crew-Liste, nicht beim Antippen im Schiff.
 func _on_selection_changed(member: CrewMember, _room_idx: int) -> void:
 	crew_panel.selected = member
 	if member != _card_member:
 		_card_member = null
-	crew_card.show_member(_card_member)
+	_show_card()
 	_on_order_selection(0 if member else -1)
 	_update_info()
+
+
+## Breite Liste: Infokasten unter dem Eintrag. Schmale Liste (nur Porträts): Karte daneben.
+func _show_card() -> void:
+	crew_panel.expanded = _card_member
+	crew_card.show_member(_card_member if crew_panel.compact else null)
 
 
 func _update_info() -> void:
@@ -906,6 +913,9 @@ func _update_info() -> void:
 		else:
 			info.text = ""
 		return
+	if member == _card_member and not crew_panel.compact:
+		info.text = _traits_text(member)
+		return
 	var target_room := state.layout.room_index_at(member.destination())
 	var room_data: Dictionary = state.layout.rooms[target_room]
 	var text := "%s → %s" % [member.display_name, room_data.name] if member.is_moving() else "%s · %s" % [member.display_name, room_data.name]
@@ -913,3 +923,22 @@ func _update_info() -> void:
 		text += " · " + ActivityIcons.NAMES.get(member.activity, "")
 	text += " · freie Kachel antippen = hinschicken"
 	info.text = text
+
+
+## Stärken und Schwächen der Spezies für die Infozeile. Passt nicht alles hinein,
+## wechseln sich die Teile alle paar Sekunden ab.
+func _traits_text(member: CrewMember) -> String:
+	var pages: Array[String] = []
+	var line := ""
+	for t: String in Species.traits(member.species):
+		var next := t if line == "" else line + " · " + t
+		if line != "" and HudStyle.text_width(Species.display_name(member.species) + ": " + next) > info.size.x - 4:
+			pages.append(line)
+			line = t
+		else:
+			line = next
+	if line != "":
+		pages.append(line)
+	if pages.is_empty():
+		return member.display_name
+	return Species.display_name(member.species) + ": " + pages[int(_time / 3.0) % pages.size()]
