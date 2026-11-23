@@ -7,7 +7,7 @@ extends RefCounted
 ## der App). Ein Kampf wird nicht mitten drin gespeichert: Wird die App im Kampf beendet, beginnt
 ## der Kampf beim nächsten Start neu, mit dem Schiff, wie es vor dem Kampf war.
 ##
-## Updates: Android behält user:// bei einem Update (gleiche Paket-ID, gleicher Schlüssel).
+## Updates: Android behält user:// bei einem Update (gleiche Paket-ID, gleicher Schlüssel), iOS bei gleicher Bundle-ID.
 ## Damit ein neuer Build einen alten Spielstand nicht zerstört:
 ## - Die Datei hat eine Formatversion (VERSION). Ältere Formate werden in `_migrate` angehoben,
 ##   fehlende Felder bekommen Standardwerte, unbekannte Felder werden ignoriert.
