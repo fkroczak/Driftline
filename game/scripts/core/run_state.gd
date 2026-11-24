@@ -128,7 +128,21 @@ func _setup_sector() -> void:
 			used[id] = true
 
 
-## Sprung in den nächsten Sektor (nach dem Boss bzw. am Ausgang im Endlos-Modus).
+## Eigener Sprung vom geschafften Ausgang in den nächsten Sektor. Kostet wie jeder Sprung Treibstoff.
+func can_leave_sector() -> bool:
+	return result == "" and sector_cleared and dialog.is_empty() and not needs_battle() and fuel >= jump_cost()
+
+
+func leave_sector() -> bool:
+	if not can_leave_sector():
+		return false
+	fuel -= jump_cost()
+	total_jumps += 1
+	next_sector()
+	return true
+
+
+## Neuer Sektor (nach dem Boss bzw. am Ausgang im Endlos-Modus).
 func next_sector() -> void:
 	sector += 1
 	ship.end_combat()
@@ -259,9 +273,10 @@ func _open_node_dialog() -> void:
 			_open_repair()
 
 
-## Ohne Treibstoff festsitzen: Notsignal senden.
+## Ohne Treibstoff festsitzen: Notsignal senden (auch am geschafften Ausgang).
 func can_send_distress() -> bool:
-	return result == "" and not sector_cleared and dialog.is_empty() and not needs_battle() and fuel < jump_cost() and node().type != "boss"
+	return result == "" and dialog.is_empty() and not needs_battle() and fuel < jump_cost() \
+		and (node().type != "boss" or cleared.has(current))
 
 
 func send_distress() -> bool:
@@ -274,10 +289,12 @@ func send_distress() -> bool:
 ## Am aktuellen Knoten wartet ein Gegner, der noch nicht besiegt oder abgehängt ist.
 ## Wer vor dem Boss flieht, springt weg; der Boss wartet weiter am Ausgang.
 func needs_battle() -> bool:
-	if result != "" or sector_cleared or fleeing or not dialog.is_empty():
+	if result != "" or fleeing or not dialog.is_empty():
 		return false
 	if hunter_battle or pending_battle.has(current):
-		return true
+		return true  # auch am geschafften Ausgang, etwa nach einem Notsignal
+	if sector_cleared:
+		return false
 	var type: String = node().type
 	return (type == "kampf" or type == "boss") and not cleared.has(current)
 

@@ -841,7 +841,13 @@ func test_endless_mode_has_exit_and_no_front() -> void:
 	# Erst ankommen, dann mit eigenem Sprung in den nächsten Sektor
 	check(run.sector == 1 and run.current == exit_id and run.sector_cleared, "Am Ausgang nicht angekommen oder Sektor nicht geschafft")
 	check(not run.can_jump_to(run.node().links[0]), "Am geschafften Ausgang noch Sprünge auf der alten Karte möglich")
-	run.next_sector()
+	# Auch dieser Sprung kostet Treibstoff; ohne Treibstoff hilft das Notsignal
+	run.fuel = 0
+	check(not run.leave_sector() and run.sector == 1, "Sektorsprung ohne Treibstoff möglich")
+	check(run.can_send_distress(), "Am Ausgang ohne Treibstoff kein Notsignal")
+	run.fuel = 2
+	check(run.leave_sector(), "Sektorsprung mit Treibstoff nicht möglich")
+	check(run.fuel == 1, "Sektorsprung kostet keinen Treibstoff")
 	check(run.sector == 2 and run.current == run.map.start_id() and run.score() == 2 and not run.sector_cleared, "Sprung führt nicht in Sektor 2")
 
 

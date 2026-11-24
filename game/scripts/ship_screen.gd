@@ -53,6 +53,8 @@ var _auto_paused := false
 var _weapons_ready: Array[bool] = []
 var _jump_was_ready := false
 var _hull_alarm_at := -100.0
+## Banner „Sektor geschafft“ nur einmal je Ausgang (nicht nach jedem Dialog dort).
+var _cleared_announced := false
 ## Sound je Waffe (Spieler: so wie es ist, Gegner: tiefer und leiser).
 const WEAPON_SOUNDS := {"pulslaser": "laser_pulse", "schwerer_laser": "laser_heavy", "bordkanone": "cannon"}
 const HULL_ALARM := 0.3
@@ -261,17 +263,6 @@ func _enter_node() -> void:
 	if run.result != "":
 		_show_run_over()
 		return
-	if run.sector_cleared:
-		# Sektor geschafft (Boss besiegt bzw. Ausgang erreicht): Man bleibt hier, bis man selbst
-		# mit SPRUNG in den nächsten Sektor springt. Erst dann kommt die neue Karte.
-		_phase = "ruhe"
-		var text := Loc.t("Flaggschiff vernichtet – Sektor %d geschafft") % run.sector if run.is_hunt() \
-			else Loc.t("Ausgang erreicht – Sektor %d geschafft") % run.sector
-		if run.last_reward != "" and run.is_hunt():
-			text += "\n" + Loc.t("Beute: ") + run.last_reward
-		_show_banner_text(text + "\n" + Loc.t("SPRUNG führt in den nächsten Sektor"), VICTORY_BANNER)
-		Sfx.play("sector_clear")
-		return
 	if not run.dialog.is_empty():
 		_phase = "ruhe"
 		dialog.show_dialog(run.dialog)
@@ -279,6 +270,20 @@ func _enter_node() -> void:
 		return
 	if run.needs_battle():
 		_start_battle()
+		return
+	if run.sector_cleared:
+		# Sektor geschafft (Boss besiegt bzw. Ausgang erreicht): Man bleibt hier, bis man selbst
+		# mit SPRUNG in den nächsten Sektor springt. Erst dann kommt die neue Karte.
+		_phase = "ruhe"
+		if _cleared_announced:
+			return
+		_cleared_announced = true
+		var text := Loc.t("Flaggschiff vernichtet – Sektor %d geschafft") % run.sector if run.is_hunt() \
+			else Loc.t("Ausgang erreicht – Sektor %d geschafft") % run.sector
+		if run.last_reward != "" and run.is_hunt():
+			text += "\n" + Loc.t("Beute: ") + run.last_reward
+		_show_banner_text(text + "\n" + Loc.t("SPRUNG führt in den nächsten Sektor"), VICTORY_BANNER)
+		Sfx.play("sector_clear")
 		return
 	_phase = "ruhe"
 	if run.jumps_done() == 0:
@@ -332,7 +337,7 @@ func _on_jump_requested() -> void:
 	if _phase in ["warp", "ende"]:
 		return
 	var why := jump_button.reason()
-	if why == "" and run.sector_cleared:
+	if why == "" and run.can_leave_sector():
 		_sector_jump()
 		return
 	if why != "" and why != "kein Treibstoff":
@@ -367,10 +372,10 @@ func _close_map() -> void:
 
 
 func _map_hint() -> String:
-	if run.sector_cleared:
-		return Loc.t("Sektor geschafft: SPRUNG führt in den nächsten Sektor · ZURÜCK zum Schiff")
 	if run.can_send_distress():
 		return Loc.t("Kein Treibstoff mehr: Notsignal senden und hoffen, dass Freunde antworten")
+	if run.sector_cleared:
+		return Loc.t("Sektor geschafft: SPRUNG führt in den nächsten Sektor · ZURÜCK zum Schiff")
 	if not state.jump_ready():
 		match jump_button.reason():
 			"Pilot?":
@@ -448,12 +453,13 @@ func _arrive() -> void:
 
 
 func _sector_jump() -> void:
-	if not run.sector_cleared:
+	if not run.can_leave_sector():
 		return
 	_phase = "warp"
 	Game.can_save = false
+	_cleared_announced = false
 	_warp_out(func() -> void:
-		run.next_sector()
+		run.leave_sector()
 		Game.save()
 		_arrive()
 		_show_hint(Loc.t("Sektor %d · neue Karte, die Jäger beginnen von vorn") % run.sector if run.is_hunt() else Loc.t("Sektor %d") % run.sector, 4.0))
@@ -1002,6 +1008,7 @@ func _update_explosions(delta: float) -> void:
 ## Nach einem Sieg muss nichts bestätigt werden: Das Banner blendet von selbst aus.
 func _battle_over(outcome: String, reason: String) -> void:
 	var name := Loc.t(enemy.layout.display_name) if enemy else ""
+	var was_boss := run.is_boss_battle()
 	_tut_won = _tut_won or outcome == "sieg"
 	run.finish_battle(outcome)
 	_end_battle()
@@ -1017,8 +1024,8 @@ func _battle_over(outcome: String, reason: String) -> void:
 		return
 	if run.last_reward != "":
 		text += "\n" + Loc.t("Beute: ") + run.last_reward
-	if run.sector_cleared:
-		_enter_node()  # Banner und Sprung in den nächsten Sektor
+	if run.sector_cleared and was_boss:
+		_enter_node()  # Banner „Sektor geschafft“, weiter mit eigenem Sprung
 		return
 	_phase = "ruhe"
 	text += "\n" + Loc.t("Crew repariert · dann SPRUNG")
@@ -1135,7 +1142,7 @@ func _update_info() -> void:
 			info.text = Loc.t("Gegnerraum: alle Waffen zielen · Waffenkarte: einzeln") if not battle.player_has_target() else Loc.t("Energie: antippen +1, halten −1 · ? = Symbole")
 		elif _phase == "ruhe":
 			var left := run.ship_damage_count()
-			if run.sector_cleared and state.jump_ready():
+			if run.sector_cleared and state.jump_ready() and run.fuel >= run.jump_cost():
 				info.text = Loc.t("Sektor geschafft · SPRUNG antippen: weiter in Sektor %d") % (run.sector + 1)
 			elif left > 0:
 				info.text = Loc.t("Noch %d %s · Crew in beschädigte Räume schicken") % [left, Loc.t("Schaden") if left == 1 else Loc.t("Schäden")]

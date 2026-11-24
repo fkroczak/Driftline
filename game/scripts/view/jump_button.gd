@@ -31,7 +31,7 @@ func reason() -> String:
 		return "Antrieb?"  # i18n
 	if not state.jump_ready():
 		return "%d %%" % floori(state.jump_charge * 100.0)
-	if run and run.fuel < run.jump_cost() and not run.sector_cleared:  # der Sprung in den nächsten Sektor ist frei
+	if run and run.fuel < run.jump_cost():
 		return "kein Treibstoff"  # i18n
 	return ""
 
