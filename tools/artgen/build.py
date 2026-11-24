@@ -7,6 +7,7 @@ import crew_human as CH
 import crew_species as CS
 import ship_human_freighter as FR
 import ship_pirate_cutter as PC
+import ship_enemies as SE
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 ART = os.path.join(ROOT, "art")
@@ -93,6 +94,21 @@ def previews(crew, ship):
     P.on_space(P.upscale(small, 8), 32).save(path("preview", "mensch_crew_klein_x8.png"))
 
 
+def build_enemies():
+    """Weitere Gegnerschiffe (ship_enemies.py): Sprite, Vorschau, Grafikpunkte fürs JSON."""
+    out = {}
+    for name in SE.SHIPS:
+        svg = SE.build_svg(name)
+        with open(path("source", "ships", f"gegner_{name}.svg"), "w") as f:
+            f.write(svg)
+        w, h = SE.SHIPS[name]["size"]
+        img = P.process(svg, w, h, 3)
+        save_sprite(img, f"ships/gegner_{name}.png")
+        P.on_space(P.upscale(img), 40).save(path("preview", f"gegner_{name}.png"))
+        out[name] = SE.meta(name)
+    return out
+
+
 def species_preview(all_crew):
     """Alle Spezies nebeneinander: oben groß (x4), darunter klein (x8), je 4 Richtungen."""
     rows = []
@@ -130,6 +146,10 @@ def palette_files():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["gegner"]:
+        import json
+        print(json.dumps(build_enemies(), indent=1))
+        sys.exit(0)
     if sys.argv[1:] == ["spezies"]:
         # Nur die Crew-Sprites der Spezies neu bauen (Mensch, Schiffe und Palette bleiben unberührt)
         all_crew = {sp: build_crew(sp) for sp in CS.SPECIES}

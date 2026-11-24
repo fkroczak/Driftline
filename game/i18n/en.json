@@ -671,5 +671,9 @@
   "durchschlägt %d Schild": "pierces %d shield",
   "DURCHSCHLAG": "PIERCED",
   "Durchschlaglaser": "Piercing laser",
-  "Torpedo": "Torpedo"
+  "Torpedo": "Torpedo",
+  "Kanonenboot": "Gunboat",
+  "Plünderer": "Raider",
+  "Ein schwer gepanzerter Kasten mit Geschützturm auf dem Rücken. Langsam und kaum fähig auszuweichen, aber zäh und mit drei Waffen gefährlich. Die eigene Medbay flickt die Mannschaft wieder zusammen.": "A heavily armoured box with a gun turret on its back. Slow and barely able to dodge, but tough and dangerous with three weapons. Its own medbay patches the crew back together.",
+  "Schlanke Raubschiffe mit übergroßem Antrieb. Sie weichen vielen Schüssen aus und schlagen mit einer Salve zu, halten aber wenig aus. Wer Antrieb oder Cockpit trifft, holt sie vom Himmel.": "Slender raiders with oversized drives. They dodge many shots and strike with a burst, but can't take much. Hit the engine or cockpit to bring them down."
 }

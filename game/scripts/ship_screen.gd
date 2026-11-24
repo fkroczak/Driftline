@@ -22,6 +22,7 @@ const COLOR_ENEMY_BOLT := Color("#E24B4A")
 const COLOR_SHIELD := Color("#85B7EB")
 ## Sichtbarer Rumpf im Sprite (ohne transparenten Rand): links/rechts.
 const PLAYER_HULL_X := Vector2(35, 257)
+## Sichtbarer Rumpf des Gegners in x (links, rechts); rechts = Breite seiner Grafik.
 const ENEMY_HULL_X := Vector2(2, 116)
 ## Ab dieser Breite zeigt die Crew-Liste Namen.
 const WIDE_SCREEN := 440.0
@@ -660,11 +661,12 @@ func _layout() -> void:
 	if _phase != "warp":
 		ship_view.position = _ship_base
 	var player_right := _ship_base.x + PLAYER_HULL_X.y
-	var enemy_w := ENEMY_HULL_X.y - ENEMY_HULL_X.x
+	var enemy_size := enemy_view.get_size()
+	var hull_right := enemy_size.x if enemy_size.x > 0.0 else ENEMY_HULL_X.y
+	var enemy_w := hull_right - ENEMY_HULL_X.x
 	var free := view_size.x - player_right
 	var enemy_x := player_right + (free - enemy_w) / 2.0 - ENEMY_HULL_X.x
-	enemy_x = minf(enemy_x, view_size.x - ENEMY_HULL_X.y - 2.0)
-	var enemy_size := enemy_view.get_size()
+	enemy_x = minf(enemy_x, view_size.x - hull_right - 2.0)
 	_enemy_base = Vector2(enemy_x, _ship_base.y + (ship_size.y - enemy_size.y) / 2.0).floor()
 	enemy_view.position = _enemy_base
 	power_panel.position = Vector2(2, BOTTOM_PANEL_Y)

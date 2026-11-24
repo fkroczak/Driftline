@@ -789,7 +789,7 @@ func test_enemy_stages_follow_progress() -> void:
 	for n in run.map.nodes:
 		if n.column <= 3 and n.type != "start":
 			var spec := run.enemy_spec(n.id)
-			check(spec.ship.ends_with("piraten_kutter.json") and spec.hull_bonus == 0, "Vorne auf der Karte nur der einfache Kutter")
+			check((spec.ship.ends_with("piraten_kutter.json") or spec.ship.ends_with("pluenderer.json")) and spec.hull_bonus == 0, "Vorne auf der Karte nur Kutter und Plünderer")
 	var boss := run.create_enemy(run.map.boss_id())
 	check(boss.layout.display_name == "Piraten-Flaggschiff", "Boss heißt nicht Piraten-Flaggschiff")
 	check(boss.max_hull == 24 and boss.hull == 24, "Boss hat nicht 18 + 6 Hülle: %d" % boss.max_hull)
@@ -1676,3 +1676,32 @@ func test_reactor_goes_to_20() -> void:
 		pass
 	check(run.ship.get_system("reaktor").capacity == 20, "Reaktor nicht bis 20: %d" % run.ship.get_system("reaktor").capacity)
 	check(run.scrap == 10000 - 364, "Reaktor 7 → 20 kostet nicht 364: %d" % (10000 - run.scrap))
+
+
+func test_all_enemy_ships_are_valid_and_crewable() -> void:
+	for id in ["piraten_kutter", "piraten_kutter_schwer", "pluenderer", "kanonenboot", "jaeger_fregatte"]:
+		var path := "res://data/ships/%s.json" % id
+		var layout := ShipLayout.load_json(path)
+		check(layout.validate().is_empty(), "%s: %s" % [id, ", ".join(layout.validate())])
+		check(ResourceLoader.exists(layout.sprite_path), "%s: Grafik fehlt" % id)
+		for room in ["cockpit", "waffen", "schilde", "antrieb", "reaktor"]:
+			check(layout.room_index_by_id(room) >= 0, "%s: Raum %s fehlt" % [id, room])
+		for room in ["cockpit", "waffen", "schilde"]:
+			check(layout.console_of(layout.room_index_by_id(room)) != null, "%s: keine Konsole in %s" % [id, room])
+		var ship := ShipState.new(layout)
+		for w in ship.weapons:
+			check(w.powered, "%s: %s ohne Energie" % [id, w.id])
+		check(ship.max_shield_layers() == 1, "%s: nicht genau eine Schildschicht" % id)
+		check(ship.level("antrieb") > 0, "%s: Antrieb ohne Energie (kann nicht fliehen)" % id)
+
+
+func test_enemy_variety_on_the_map() -> void:
+	var seen := {}
+	for s in range(1, 30):
+		var run := RunState.new(s, RunState.MODE_ENDLESS)
+		run.sector = 3
+		for n in run.map.nodes:
+			if n.type == "kampf":
+				seen[str(run.enemy_spec(n.id).ship).get_file().get_basename()] = true
+	for id in ["piraten_kutter", "piraten_kutter_schwer", "pluenderer", "kanonenboot"]:
+		check(seen.has(id), "%s kommt nie vor" % id)
