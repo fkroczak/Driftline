@@ -467,7 +467,7 @@ func _sector_jump() -> void:
 
 ## Abflug: Blase baut sich auf, Schiff leuchtet, schießt nach rechts davon, Sterne werden zu Streifen.
 func _warp_out(done: Callable) -> void:
-	Sfx.play("warp_out", 0.0, 1.0, 0.0)
+	Sfx.lead("warp_out", WARP_OUT + 0.6)
 	ship_view.select(null)
 	var e := ship_view.shield_ellipse()
 	effects.warp_bubble(ship_view, e[0], e[1], WARP_OUT * 0.6, true)
@@ -486,7 +486,7 @@ func _warp_in(done: Callable) -> void:
 	ship_view.position = _ship_base - Vector2(get_viewport_rect().size.x * 0.8, 0)
 	ship_view.modulate = Color(1.6, 1.7, 2.0, 1.0)
 	starfield.warp = 1.0
-	Sfx.play("warp_in", 0.0, 1.0, 0.0)
+	Sfx.lead("warp_in", WARP_IN + 0.8)
 	var e := ship_view.shield_ellipse()
 	var tween := create_tween()
 	tween.tween_property(warp_flash, "color", Color(0.85, 0.9, 1.0, 0.0), 0.3)
