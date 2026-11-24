@@ -18,7 +18,7 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 OUT = os.path.join(ROOT, "art", "logos", "final")
 
 
-def damaged(cv, m, rnd, cracks, hole, scorch_r=5):
+def damaged(cv, m, rnd, cracks, hole, scorch_r=5, effects=True):
     cv.fill(m.shift(2, 2).dilate(1), C["g9"])
     cv.outline(m, C["outline"])
     cv.fill_bands(m, [C["g2"], C["g3"], C["g4"], C["g5"], C["g6"]])
@@ -39,6 +39,8 @@ def damaged(cv, m, rnd, cracks, hole, scorch_r=5):
     cv.fill(h.dilate(1), C["e2"])
     cv.fill(h, C["outline"])
     cv.set(hx - 1, hy - 4, C["o1"]); cv.set(hx + 3, hy - 3, C["o1"]); cv.set(hx - 3, hy + 1, C["o2"])
+    if not effects:
+        return
     for _ in range(26):
         a = rnd.uniform(-2.6, -0.4); d = rnd.uniform(4, 20)
         cv.set(hx + round(math.cos(a) * d), hy + round(math.sin(a) * d * 0.8),
@@ -47,7 +49,7 @@ def damaged(cv, m, rnd, cracks, hole, scorch_r=5):
         cv.set(hx + rnd.randint(-5, 9), hy - rnd.randint(8, 18), rnd.choice([C["g7"], C["g8"]]))
 
 
-def logo(transparent=False, subtitle=True):
+def logo(transparent=False, subtitle=True, effects=True):
     L.W, L.H = 256, 72
     cv = L.Canvas(seed=5, stars=not transparent)
     if transparent:
@@ -56,7 +58,7 @@ def logo(transparent=False, subtitle=True):
     ls = L2.letters("HULLBOUND", x, 16, "bold", 2, 2)
     word = L2.union(m for _, m, _ in ls)
     rnd = random.Random(12)
-    damaged(cv, word, rnd, [(x + 14, 16, 26), (x + 104, 16, 26), (x + 150, 16, 26)], (x + 63, 30))
+    damaged(cv, word, rnd, [(x + 14, 16, 26), (x + 104, 16, 26), (x + 150, 16, 26)], (x + 63, 30), effects=effects)
     if not subtitle:
         return cv
     s = Mask(); s.text("EIN RAUMSCHIFF-ROGUELIKE", (L.W - L.text_w("EIN RAUMSCHIFF-ROGUELIKE", "mini")) // 2, 52, "mini")
@@ -99,8 +101,11 @@ def main():
     save(logo(), os.path.join(OUT, "logo.png"), (256 * 6, 72 * 6))
     save(logo(True), os.path.join(OUT, "logo_transparent.png"), (256 * 6, 72 * 6))
     # Menü-Logo in Spielauflösung (1 px = 1 Pixel), transparent, ohne Untertitel, eng beschnitten
-    menu = logo(True, subtitle=False).img
-    menu = menu.crop(menu.getbbox())
+    # Funken und Rauch zeichnet das Menü selbst (animiert), Lochmitte siehe HOLE in title_screen.gd
+    menu = logo(True, subtitle=False, effects=False).img
+    box = menu.getbbox()
+    print("Loch im Menü-Logo bei", (40 + 63 - box[0], 30 - box[1]), "Größe", (box[2] - box[0], box[3] - box[1]))
+    menu = menu.crop(box)
     os.makedirs(os.path.join(ROOT, "game", "assets", "ui"), exist_ok=True)
     menu.save(os.path.join(ROOT, "game", "assets", "ui", "logo.png"))
     ic = icon()
