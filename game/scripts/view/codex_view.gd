@@ -193,6 +193,7 @@ func _gui_input(event: InputEvent) -> void:
 	for hit in _hits:
 		if not (hit.rect as Rect2).grow(1).has_point(event.position):
 			continue
+		Sfx.play("ui_click")
 		if hit.has("back"):
 			visible = false
 			closed.emit()

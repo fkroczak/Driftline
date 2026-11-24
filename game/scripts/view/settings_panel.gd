@@ -33,6 +33,8 @@ func open() -> void:
 
 func _rows() -> Array:
 	var rows := [
+		{"key": "muted", "label": "Ton", "options": [[false, "An"], [true, "Aus"]],
+			"note": "Soundeffekte an oder aus"},
 		{"key": "crisp_text", "label": "Schrift", "options": [[true, "HD"], [false, "Retro"]],
 			"note": "HD: Schrift in voller Auflösung · Retro: alles im groben Pixelraster"},
 		{"key": "speed", "label": "Spieltempo", "options": [[0.75, "Langsam"], [1.0, "Normal"], [1.25, "Schnell"]],
@@ -98,6 +100,7 @@ func _gui_input(event: InputEvent) -> void:
 	for hit in _hits:
 		if not (hit.rect as Rect2).grow(1).has_point(event.position):
 			continue
+		Sfx.play("ui_click")
 		if hit.has("action"):
 			if hit.action == "quit":
 				quit_requested.emit()

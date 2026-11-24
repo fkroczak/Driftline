@@ -122,6 +122,8 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()  # Kasten schluckt Taps (auch das Loslassen)
 	if not event.pressed:
 		return
+	if on_quit or on_next:
+		Sfx.play("ui_click")
 	if on_quit:
 		Game.end_tutorial()
 	elif on_next:

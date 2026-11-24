@@ -9,7 +9,7 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 - **Hauptmenü:** SPIELEN führt zur Moduswahl (Weiter / Neuer Run, ZURÜCK), dazu TUTORIAL, LEXIKON und EINSTELLUNGEN. Hinter dem Menü zieht der eigene Frachter vorbei.
 - **Tutorial:** ein Jagd-Run auf fester Karte, der nie gespeichert wird und keinen Spielstand berührt. Alle Nachbarn des Startsystems sind Kämpfe, der erste Sprung führt also sicher zu einem Piratenkutter. 13 Schritte (Crew wählen und bewegen, Energie, Türen, Pause, Sprung, Karte, Ziel wählen, Kampf gewinnen) in einem Kasten oben; ein blinkender Rahmen zeigt auf das Bedienelement. Aufgaben gehen von selbst weiter, sobald sie erledigt sind, Info-Schritte mit WEITER (das Spiel steht so lange). Jeder Schritt lässt sich überspringen, BEENDEN führt ins Hauptmenü (`scripts/view/tutorial_coach.gd`).
 - **Lexikon:** Reiter SCHIFFE und SPEZIES mit Bild, Werten und Beschreibung (`description`/`role` in `data/ships/*.json`, `lore` in `data/species.json`). Freigeschaltet wird über alle Runs hinweg (`user://codex.json`): ein Schiff, sobald man gegen es kämpft, eine Spezies, sobald sie in der eigenen Crew ist. Frachter und Menschen sind von Anfang an bekannt; neue Einträge meldet die Infozeile („Neu im Lexikon: …“). Unbekannte Einträge zeigen nur einen Schatten und einen Hinweis.
-- **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
+- **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Ton, Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
 
 ### Ablauf: Schiff, Sprung, Ankunft
 
@@ -129,6 +129,20 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 
 Warpblase, Lichtstreifen und Blitz beim Sprung (Abflug und Ankunft, auch bei Gegnern), flackernde Flammen mit Rauch, entweichende Luft an Lecks und offenen Schleusen, Dampf beim Löschen, Geschosse mit Mündungsfeuer, Schildblase mit Welle beim Abfangen, Explosion mit Funken und Rauch, Raumblitz, Bildschirmwackeln und roter Blitz bei eigenen Treffern, schwebende Texte (Schaden, „SCHILD“, „AUSGEWICHEN“, „REPARIERT“), Triebwerksflammen je nach Antriebsenergie, Explosionskette beim Zerstören. Alles ist in `scripts/view/` gezeichnet, ohne zusätzliche Grafikdateien.
 
+### Sound
+
+48 Soundeffekte für alle Situationen, prozedural erzeugt (`tools/sfxgen`, siehe unten), abgespielt vom Autoload `Sfx` (`scripts/sfx.gd`):
+
+- **Waffen:** eigener Klang je Waffe (Pulslaser, Schwerlaser, Bordkanone); Gegnerschüsse tiefer und leiser. Ziel erfasst, Waffe geladen, Waffe angewählt.
+- **Einschläge:** Explosion auf der Hülle (lauter je Schaden), Funken bei Systemschaden, Schild, Vorbeiflug, Schiff zerstört. Am Gegnerschiff alles etwas leiser.
+- **An Bord:** Feuer bricht aus, Prasseln als Schleife (lauter je mehr Brände), Löschen, Hüllenbruch, Flicken, Reparatur, Crew gefallen, Türen und Schleusen, Schiffsbrummen als Dauerklang.
+- **Warnungen:** Alarm, wenn der Gegner fliehen will oder die Jäger kommen; Warnton bei kritischer Hülle (≤ 30 %, höchstens alle 6 s).
+- **Sprung und Karte:** Abflug, Ankunft (auch Gegner), Antrieb geladen, Karte öffnen/schließen, Ziel wählen, Flug auf der Karte, Notsignal (SOS).
+- **Bedienung:** Knopf, „geht nicht“, Energie ±1, Crew wählen und schicken, Pause/Weiter, Funkspruch bei Ereignissen, Antwort gewählt.
+- **Ergebnisse:** Sieg, Beute, Sektor geschafft, Niederlage, alle Sektoren geschafft.
+
+Ton aus/an: Zeile „Ton“ in den Einstellungen (`user://settings.json`, Schlüssel `muted`, über `Settings`). Derselbe Effekt spielt höchstens alle 45 ms, damit Salven nicht übersteuern.
+
 ## Öffnen und starten
 
 1. [Godot 4.7](https://godotengine.org/download) installieren (Standard-Version, nicht .NET)
@@ -151,6 +165,8 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `scripts/core/settings.gd`, `scripts/core/codex.gd` | `Settings` (Einstellungen laden, speichern, anwenden) und `Codex` (entdeckte Schiffe und Spezies) |
 | `scripts/view/` | Darstellung und Eingabe: `SettingsPanel`, `CodexView` (Lexikon), `TutorialCoach`, `ShipView` (eigenes und Gegnerschiff), `Effects` (auch Warpblase), `Starfield` (mit Lichtstreifen), `HudStyle` und `HudButton` (Kasten-Look), `StatusBar`, `ResourceBar`, `JumpButton`, `PowerPanel`, `WeaponPanel`, `DoorPanel`, `CrewPanel`, `CrewCard`, `MapView` (Sternenkarte als Überlagerung), `EventDialog` (Ereignis-, Händler- und Werftdialog) |
 | `scripts/core/save_game.gd` | `SaveGame`: Spielstand speichern und laden, Formatversion und Migration |
+| `scripts/sfx.gd` | Autoload `Sfx`: Effekte abspielen (16 Stimmen, Tonhöhe leicht variiert), Schleifen mit Pegel, Ton aus/an |
+| `assets/sfx/` | Soundeffekte (WAV, erzeugt mit `tools/sfxgen`) |
 | `scripts/game.gd` | Autoload `Game`: hält den Run, wechselt zwischen Hauptmenü und Schiff, speichert je Modus, führt die Rekorde |
 | `scenes/title.tscn` | Startszene: Hauptmenü, Moduswahl, Lexikon und Einstellungen (`scripts/title_screen.gd`) |
 | `scenes/ship.tscn` | Schiff: Ruhe, Kampf, Ereignisse, Karte und Sprung (`scripts/ship_screen.gd`) |
@@ -158,6 +174,8 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `tests/run_tests.gd` | Logiktests |
 
 **Grafik aktualisieren:** Nach `python3 tools/artgen/build.py` die benötigten PNGs aus `art/export/1x/` nach `game/assets/` kopieren.
+
+**Sounds aktualisieren:** `python3 tools/sfxgen/build.py` schreibt alle Effekte nach `game/assets/sfx/` (nur numpy nötig). Einzelne Effekte: Namen anhängen, z. B. `… build.py laser_pulse`. Mit `--preview ORDNER` landen zusätzlich alle Varianten (A, B, C) zum Vergleichen dort. Welche Variante ins Spiel kommt, steht in `CHOICE` in `tools/sfxgen/sounds.py`.
 
 ## Tests
 

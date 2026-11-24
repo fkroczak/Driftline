@@ -63,5 +63,6 @@ func _draw() -> void:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		visible = false
+		Sfx.play("ui_click")
 		closed.emit()
 		accept_event()

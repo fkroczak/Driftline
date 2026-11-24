@@ -142,6 +142,7 @@ func _change(col: int, add: bool) -> void:
 	var id := _columns[col]
 	var ok := state.add_power(id) if add else state.remove_power(id)
 	system_tapped.emit(id, ok)
+	Sfx.play(("power_up" if add else "power_down") if ok else "ui_deny")
 	if ok:
 		if add:
 			_pop[id] = 0.2

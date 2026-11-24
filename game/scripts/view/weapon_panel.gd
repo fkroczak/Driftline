@@ -153,16 +153,23 @@ func _tap(idx: int) -> void:
 		return
 	if selected == idx:
 		select(-1)
+		Sfx.play("ui_click")
 		return
 	if not state.weapons[idx].powered and not state.set_weapon_wanted(idx, true):
 		_deny[idx] = 0.25
+		Sfx.play("ui_deny")
 		return
 	select(idx)
+	Sfx.play("weapon_select")
 
 
 func _toggle_power(idx: int) -> void:
 	var w := state.weapons[idx]
+	var was := w.powered
 	if not state.set_weapon_wanted(idx, not w.powered):
 		_deny[idx] = 0.25
-	elif selected == idx and not w.powered:
+		Sfx.play("ui_deny")
+		return
+	Sfx.play("power_down" if was else "power_up")
+	if selected == idx and not w.powered:
 		select(-1)

@@ -15,6 +15,11 @@ const MODES := [
 		"text": "Sektor um Sektor, ohne Verfolger. Die Gegner werden immer stärker. Wie weit kommst du?"},
 ]
 const SHIP_TEXTURE := preload("res://assets/ships/mensch_frachter.png")
+const LOGO := preload("res://assets/ui/logo.png")
+const HOLE := Vector2(64, 15)  # Mitte des Einschusslochs im Logo (tools/app_icon.py gibt sie aus)
+const SPARK_COLORS := [Color("#FDE6BF"), Color("#FAC775"), Color("#EF9F27"), Color("#D85A30")]
+const GLOW_COLORS := [Color("#FAC775"), Color("#EF9F27"), Color("#D85A30")]
+const GLOW_PIXELS := [Vector2(-1, -4), Vector2(3, -3), Vector2(-3, 1), Vector2(2, 3), Vector2(-4, -2), Vector2(4, 0)]
 
 ## "start" (Hauptmenü) oder "modes" (Spielmodus wählen)
 var _page := "start"
@@ -23,6 +28,12 @@ var _confirm := ""  # Modus, für den „Neuer Run“ einmal angetippt wurde
 var _time := 0.0
 var _settings: SettingsPanel
 var _codex: CodexView
+var _logo_y := 12.0
+var _sparks: Array[Dictionary] = []  # {pos, vel, age, life}
+var _smoke: Array[Dictionary] = []
+var _spark_timer := 0.0
+var _smoke_timer := 0.0
+var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -45,7 +56,54 @@ func _layout() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
+	_update_effects(delta)
 	queue_redraw()
+
+
+func _hole() -> Vector2:
+	return Vector2(roundf((size.x - LOGO.get_width()) / 2.0), _logo_y) + HOLE
+
+
+## Funken sprühen stoßweise aus dem Einschussloch des Logos, Rauch steigt langsam auf.
+func _update_effects(delta: float) -> void:
+	var intensity := 0.5 + 0.5 * sin(_time * 2.3) * sin(_time * 0.9 + 1.0)
+	_spark_timer -= delta
+	if _spark_timer <= 0.0:
+		_spark_timer = lerpf(0.25, 0.03, intensity)
+		var burst := 1 if _rng.randf() > 0.12 else _rng.randi_range(4, 8)
+		for i in burst:
+			var a := _rng.randf_range(-2.7, -0.4)
+			_sparks.append({"pos": _hole() + Vector2(_rng.randf_range(-1, 1), _rng.randf_range(-1, 1)),
+				"vel": Vector2(cos(a), sin(a)) * _rng.randf_range(14, 46), "age": 0.0, "life": _rng.randf_range(0.3, 0.9)})
+	_smoke_timer -= delta
+	if _smoke_timer <= 0.0:
+		_smoke_timer = _rng.randf_range(0.12, 0.3)
+		_smoke.append({"pos": _hole() + Vector2(_rng.randf_range(-2, 2), -3), "vel": Vector2(_rng.randf_range(1, 5), -_rng.randf_range(5, 9)),
+			"age": 0.0, "life": _rng.randf_range(1.4, 2.4)})
+	for list: Array[Dictionary] in [_sparks, _smoke]:
+		for p in list:
+			p.age += delta
+			p.pos += p.vel * delta
+		list.assign(list.filter(func(p: Dictionary) -> bool: return p.age < p.life))
+	for p in _sparks:
+		p.vel.y += 50.0 * delta
+
+
+func _draw_effects() -> void:
+	for p in _smoke:
+		var t: float = p.age / p.life
+		var c := Color("#424A56") if t < 0.5 else Color("#2A2F3A")
+		c.a = 1.0 - t * 0.6
+		draw_rect(Rect2(p.pos.floor(), Vector2.ONE), c)
+	for p in _sparks:
+		var t: float = p.age / p.life
+		draw_rect(Rect2(p.pos.floor(), Vector2.ONE), SPARK_COLORS[mini(int(t * SPARK_COLORS.size()), SPARK_COLORS.size() - 1)])
+	# glühender Rand flackert
+	var h := _hole()
+	for i in GLOW_PIXELS.size():
+		var k := int(_time * 12.0 + i * 7) % 5
+		if k < GLOW_COLORS.size():
+			draw_rect(Rect2(h + GLOW_PIXELS[i], Vector2.ONE), GLOW_COLORS[k])
 
 
 func _draw() -> void:
@@ -58,12 +116,13 @@ func _draw() -> void:
 	HudStyle.text(self, Vector2(size.x - HudStyle.text_width(version) - 4, size.y - 4), version, HudStyle.COLOR_DIM)
 
 
+## Logo mit Funken am Einschussloch; `y` ist die Grundlinie des Untertitels.
 func _draw_title(y: float) -> void:
-	var title := "HULLBOUND"
-	var tw := HudStyle.text_width(title, 26)
-	HudStyle.text(self, Vector2(roundf((size.x - tw) / 2.0), y), title, COLOR_TITLE, -1, 26)
+	_logo_y = y - 34.0
+	draw_texture(LOGO, Vector2(roundf((size.x - LOGO.get_width()) / 2.0), _logo_y))
+	_draw_effects()
 	var sub := "Raumschiff-Roguelike"
-	HudStyle.text(self, Vector2(roundf((size.x - HudStyle.text_width(sub)) / 2.0), y + 12), sub, HudStyle.COLOR_DIM)
+	HudStyle.text(self, Vector2(roundf((size.x - HudStyle.text_width(sub)) / 2.0), y), sub, HudStyle.COLOR_DIM)
 
 
 func _draw_start() -> void:
@@ -73,7 +132,7 @@ func _draw_start() -> void:
 	var sx := fmod(_time * 9.0, travel) - ship_w - 20.0
 	var sy := size.y - 46.0 + roundf(sin(_time * 0.8) * 1.5)
 	draw_texture_rect(SHIP_TEXTURE, Rect2(Vector2(sx, sy).round(), SHIP_TEXTURE.get_size() * 0.5), false, Color(1, 1, 1, 0.55))
-	_draw_title(44)
+	_draw_title(60)
 	var entries := [
 		["play", "SPIELEN", HudStyle.COLOR_OK],
 		["tutorial", "TUTORIAL", HudStyle.COLOR_WARN],
@@ -81,7 +140,7 @@ func _draw_start() -> void:
 		["settings", "EINSTELLUNGEN", HudStyle.COLOR_TEXT],
 	]
 	var x := roundf((size.x - MENU_W) / 2.0)
-	var y := 72.0
+	var y := 70.0
 	for e: Array in entries:
 		_button(Rect2(x, y, MENU_W, MENU_H), e[1], e[2], e[0])
 		y += MENU_H + 5
@@ -91,13 +150,13 @@ func _draw_start() -> void:
 
 
 func _draw_modes() -> void:
-	_draw_title(30)
+	_draw_title(46)
 	var gap := 12.0
 	var total := CARD.x * 2 + gap
 	var x0 := roundf((size.x - total) / 2.0)
 	for i in MODES.size():
-		_draw_card(Rect2(Vector2(x0 + i * (CARD.x + gap), 52), CARD), MODES[i])
-	_button(Rect2(x0, 52 + CARD.y + 8, 70, 17), "ZURÜCK", HudStyle.COLOR_TEXT, "back")
+		_draw_card(Rect2(Vector2(x0 + i * (CARD.x + gap), 58), CARD), MODES[i])
+	_button(Rect2(x0, 58 + CARD.y + 6, 70, 17), "ZURÜCK", HudStyle.COLOR_TEXT, "back")
 
 
 func _draw_card(rect: Rect2, m: Dictionary) -> void:
@@ -137,6 +196,7 @@ func _gui_input(event: InputEvent) -> void:
 		if not (b.rect as Rect2).grow(2).has_point(event.position):
 			continue
 		_confirm = "" if b.action != "new" else _confirm
+		Sfx.play("ui_click")
 		match b.action:
 			"play":
 				_page = "modes"
