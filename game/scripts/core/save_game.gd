@@ -224,7 +224,7 @@ static func from_dict(data: Dictionary, mode := RunState.MODE_HUNT) -> RunState:
 	for key: Variant in quests:
 		var q: Dictionary = quests[key]
 		if not run.events.get_event(str(q.get("event", ""))).is_empty():
-			run.quests[int(key)] = {"event": str(q.event), "title": str(q.get("title", ""))}
+			run.quests[int(key)] = {"event": str(q.event), "title": str(q.get("title", "")), "deadline": int(q.get("deadline", 0))}
 	run.quest_note = r.get("quest_note", "")
 	if r.has("rng"):
 		run._rng.state = int(r.rng)

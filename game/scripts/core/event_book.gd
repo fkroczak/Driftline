@@ -58,6 +58,9 @@ func validate() -> Array[String]:
 		for key in ["title", "text", "choices"]:
 			if not e.has(key):
 				errors.append("%s: %s fehlt" % [id, key])
+		for key: String in e.get("fail", {}):
+			if not EFFECTS.has(key) or key == "quest":
+				errors.append("%s: unbekannter Effekt %s in fail" % [id, key])
 		for choice: Dictionary in e.get("choices", []):
 			if choice.get("outcomes", []).is_empty():
 				errors.append("%s: Option ohne Ausgang" % id)

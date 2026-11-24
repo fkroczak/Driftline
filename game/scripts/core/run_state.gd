@@ -31,7 +31,9 @@ extends RefCounted
 ## System im selben Sektor (2–4 Sprünge entfernt, möglichst unbesucht und vor der Jägerfront), die
 ## Karte markiert es. Dort wartet das Abschlussereignis (Pool "auftrag") mit mehreren Stufen, oft
 ## einem Kampf und großer Belohnung. Überrennt die Front das Ziel oder endet der Sektor, verfällt
-## der Auftrag (`quest_note` meldet es).
+## der Auftrag (`quest_note` meldet es). Hat das Abschlussereignis eine `frist` (Sprünge), muss das
+## Ziel spätestens mit dem so vielten Sprung erreicht sein, sonst scheitert der Auftrag; die Effekte
+## unter `fail` (falls vorhanden) treten dann ein.
 ##
 ## Rohstoffe aus Beute und Ereignissen werden mit `scrap_gain` aus data/run.json multipliziert.
 ##
@@ -99,7 +101,7 @@ var last_reward := ""
 var shop_stock: Dictionary = {}
 ## Der letzte Sprung war dank Treibstoffrecycler gratis (für den Hinweis).
 var last_jump_free := false
-## Offene Aufträge: Ziel-Knoten -> {event (Abschlussereignis), title}.
+## Offene Aufträge: Ziel-Knoten -> {event (Abschlussereignis), title, deadline (Sprung im Sektor, 0 = keine Frist)}.
 var quests: Dictionary = {}
 ## Meldung für die Darstellung, wenn ein Auftrag verfallen ist ("" = keine); wer sie zeigt, leert sie.
 var quest_note := ""
@@ -254,6 +256,7 @@ func jump_to(id: int) -> bool:
 	current = id
 	jumps += 1
 	total_jumps += 1
+	_expire_quests(id)
 	if mode == MODE_HUNT:
 		front += FRONT_STEP
 		_drop_overrun_quests()
@@ -285,19 +288,42 @@ func _drop_overrun_quests() -> void:
 			quests.erase(id)
 
 
+## Frist abgelaufen: Wer mit diesem Sprung nicht am Ziel ist, kommt zu spät.
+func _expire_quests(arrived: int) -> void:
+	for id: int in quests.keys():
+		var q: Dictionary = quests[id]
+		if id != arrived and int(q.get("deadline", 0)) > 0 and jumps >= int(q.deadline):
+			quests.erase(id)
+			var parts := _apply(events.get_event(q.event).get("fail", {}))
+			quest_note = Loc.t("Auftrag gescheitert, Frist abgelaufen: %s") % Loc.t(q.title)
+			if not parts.is_empty():
+				quest_note += " · " + " · ".join(parts)
+
+
+## Sprünge, die für den Auftrag am Knoten noch bleiben (-1 = keine Frist).
+func quest_jumps_left(id: int) -> int:
+	var deadline := int(quests.get(id, {}).get("deadline", 0))
+	return deadline - jumps if deadline > 0 else -1
+
+
 ## Auftrag annehmen: Ziel wählen und auf der Karte markieren. Liefert den Text für den Dialog.
 func _start_quest(event_id: String) -> String:
 	var e := events.get_event(event_id)
-	var target := _quest_target()
+	var limit := int(e.get("frist", 0))
+	var target := _quest_target(limit)
 	if e.is_empty() or target < 0:
 		return Loc.t("Kein Ziel in Reichweite: Der Auftrag entfällt")
-	quests[target] = {"event": event_id, "title": str(e.get("quest", e.get("title", "")))}
+	quests[target] = {"event": event_id, "title": str(e.get("quest", e.get("title", ""))),
+		"deadline": jumps + limit if limit > 0 else 0}
+	if limit > 0:
+		return Loc.t("Auftrag: %s · Ziel markiert, Frist %d Sprünge") % [Loc.t(quests[target].title), limit]
 	return Loc.t("Auftrag: %s · Ziel auf der Karte markiert") % Loc.t(quests[target].title)
 
 
 ## Ziel eines neuen Auftrags: Ereignis- oder leeres System, möglichst 2–4 Sprünge entfernt und
-## unbesucht; nie eines, das die Jäger erreichen, bevor man dort sein kann. -1 = keines.
-func _quest_target() -> int:
+## unbesucht; nie eines, das die Jäger erreichen, bevor man dort sein kann, und mit Frist nur eines,
+## das in der Frist erreichbar ist. -1 = keines.
+func _quest_target(limit := 0) -> int:
 	var best: Array[int] = []
 	var other: Array[int] = []
 	for n: Dictionary in map.nodes:
@@ -305,12 +331,12 @@ func _quest_target() -> int:
 		if id == current or quests.has(id) or not n.type in ["ereignis", "leer"] or is_overrun(id):
 			continue
 		var d := map.distance(current, id)
-		if d < 1:
+		if d < 1 or (limit > 0 and d > limit):
 			continue
 		var soon := jumps_until_overrun(id)
 		if soon >= 0 and soon <= d + 1:
 			continue
-		if d >= 2 and d <= 4 and not visited.has(id):
+		if d >= 2 and d <= (mini(4, limit) if limit > 0 else 4) and not visited.has(id):
 			best.append(id)
 		else:
 			other.append(id)
@@ -535,8 +561,12 @@ func _close_result() -> void:
 # --- Händler und Reparaturstation ---
 
 
+## Rabatt beim Händler: Gildenbrief billiger, schlechter Ruf (`ruf_schlecht`) teurer (negativ).
 func _discount() -> float:
-	return float(rules.get("guild_discount", 0.0)) if flags.has("gilde_freund") else 0.0
+	var d := float(rules.get("guild_discount", 0.0)) if flags.has("gilde_freund") else 0.0
+	if flags.has("ruf_schlecht"):
+		d -= float(rules.get("bad_reputation_markup", 0.0))
+	return d
 
 
 func _price(base: int) -> int:
@@ -598,7 +628,9 @@ func _open_shop(page := "main") -> void:
 			choices.append({"text": Loc.t("Waffen kaufen und verkaufen …"), "enabled": true, "special": false})
 			choices.append({"text": Loc.t("Crew anheuern …"), "enabled": true, "special": false})
 	if flags.has("gilde_freund"):
-		text += Loc.t(" Euer Gildenbrief bringt %d %% Rabatt.") % roundi(_discount() * 100.0)
+		text += Loc.t(" Euer Gildenbrief bringt %d %% Rabatt.") % roundi(float(rules.get("guild_discount", 0.0)) * 100.0)
+	if flags.has("ruf_schlecht"):
+		text += Loc.t(" Euer Ruf ist euch vorausgeeilt: %d %% Aufschlag.") % roundi(float(rules.get("bad_reputation_markup", 0.0)) * 100.0)
 	if _shop_note != "":
 		text += "\n\n" + _shop_note
 	choices.append({"text": Loc.t("Ablegen") if page == "main" else Loc.t("Zurück"), "enabled": true, "special": false})
@@ -845,6 +877,8 @@ static func _flag_text(flag: String) -> String:
 			return Loc.t("Gildenbrief: Händler billiger")
 		"kolonie_dank":
 			return Loc.t("Dank der Kolonie: Gratisreparatur in der Reparaturstation")
+		"ruf_schlecht":
+			return Loc.t("Schlechter Ruf: Händler teurer")
 	return Loc.t("Ansehen gewonnen")
 
 

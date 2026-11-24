@@ -207,7 +207,7 @@ func test_enemy_flees_with_engine_and_pilot() -> void:
 				break
 		if battle.outcome == "gegner_entkommen":
 			fled += 1
-	check(fled > 4 and fled < 20, "Gegner flieht nie oder immer (%d von 20)" % fled)
+	check(fled >= 2 and fled <= 14, "Gegner flieht nie oder zu oft (%d von 20, erwartet etwa jeder dritte)" % fled)
 
 
 func test_enemy_cannot_flee_without_engine() -> void:
@@ -1590,3 +1590,45 @@ func test_quest_givers_are_in_event_pool() -> void:
 	check(not book.ids_in_pool("auftrag").is_empty(), "Keine Abschlussereignisse")
 	for id in book.ids_in_pool("auftrag"):
 		check(not pool.has(id), "Abschluss im normalen Pool: %s" % id)
+
+
+func test_quest_deadline_fails_with_consequence() -> void:
+	var run := _quest_run("auftrag_seuche")
+	check(run.quests.size() == 1, "Fieberschiff vergibt keinen Auftrag")
+	if run.quests.is_empty():
+		return
+	var target: int = run.quests.keys()[0]
+	check(run.quest_jumps_left(target) == 3, "Frist nicht 3 Sprünge: %d" % run.quest_jumps_left(target))
+	check(run.map.distance(run.current, target) <= 3, "Ziel nicht in der Frist erreichbar")
+	var hp := run.ship.crew.map(func(m: CrewMember) -> float: return m.hp)
+	run.jumps += 2
+	run._expire_quests(-1)
+	check(run.quests.size() == 1, "Frist läuft zu früh ab")
+	run.jumps += 1  # dritter Sprung, aber nicht ans Ziel
+	run._expire_quests(-1)
+	check(run.quests.is_empty() and "Frist" in run.quest_note, "Frist läuft nicht ab")
+	var after := run.ship.crew.map(func(m: CrewMember) -> float: return m.hp)
+	check(after != hp, "Scheitern hat keine Folgen (fail)")
+
+
+func test_quest_deadline_allows_arrival_on_last_jump() -> void:
+	var run := _quest_run("auftrag_ueberlaeufer")
+	if run.quests.is_empty():
+		check(false, "Überläufer vergibt keinen Auftrag")
+		return
+	var target: int = run.quests.keys()[0]
+	run.jumps += 2  # zwei Umwege, der dritte Sprung muss ans Ziel
+	run.map.node(run.current).links.append(target)
+	run.fuel = 5
+	check(run.jump_to(target) and run.dialog.get("title", "") == "Das Beutelager", "Ankunft mit dem letzten Sprung zählt nicht")
+
+
+func test_bad_reputation_raises_prices() -> void:
+	var run := RunState.new(8)
+	run.flags["ruf_schlecht"] = true
+	run.scrap = 20
+	run._open_shop()
+	check(run._price(3) == 3 and run._price(20) == 23, "Aufschlag falsch: %d" % run._price(20))
+	check(run._price(8) == 9, "Schlechter Ruf macht Hülle +5 nicht teurer: %d" % run._price(8))
+	run.flags["gilde_freund"] = true
+	check(run._price(8) == 7, "Gildenbrief und schlechter Ruf verrechnen sich nicht: %d" % run._price(8))

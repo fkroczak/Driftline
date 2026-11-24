@@ -321,7 +321,9 @@ func _draw_labels() -> void:
 			continue
 		var below := node_screen_pos(n.id) + Vector2(0, 6)
 		if run.is_quest_target(n.id):
-			_draw_tag(below, Loc.t("AUFTRAG"), COLOR_QUEST, true)
+			var left := run.quest_jumps_left(n.id)
+			var tag := Loc.t("AUFTRAG") if left < 0 else Loc.t("AUFTRAG · %d") % left
+			_draw_tag(below, tag, COLOR_BOSS if left == 1 else COLOR_QUEST, true)
 		elif n.type == "haendler" and not run.visited.has(n.id):
 			_draw_tag(below, Loc.t("HÄNDLER"), COLOR_SHOP, true)
 		elif n.type == "reparatur" and not run.visited.has(n.id):
@@ -376,6 +378,11 @@ func _draw_info_box(id: int) -> void:
 		title = Loc.t("Notruf empfangen")
 	if run.is_quest_target(id):
 		title = Loc.t("Auftrag: %s") % Loc.t(run.quests[id].title)
+		var left := run.quest_jumps_left(id)
+		if left == 1:
+			title += Loc.t(" · letzter Sprung!")
+		elif left > 1:
+			title += Loc.t(" · noch %d Sprünge") % left
 	var line := Loc.t("%d Treibstoff · nochmal antippen") % run.jump_cost()
 	var line_color := COLOR_REACH
 	var soon := run.jumps_until_overrun(id)

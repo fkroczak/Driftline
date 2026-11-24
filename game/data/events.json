@@ -1,5 +1,5 @@
 {
-  "_doc": "Ereignisse der Sternenkarte. pool: ereignis (normale Systeme), notsignal (Notsignal ohne Treibstoff), auftrag (Abschluss eines Auftrags, nur über den Effekt quest). quest: kurzer Name des Auftrags für die Karte (bei Abschlussereignissen). beacon: auf der Karte als NOTRUF sichtbar. scene: Bild links (wrack, planet, notruf, station, schiff, asteroiden, nebel). Choice: text, cost {fuel, scrap} wird vorher abgezogen und ist Bedingung, requires {flag, species, crew_min} blendet die Option sonst aus (flag, species: jemand dieser Spezies an Bord) bzw. graut sie aus. Outcome: weight, text, effects {scrap, fuel, hull, hull_full, crew_hp, crew_lose, crew_add (species: feste Spezies), flag, weapon (Waffe einbauen oder ins Lager), quest (Auftrag: ID des Abschlussereignisses, Ziel wird auf der Karte markiert)}, battle (danach Kampf), victory (Effekte nach dem Sieg), next (Folgeereignis).",
+  "_doc": "Ereignisse der Sternenkarte. pool: ereignis (normale Systeme), notsignal (Notsignal ohne Treibstoff), auftrag (Abschluss eines Auftrags, nur über den Effekt quest). quest: kurzer Name des Auftrags für die Karte (bei Abschlussereignissen). frist: so viele Sprünge bleiben bis zum Ziel, sonst scheitert der Auftrag; fail: Effekte beim Scheitern. beacon: auf der Karte als NOTRUF sichtbar. scene: Bild links (wrack, planet, notruf, station, schiff, asteroiden, nebel). Choice: text, cost {fuel, scrap} wird vorher abgezogen und ist Bedingung, requires {flag, species, crew_min} blendet die Option sonst aus (flag, species: jemand dieser Spezies an Bord) bzw. graut sie aus. Outcome: weight, text, effects {scrap, fuel, hull, hull_full, crew_hp, crew_lose, crew_add (species: feste Spezies), flag, weapon (Waffe einbauen oder ins Lager), quest (Auftrag: ID des Abschlussereignisses, Ziel wird auf der Karte markiert)}, battle (danach Kampf), victory (Effekte nach dem Sieg), next (Folgeereignis).",
   "events": [
     {
       "id": "wrack_frachter", "pool": "ereignis", "scene": "wrack",
@@ -306,7 +306,7 @@
       ]
     },
     {
-      "id": "konvoi_treffpunkt", "pool": "auftrag", "scene": "notruf", "quest": "Treffpunkt der Evakuierung",
+      "id": "konvoi_treffpunkt", "pool": "auftrag", "scene": "notruf", "quest": "Treffpunkt der Evakuierung", "frist": 5,
       "title": "Der Treffpunkt",
       "text": "Am Treffpunkt hängt der Transporter manövrierunfähig im All. Piraten kreisen bereits um ihn wie Geier um ein verletztes Tier.",
       "choices": [
@@ -360,7 +360,7 @@
       ]
     },
     {
-      "id": "mine_depot", "pool": "auftrag", "scene": "asteroiden", "quest": "Verschüttete Bergleute",
+      "id": "mine_depot", "pool": "auftrag", "scene": "asteroiden", "quest": "Verschüttete Bergleute", "frist": 5,
       "title": "Das Sprengstoffdepot",
       "text": "Das Depot ist verlassen, die Sprengladungen liegen noch im Regal. Doch der Zugangscode ist veraltet, und die Selbstschussanlage am Tor ist scharf.",
       "choices": [
@@ -388,6 +388,119 @@
         {"text": "Mit voller Ladung sprengen", "outcomes": [
           {"weight": 0.4, "text": "Ein gewaltiger Knall, dann Stille, dann Jubel. Der Weg ist frei, und die Explosion hat eine neue Erzader freigelegt.", "effects": {"scrap": 42}},
           {"weight": 0.6, "text": "Der ganze Stollen bricht ein. Die Bergleute überleben in einer Luftblase, ihr müsst sie mühsam herausschneiden. Der Lohn fällt mager aus.", "effects": {"scrap": 12, "hull": -3}}
+        ]}
+      ]
+    },
+    {
+      "id": "auftrag_seuche", "pool": "ereignis", "scene": "schiff",
+      "title": "Fieberschiff",
+      "text": "Ein Lazarettschiff treibt mit totem Antrieb. An Bord liegen vierzig Fieberkranke. Die Ärztin bittet euch, die Schwerkranken zur Klinik zu bringen. Ansteckung ist möglich.",
+      "choices": [
+        {"text": "Die Kranken an Bord nehmen", "outcomes": [
+          {"weight": 0.6, "text": "Ihr richtet den Frachtraum als Krankenstation ein. Die Klinik erwartet euch, aber lange halten die Kranken nicht durch.", "effects": {"quest": "seuche_klinik"}},
+          {"weight": 0.4, "text": "Beim Umladen steckt sich jemand aus der Crew an. Trotzdem: Die Klinik erwartet euch, und die Zeit läuft.", "effects": {"crew_hp": -35, "quest": "seuche_klinik"}}
+        ]},
+        {"text": "Nur Medikamente abgeben", "cost": {"scrap": 12}, "outcomes": [
+          {"text": "Die Ärztin dankt euch und meldet euch der Gilde. Eine Werft wird euch einmal umsonst reparieren.", "effects": {"flag": "kolonie_dank"}}
+        ]},
+        {"text": "Das Wrack ausschlachten, sie sind ohnehin verloren", "outcomes": [
+          {"text": "Die Ärztin flucht über Funk, während eure Leute Teile aus dem Rumpf schneiden. Die Geschichte macht schnell die Runde.", "effects": {"scrap": 24, "fuel": 1, "flag": "ruf_schlecht"}}
+        ]}
+      ]
+    },
+    {
+      "id": "seuche_klinik", "pool": "auftrag", "scene": "station", "quest": "Fieberkranke zur Klinik", "frist": 3, "fail": {"crew_hp": -40},
+      "title": "Die Klinik",
+      "text": "Die Klinik nimmt eure Kranken auf. Doch das Gegenmittel reicht nicht für alle Schiffe, die hier warten. Der Leiter macht euch ein Angebot, das euch nicht gefallen wird.",
+      "choices": [
+        {"text": "Den vollen Lohn nehmen", "outcomes": [
+          {"text": "Ihr bekommt euren Lohn. Draußen warten noch drei Schiffe vergeblich.", "effects": {"scrap": 34}}
+        ]},
+        {"text": "Auf den Lohn verzichten: Gegenmittel für die Wartenden", "outcomes": [
+          {"text": "Der Leiter schüttelt erst den Kopf, dann eure Hand. Die Nachricht verbreitet sich: Eine Gildenwerft will euch umsonst reparieren.", "effects": {"flag": "kolonie_dank", "hull": 4}}
+        ]},
+        {"text": "Eine genesene Ärztin anheuern, halber Lohn", "outcomes": [
+          {"text": "Die Ärztin packt ihre Tasche. Sie hat genug von Kliniken, die rechnen müssen.", "effects": {"crew_add": 1, "scrap": 14}}
+        ]},
+        {"text": "[Androide] Das Gegenmittel nachbauen", "requires": {"species": "androide"}, "outcomes": [
+          {"text": "Euer Androide rechnet die Formel nach und baut die Synthese um. Genug für alle, und Lohn obendrein.", "effects": {"scrap": 30, "flag": "kolonie_dank"}}
+        ]}
+      ]
+    },
+    {
+      "id": "auftrag_ueberlaeufer", "pool": "ereignis", "scene": "notruf",
+      "title": "Der Überläufer",
+      "text": "In einer Rettungskapsel sitzt ein Pirat aus Rasks Bande. Er bietet die Koordinaten eines Beutelagers gegen freie Passage. Die Gilde zahlt für ihn ein Kopfgeld.",
+      "choices": [
+        {"text": "Den Handel annehmen", "outcomes": [
+          {"text": "Er grinst: „Klug. Aber beeilt euch, die Bande räumt das Lager bald.“", "effects": {"quest": "ueberlaeufer_lager"}}
+        ]},
+        {"text": "Ihn der Gilde ausliefern", "outcomes": [
+          {"text": "Er spuckt aus, als die Gildenwachen ihn abführen. Das Kopfgeld ist bescheiden, der Dank der Gilde nicht.", "effects": {"scrap": 14, "flag": "gilde_freund"}}
+        ]},
+        {"text": "Ihn ziehen lassen", "outcomes": [{"text": "Die Kapsel treibt davon.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "ueberlaeufer_lager", "pool": "auftrag", "scene": "asteroiden", "quest": "Beutelager der Bande", "frist": 3,
+      "title": "Das Beutelager",
+      "text": "Das Lager ist echt: Kisten voller Ersatzteile in einer Felsspalte. Doch zwei Bandenkutter docken gerade an. Der Überläufer flüstert: „Setzt mich ab, ich lenke sie ab.“ Er würde das kaum überleben.",
+      "choices": [
+        {"text": "Ihn als Köder absetzen", "outcomes": [
+          {"text": "Die Kutter jagen dem Überläufer nach. Ihr ladet in Ruhe, und hört sein Signal verstummen.", "effects": {"scrap": 40, "fuel": 2}}
+        ]},
+        {"text": "Gemeinsam kämpfen", "outcomes": [
+          {"text": "Der Überläufer greift zur Waffe: „Dann eben zusammen.“", "battle": true, "victory": {"scrap": 30, "fuel": 1, "crew_add": 1, "species": "mensch"}}
+        ]},
+        {"text": "Zwei Kisten greifen und sofort springen", "outcomes": [
+          {"weight": 0.5, "text": "Ihr reißt zwei Kisten an Bord und springt, bevor die Kutter feuern.", "effects": {"scrap": 16}},
+          {"weight": 0.5, "text": "Ein Kutter erwischt euch beim Ablegen. Zwei Kisten habt ihr trotzdem.", "effects": {"scrap": 16, "hull": -6}}
+        ]}
+      ]
+    },
+    {
+      "id": "auftrag_fracht", "pool": "ereignis", "scene": "station",
+      "title": "Versiegelte Fracht",
+      "text": "Ein Mann im teuren Mantel bietet Rohstoffe sofort und mehr bei Lieferung, wenn ihr einen versiegelten Container zu einem Kontakt bringt. Keine Fragen.",
+      "choices": [
+        {"text": "Annehmen, keine Fragen", "outcomes": [
+          {"text": "Der Container wird verladen. Er ist schwerer, als er aussieht.", "effects": {"scrap": 15, "quest": "fracht_kontakt"}}
+        ]},
+        {"text": "Ablehnen", "outcomes": [
+          {"text": "Der Mann zuckt mit den Schultern und sucht den nächsten Kapitän.", "effects": {}}
+        ]}
+      ]
+    },
+    {
+      "id": "fracht_kontakt", "pool": "auftrag", "scene": "schiff", "quest": "Container abliefern", "frist": 4, "fail": {"flag": "ruf_schlecht"},
+      "title": "Die Übergabe",
+      "text": "Der Kontakt ist ein Piratenkutter. Die Empfänger wollen den Container, bezahlen wollen sie plötzlich nicht mehr.",
+      "choices": [
+        {"text": "Übergeben und ohne Lohn abziehen", "outcomes": [
+          {"text": "Ihr übergebt den Container und zieht ab. Wenigstens schießt niemand.", "effects": {}}
+        ]},
+        {"text": "Den Container öffnen", "outcomes": [
+          {"text": "Ihr brecht das Siegel auf, während die Piraten zusehen.", "next": "fracht_inhalt"}
+        ]},
+        {"text": "Auf Bezahlung bestehen", "outcomes": [
+          {"text": "Die Piraten fahren ihre Waffen hoch. Ihr auch.", "battle": true, "victory": {"scrap": 26, "weapon": "brandkanone"}}
+        ]}
+      ]
+    },
+    {
+      "id": "fracht_inhalt", "pool": "auftrag", "scene": "schiff",
+      "title": "Der Inhalt",
+      "text": "Im Container liegen Brandkanonen mit Gildenstempel, gestohlen aus einem Arsenal. Damit werden bald Gildenfrachter brennen. Die Piraten werden ungeduldig.",
+      "choices": [
+        {"text": "Übergeben und den Lohn kassieren", "outcomes": [
+          {"text": "Die Piraten zahlen tatsächlich. Bald schießt jemand mit diesen Kanonen auf Gildenfrachter, und man wird sich an euch erinnern.", "effects": {"scrap": 32, "flag": "ruf_schlecht"}}
+        ]},
+        {"text": "Eine Kanone behalten, den Rest übergeben", "outcomes": [
+          {"weight": 0.5, "text": "Die Piraten zählen nicht nach.", "effects": {"weapon": "brandkanone"}},
+          {"weight": 0.5, "text": "Die Piraten zählen nach. Sehr genau.", "battle": true, "victory": {"scrap": 18, "weapon": "brandkanone"}}
+        ]},
+        {"text": "Die Gilde rufen", "outcomes": [
+          {"text": "Ihr funkt die Gilde an. Die Piraten eröffnen das Feuer, bevor die Patrouille da ist.", "battle": true, "victory": {"scrap": 24, "flag": "gilde_freund"}}
         ]}
       ]
     }
