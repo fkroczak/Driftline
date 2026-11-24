@@ -753,9 +753,12 @@ func close_shop() -> void:
 
 
 ## Waren des offenen Händlers: weapons (IDs), perks (IDs), crew ([{name, species}]), battery (bool).
+## Die Waren stehen je Händler für den ganzen Sektor fest (auch nach vielen Sprüngen und nach dem
+## Laden); Gekauftes ist weg, Perks, die schon an Bord sind, verschwinden aus allen Angeboten.
 func shop_goods() -> Dictionary:
 	var stock := _stock()
 	_stock_extras(stock)
+	stock.perks = (stock.perks as Array).filter(func(id: String) -> bool: return not ship.has_perk(id))
 	return stock
 
 

@@ -1801,3 +1801,43 @@ func test_crew_has_gender_and_look() -> void:
 			check(ResourceLoader.exists(CrewArt.SHEET % ("%s_%s%d" % [id, m.gender, m.look])), "Grafik fehlt für %s" % n)
 			seen["%s_%s" % [id, m.gender]] = true
 	check(seen.size() == Species.ids().size() * 2, "Nicht jede Spezies hat Frauen und Männer")
+
+
+func test_shop_goods_stay_the_same_on_revisits() -> void:
+	_save_paths()
+	var run := RunState.new(21, RunState.MODE_ENDLESS)  # ohne Jägerfront, die den Rückweg besetzen würde
+	var shop := -1
+	for n in run.map.nodes:
+		if n.type == "haendler":
+			shop = n.id
+	var home := run.current
+	run.map.node(home).links.append(shop)
+	run.map.node(shop).links.append(home)
+	run.fuel = 20
+	run.scrap = 500
+	check(run.jump_to(shop) and run.is_shop_open(), "Händler öffnet nicht")
+	var first := run.shop_goods().duplicate(true)
+	run.shop_buy_weapon(0)
+	var after_buy := run.shop_goods().duplicate(true)
+	run.close_shop()
+	for i in 3:  # weg und wieder hin, mehrmals
+		run.jump_to(home)
+		run.close_shop()
+		run.jump_to(shop)
+		check(run.is_shop_open(), "Händler beim Wiederbesuch zu")
+		check(run.shop_goods().weapons == after_buy.weapons and run.shop_goods().perks == after_buy.perks \
+			and run.shop_goods().crew == after_buy.crew, "Waren ändern sich beim Wiederbesuch")
+		run.close_shop()
+	check(after_buy.weapons.size() == first.weapons.size() - 1, "Gekaufte Waffe nicht weg")
+	SaveGame.save(run)
+	var loaded := SaveGame.load_run(RunState.MODE_ENDLESS)
+	check(loaded != null and loaded._stock().weapons == after_buy.weapons, "Waren nach dem Laden anders")
+	SaveGame.clear(RunState.MODE_ENDLESS)
+	# Perk woanders gekauft: verschwindet aus diesem Angebot
+	run.jump_to(shop)
+	var perk: String = run.shop_goods().perks[0]
+	run.ship.perks.append(perk)
+	check(not run.shop_goods().perks.has(perk), "Perk an Bord noch im Angebot")
+	run.close_shop()
+	run.next_sector()
+	check(run.shop_stock.is_empty(), "Neuer Sektor behält alte Waren")
