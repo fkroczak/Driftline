@@ -580,4 +580,4 @@ SOUNDS = {
 }
 
 # Welche Variante ins Spiel kommt (Index in der Variantenliste). Nicht genannt = erste.
-CHOICE = {}
+CHOICE = {"laser_pulse": 2, "laser_heavy": 1, "cannon": 1, "hit_hull": 2}
