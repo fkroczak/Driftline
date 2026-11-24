@@ -1,6 +1,9 @@
 {
-  "_doc": "Waffenwerte. power: Energiebalken, charge: Ladezeit in s, shots: Schüsse je Salve, damage: Hüllenschaden je Schuss. Chancen je Treffer (0..1): system = System im Raum verliert Balken (sonst nur Hülle), fire = Feuer, breach = Hüllenbruch.",
-  "pulslaser": {"name": "Pulslaser", "power": 1, "charge": 8.0, "shots": 2, "damage": 1, "system": 0.3, "fire": 0.1, "breach": 0.05},
-  "schwerer_laser": {"name": "Schwerlaser", "power": 2, "charge": 11.0, "shots": 1, "damage": 2, "system": 0.7, "fire": 0.3, "breach": 0.15},
-  "bordkanone": {"name": "Bordkanone", "power": 1, "charge": 10.0, "shots": 1, "damage": 1, "system": 0.4, "fire": 0.15, "breach": 0.1}
+  "_doc": "Waffenwerte. power: Energiebalken, charge: Ladezeit in s, shots: Schüsse je Salve, damage: Hüllenschaden je Schuss. Chancen je Treffer (0..1): system = System im Raum verliert Balken (sonst nur Hülle), fire = Feuer, breach = Hüllenbruch. price: Kaufpreis beim Händler in Rohstoffen (Verkauf: sell_factor aus data/upgrades.json). shop: false = nie im Angebot.",
+  "pulslaser": {"name": "Pulslaser", "power": 1, "charge": 8.0, "shots": 2, "damage": 1, "system": 0.3, "fire": 0.1, "breach": 0.05, "price": 30},
+  "schwerer_laser": {"name": "Schwerlaser", "power": 2, "charge": 11.0, "shots": 1, "damage": 2, "system": 0.7, "fire": 0.3, "breach": 0.15, "price": 45},
+  "bordkanone": {"name": "Bordkanone", "power": 1, "charge": 10.0, "shots": 1, "damage": 1, "system": 0.4, "fire": 0.15, "breach": 0.1, "price": 25},
+  "salvenlaser": {"name": "Salvenlaser", "power": 2, "charge": 12.0, "shots": 3, "damage": 1, "system": 0.3, "fire": 0.1, "breach": 0.05, "price": 55},
+  "brandkanone": {"name": "Brandkanone", "power": 1, "charge": 12.0, "shots": 1, "damage": 1, "system": 0.3, "fire": 0.6, "breach": 0.05, "price": 35},
+  "schwere_kanone": {"name": "Schwere Kanone", "power": 3, "charge": 16.0, "shots": 1, "damage": 3, "system": 0.8, "fire": 0.2, "breach": 0.3, "price": 70}
 }

@@ -21,8 +21,9 @@ extends RefCounted
 ##
 ## Bei Formatänderungen: VERSION erhöhen und in `_migrate` einen Schritt ergänzen.
 ## Version 2: Modus, Sektor, Sprungzähler, Jägerfront, freie Karte mit Verbindungen in beide Richtungen.
+## Version 3: Schiffsausbau (Perks, Waffenlager) und Händlerwaren; ältere Stände bekommen leere Listen.
 
-const VERSION := 2
+const VERSION := 3
 const PATH := "user://savegame.json"
 const BACKUP := "user://savegame.bak.json"
 const TEMP := "user://savegame.tmp"
@@ -131,6 +132,7 @@ static func _migrate(data: Dictionary) -> Dictionary:
 		for c: Dictionary in data.get("ship", {}).get("crew", []):
 			if c.get("name", "") == "Mara Voss":
 				c["role"] = CrewMember.ROLE_CAPTAIN
+	# v2 -> v3: nichts umzurechnen; perks, stored_weapons und shop_stock fehlen und starten leer.
 	data.version = VERSION
 	data["run"] = r
 	return data
@@ -167,6 +169,7 @@ static func to_dict(run: RunState) -> Dictionary:
 			"ctx": run._ctx,
 			"shop_note": run._shop_note,
 			"last_reward": run.last_reward,
+			"shop_stock": run.shop_stock,
 			"rng": run._rng.state,
 		},
 		"ship": _ship_to_dict(run.ship),
@@ -206,6 +209,12 @@ static func from_dict(data: Dictionary, mode := RunState.MODE_HUNT) -> RunState:
 	run._ctx = r.get("ctx", {})
 	run._shop_note = r.get("shop_note", "")
 	run.last_reward = r.get("last_reward", "")
+	run.shop_stock = {}
+	var stock: Dictionary = r.get("shop_stock", {})
+	for key: Variant in stock:
+		var entry: Dictionary = stock[key]
+		var weapons: Array = (entry.get("weapons", []) as Array).filter(func(id: Variant) -> bool: return Weapon.known(str(id)))
+		run.shop_stock[int(key)] = {"weapons": weapons, "crew": entry.get("crew", [])}
 	if r.has("rng"):
 		run._rng.state = int(r.rng)
 	if run.dialog.is_empty() != run._ctx.is_empty():
@@ -235,6 +244,8 @@ static func _ship_to_dict(ship: ShipState) -> Dictionary:
 		"max_hull": ship.max_hull,
 		"systems": systems,
 		"weapons": weapons,
+		"stored_weapons": ship.stored_weapons,
+		"perks": ship.perks,
 		"crew": crew,
 		"shield_layers": ship.shield_layers,
 		"shield_progress": ship.shield_progress,
@@ -273,6 +284,14 @@ static func _ship_from_dict(ship: ShipState, s: Dictionary) -> void:
 			var w := Weapon.create(d.id)
 			w.wanted = bool(d.get("wanted", false))
 			ship.weapons.append(w)
+	ship.stored_weapons.clear()
+	for id: Variant in s.get("stored_weapons", []):
+		if Weapon.known(str(id)) and ship.stored_weapons.size() < Upgrades.weapon_storage():
+			ship.stored_weapons.append(str(id))
+	ship.perks.clear()
+	for id: Variant in s.get("perks", []):
+		if not Upgrades.perk(str(id)).is_empty() and not ship.perks.has(str(id)):
+			ship.perks.append(str(id))
 	if s.has("crew"):
 		ship.crew.clear()
 		for d: Dictionary in s.crew:

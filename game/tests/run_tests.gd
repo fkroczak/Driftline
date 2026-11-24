@@ -1325,3 +1325,144 @@ func test_run_dialogs_follow_language() -> void:
 	check(run.dialog.choices.back().text == "Undock", "Ablegen nicht übersetzt")
 	Loc.set_language("de")
 
+
+
+# --- Schiffsausbau ---
+
+
+func test_system_upgrade_costs_and_limits() -> void:
+	var run := RunState.new(5)
+	run.scrap = 1000
+	var shields := run.ship.get_system("schilde")
+	var first := run.system_upgrade_price("schilde")
+	check(first == 25, "Erster Schildbalken kostet nicht 25, sondern %d" % first)
+	check(run.upgrade_system("schilde") and shields.capacity == 3 and run.scrap == 975, "Schildausbau klappt nicht")
+	check(run.system_upgrade_price("schilde") == 35, "Zweiter Balken kostet nicht base + step")
+	while run.upgrade_system("schilde"):
+		pass
+	check(shields.capacity == 8 and run.system_upgrade_price("schilde") == -1, "Schilde gehen über das Maximum")
+	check(run.system_upgrade_price("sensoren") == -1, "Sensoren sind ausbaubar, obwohl sie nichts tun")
+	var free := run.ship.power_free()
+	check(run.upgrade_system("reaktor") and run.ship.power_free() == free + 1, "Reaktorausbau bringt keine Energie")
+	run.scrap = 0
+	check(not run.upgrade_system("antrieb"), "Ausbau ohne Rohstoffe möglich")
+
+
+func test_no_refit_in_combat() -> void:
+	var run := RunState.new(5)
+	run.scrap = 1000
+	var enemy := run.create_enemy(run.node().links[0])
+	var _battle := Battle.new(run.ship, enemy)
+	check(not run.can_refit() and not run.upgrade_system("antrieb") and not run.buy_perk("panzerung"), "Ausbau im Kampf möglich")
+	run.ship.end_combat()
+	check(run.upgrade_system("antrieb"), "Ausbau nach dem Kampf nicht möglich")
+
+
+func test_perks() -> void:
+	var run := RunState.new(5)
+	run.scrap = 1000
+	var hull := run.ship.max_hull
+	check(run.buy_perk("panzerung") and run.ship.max_hull == hull + 6 and run.ship.hull == hull + 6, "Panzerung erhöht die Hülle nicht")
+	check(not run.buy_perk("panzerung"), "Perk zweimal kaufbar")
+	check(run.buy_perk("zielcomputer") and is_equal_approx(run.ship.perk_value("weapon_speed"), 0.15), "Zielcomputer wirkt nicht")
+	check(run.buy_perk("brandschutz") and is_equal_approx(run.ship.fire_factor(), 0.5), "Brandschutz wirkt nicht")
+	# Reparaturdrohne: Schaden ohne Crew im Raum wird langsam behoben
+	var drone := RunState.new(5)
+	drone.scrap = 100
+	var sys := drone.ship.get_system("medbay")
+	sys.damage = 1
+	for i in 100:
+		drone.ship.update(0.1)
+	check(sys.damage == 1, "Ohne Drohne repariert sich die Medbay selbst")
+	check(drone.buy_perk("reparaturdrohne"), "Drohne nicht kaufbar")
+	for i in 200:
+		drone.ship.update(0.1)
+	check(sys.damage == 0, "Drohne repariert die Medbay nicht")
+
+
+func test_salvage_and_fuel_recycler() -> void:
+	var run := RunState.new(5)
+	run.scrap = 1000
+	run.buy_perk("bergungsgreifer")
+	var loot := run._roll_loot({"scrap": [20, 20]})
+	check(loot.scrap == 25, "Bergungsgreifer bringt nicht +25 %%: %d" % loot.scrap)
+	run.buy_perk("treibstoffrecycler")
+	run.fuel = 100
+	var free := 0
+	for i in 200:
+		var before := run.fuel
+		run._pay_jump()
+		if run.fuel == before:
+			free += 1
+	check(free > 25 and free < 80, "Treibstoffrecycler spart nicht etwa jeden 4. Sprung: %d von 200" % free)
+
+
+func test_weapon_slots_and_storage() -> void:
+	var ship := RunState.create_player_ship()
+	check(ship.weapon_slots() == 3, "Frachter hat nicht 3 Waffenplätze")
+	check(ship.add_weapon("bordkanone") and ship.weapons.size() == 3, "Freier Platz wird nicht genutzt")
+	check(ship.add_weapon("brandkanone") and ship.stored_weapons == ["brandkanone"], "Volle Plätze: Waffe nicht im Lager")
+	check(ship.add_weapon("salvenlaser") and not ship.add_weapon("pulslaser"), "Lager hat nicht 2 Plätze")
+	check(not ship.install_weapon(0), "Einbau ohne freien Platz möglich")
+	check(ship.store_weapon(0) == false, "Lager voll, trotzdem ausgebaut")
+	ship.remove_weapon_at(4)  # Salvenlaser aus dem Lager
+	check(ship.store_weapon(0) and ship.weapons.size() == 2 and ship.stored_weapons.size() == 2, "Ausbau ins Lager klappt nicht")
+	check(ship.install_weapon(0) and ship.weapons.back().id == "brandkanone", "Einbau aus dem Lager klappt nicht")
+
+
+func test_shop_weapons_and_crew() -> void:
+	var run := RunState.new(12)
+	run.scrap = 500
+	run._open_shop()
+	var main_count: int = run.dialog.choices.size()
+	check(main_count == 6, "Händler-Hauptseite hat nicht 6 Optionen: %d" % main_count)
+	check(run.choose(3) and run._ctx.page == "weapons", "Waffenseite öffnet nicht")
+	var stock: Array = run._stock().weapons
+	check(stock.size() == 2, "Nicht 2 Waffen im Angebot")
+	var id: String = stock[0]
+	var before := run.scrap
+	check(run.choose(0) and run.scrap == before - Weapon.price_of(id) and run.ship.all_weapon_ids().has(id), "Waffenkauf klappt nicht")
+	check(run._stock().weapons.size() == 1, "Gekaufte Waffe bleibt im Angebot")
+	# Verkaufen: erste eigene Waffe steht nach dem restlichen Angebot
+	var owned := run.ship.all_weapon_ids()
+	before = run.scrap
+	check(run.choose(1) and run.scrap == before + run.sell_price(owned[0]), "Verkauf bringt nicht den halben Preis")
+	check(run.ship.all_weapon_ids().size() == owned.size() - 1, "Verkaufte Waffe noch an Bord")
+	check(run.choose(run.dialog.choices.size() - 1) and run._ctx.page == "main", "Zurück führt nicht zur Hauptseite")
+	check(run.choose(4) and run._ctx.page == "crew", "Crew-Seite öffnet nicht")
+	var crew_before := run.ship.crew.size()
+	var hire: Dictionary = run._stock().crew[0]
+	check(run.choose(0) and run.ship.crew.size() == crew_before + 1, "Anheuern klappt nicht")
+	check(run.ship.crew.back().display_name == hire.name and run.ship.crew.back().species == hire.species, "Falsche Person an Bord")
+	check(run.choose(run.dialog.choices.size() - 1) and run.choose(run.dialog.choices.size() - 1) and run.dialog.is_empty(), "Ablegen klappt nicht")
+
+
+func test_last_weapon_cannot_be_sold() -> void:
+	var run := RunState.new(12)
+	run.ship.remove_weapon_at(0)
+	run._open_shop("weapons")
+	var stock: int = run._stock().weapons.size()
+	check(not run.dialog.choices[stock].enabled, "Letzte Waffe verkaufbar")
+
+
+func test_save_keeps_refit() -> void:
+	_save_paths()
+	var run := RunState.new(31)
+	run.scrap = 500
+	run.upgrade_system("schilde")
+	run.upgrade_system("reaktor")
+	run.buy_perk("panzerung")
+	run.ship.add_weapon("bordkanone")
+	run.ship.add_weapon("brandkanone")
+	run._open_shop("weapons")
+	run.choose(0)
+	SaveGame.save(run)
+	var loaded := SaveGame.load_run()
+	check(loaded != null, "Stand lädt nicht")
+	if loaded == null:
+		return
+	check(loaded.ship.get_system("schilde").capacity == 3 and loaded.ship.get_system("reaktor").capacity == 8, "Ausbau verloren")
+	check(loaded.ship.perks == ["panzerung"] and loaded.ship.max_hull == run.ship.max_hull, "Perk verloren")
+	check(loaded.ship.all_weapon_ids() == run.ship.all_weapon_ids(), "Waffen oder Lager verloren")
+	check(loaded._stock().weapons == run._stock().weapons, "Händlerwaren verloren")
+	SaveGame.clear()

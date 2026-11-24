@@ -1,0 +1,24 @@
+{
+  "_doc": "Schiffsausbau (Knopf SCHIFF, nur außerhalb des Kampfs) und Händlerwaren. systems: je System max = höchste Stufe, Preis für den nächsten Balken = base + step × bisher gekaufte Balken. perks: einmalige Module; Wirkung über die Schlüssel hull (Hülle +n), weapon_speed (Waffen laden schneller, 0.15 = 15 %), evasion (Ausweichen +), drone_repair (Reparatur ohne Crew in Personen je System), fire_factor (Feuer wächst und breitet sich mit diesem Faktor aus), loot_bonus (Rohstoffe nach Siegen +), free_jump (Chance, dass ein Sprung keinen Treibstoff kostet). weapon_storage: Plätze im Waffenlager. sell_factor: Anteil des Kaufpreises beim Verkauf. shop_weapons: Waffen im Angebot je Händler. crew: Preis je Spezies beim Anheuern, offers = Angebote je Händler.",
+  "systems": {
+    "reaktor": {"max": 12, "base": 12, "step": 4},
+    "schilde": {"max": 8, "base": 25, "step": 10},
+    "waffen": {"max": 6, "base": 20, "step": 8},
+    "antrieb": {"max": 5, "base": 15, "step": 8},
+    "medbay": {"max": 3, "base": 15, "step": 10},
+    "lebenserhaltung": {"max": 3, "base": 15, "step": 10}
+  },
+  "perks": {
+    "panzerung": {"name": "Verstärkte Panzerung", "text": "Hülle +6, als Maximum und sofort", "price": 30, "hull": 6},
+    "zielcomputer": {"name": "Zielcomputer", "text": "Alle Waffen laden 15 % schneller", "price": 35, "weapon_speed": 0.15},
+    "ausweichduesen": {"name": "Ausweichdüsen", "text": "+5 % Ausweichen (mit Pilot und Antrieb)", "price": 30, "evasion": 0.05},
+    "reparaturdrohne": {"name": "Reparaturdrohne", "text": "Repariert Systeme langsam auch ohne Crew", "price": 40, "drone_repair": 0.25},
+    "brandschutz": {"name": "Brandschutzanlage", "text": "Feuer wächst und breitet sich halb so schnell aus", "price": 25, "fire_factor": 0.5},
+    "bergungsgreifer": {"name": "Bergungsgreifer", "text": "+25 % Rohstoffe nach jedem Sieg", "price": 30, "loot_bonus": 0.25},
+    "treibstoffrecycler": {"name": "Treibstoffrecycler", "text": "Jeder Sprung kostet mit 25 % Chance keinen Treibstoff", "price": 35, "free_jump": 0.25}
+  },
+  "weapon_storage": 2,
+  "sell_factor": 0.5,
+  "shop_weapons": 2,
+  "crew": {"offers": 2, "price": {"mensch": 20, "kithra": 25, "androide": 30, "veyari": 25, "ormok": 25, "petrani": 30}}
+}
