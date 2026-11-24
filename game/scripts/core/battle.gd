@@ -246,7 +246,10 @@ func _enemy_crew() -> void:
 	# Die Person an der unwichtigsten Konsole (letzte im Crew-Array) repariert.
 	if enemy.crew.is_empty():
 		return
-	if enemy_fleeing:
+	# Auf der Flucht muss jemand ins Cockpit. Ist nur noch eine Person übrig, repariert
+	# sie zuerst und steuert danach; sonst würden sich beide Befehle jeden Tick
+	# gegenseitig überschreiben und sie pendelt im Cockpit hin und her.
+	if enemy_fleeing and (enemy.crew.size() > 1 or damaged < 0):
 		_enemy_pilot()
 	var engineer: CrewMember = enemy.crew.back()
 	if engineer.is_moving():

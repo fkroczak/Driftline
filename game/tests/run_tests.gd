@@ -407,6 +407,25 @@ func test_enemy_crew_repairs() -> void:
 	check(battle.enemy.get_system("antrieb").damage == 0, "Gegner-Crew repariert nicht")
 
 
+func test_lone_fleeing_enemy_repairs() -> void:
+	# Nur noch ein Crewmitglied auf der Flucht: erst reparieren, nicht im Cockpit pendeln.
+	var battle := _flee_battle()
+	battle.enemy_fleeing = true
+	battle._flee_decided = true
+	while battle.enemy.crew.size() > 1:
+		battle.enemy.crew.pop_back()
+	for w in battle.player.weapons:
+		w.powered = false
+	var waffen := battle.enemy.layout.room_index_by_id("waffen")
+	battle.enemy.take_hit(waffen, 1)
+	battle.enemy.hull = 1
+	for i in 300:
+		battle.update(0.1)
+		if battle.outcome != "":
+			break
+	check(battle.enemy.get_system("waffen").damage == 0, "Einzelner Gegner repariert auf der Flucht nicht")
+
+
 # --- Waffenziele, Sauerstoff, Feuer, Crew-Gesundheit, Türen ---
 
 func _quiet_state() -> ShipState:
