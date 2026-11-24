@@ -90,8 +90,8 @@ func _draw() -> void:
 	_draw_scene(art, data.get("scene", ""))
 	var tx := art.end.x + PAD
 	var text_w := panel.end.x - PAD - tx
-	draw_string(font, Vector2(tx, panel.position.y + PAD + 8.0), data.get("title", ""), HORIZONTAL_ALIGNMENT_LEFT, text_w, FONT_SIZE + 1, COLOR_TITLE)
-	draw_multiline_string(font, Vector2(tx, panel.position.y + PAD + LINE + 12.0), data.get("text", ""),
+	draw_string(font, Vector2(tx, panel.position.y + PAD + 8.0), Loc.t(data.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, text_w, FONT_SIZE + 1, COLOR_TITLE)
+	draw_multiline_string(font, Vector2(tx, panel.position.y + PAD + LINE + 12.0), Loc.t(data.get("text", "")),
 		HORIZONTAL_ALIGNMENT_LEFT, text_w, FONT_SIZE, -1, COLOR_TEXT)
 	_choice_rects.clear()
 	var choices: Array = data.get("choices", [])
@@ -107,7 +107,7 @@ func _draw() -> void:
 			color = COLOR_OFF
 		draw_rect(rect, Color(COLOR_SPECIAL, 0.12) if c.special and c.enabled else COLOR_CHOICE)
 		draw_rect(rect.grow(-0.5), edge, false, 1.0)
-		draw_string(font, rect.position + Vector2(6, 12), "%d. %s" % [i + 1, c.text], HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 10.0, FONT_SIZE, color)
+		draw_string(font, rect.position + Vector2(6, 12), "%d. %s" % [i + 1, Loc.t(c.text)], HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 10.0, FONT_SIZE, color)
 		y += CHOICE_H + CHOICE_GAP
 
 

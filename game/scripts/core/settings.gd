@@ -9,6 +9,7 @@ extends RefCounted
 ## - shake: Bildschirm wackelt bei Treffern.
 ## - fullscreen: nur am Computer.
 ## - muted: Ton aus (Sfx liest und schreibt ihn hier mit).
+## - language: "de", "en" oder leer (= Systemsprache), siehe Loc.
 
 const PATH := "user://settings.json"
 const DEFAULTS := {
@@ -18,6 +19,7 @@ const DEFAULTS := {
 	"shake": true,
 	"fullscreen": false,
 	"muted": false,
+	"language": "",
 }
 
 static var _data: Dictionary = {}
@@ -60,6 +62,7 @@ static func has_fullscreen() -> bool:
 ## Wendet Darstellung und Fenstermodus an (beim Start und nach jeder Änderung).
 static func apply() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
+	Loc.set_language(str(get_value("language")))
 	if tree == null or tree.root == null:
 		return
 	var sfx := tree.root.get_node_or_null("Sfx")

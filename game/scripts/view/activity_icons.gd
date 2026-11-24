@@ -9,7 +9,7 @@ const ICONS := {
 	"heilen": {"color": Color("#97C459"), "rows": ["..X..", "..X..", "XXXXX", "..X..", "..X.."]},
 }
 const NAMES := {
-	"reparieren": "repariert", "flicken": "flickt Leck", "loeschen": "löscht", "heilen": "wird geheilt",
+	"reparieren": "repariert", "flicken": "flickt Leck", "loeschen": "löscht", "heilen": "wird geheilt",  # i18n
 }
 
 

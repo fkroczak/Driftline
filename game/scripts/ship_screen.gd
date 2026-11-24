@@ -28,7 +28,6 @@ const WIDE_SCREEN := 440.0
 const WARP_OUT := 0.9
 const WARP_IN := 1.0
 const VICTORY_BANNER := 2.6
-const SECTOR_DELAY := 3.0
 const MAP_JUMP_TIME := 0.6
 
 var run: RunState
@@ -54,6 +53,8 @@ var _auto_paused := false
 var _weapons_ready: Array[bool] = []
 var _jump_was_ready := false
 var _hull_alarm_at := -100.0
+## Banner „Sektor geschafft“ nur einmal je Ausgang (nicht nach jedem Dialog dort).
+var _cleared_announced := false
 ## Sound je Waffe (Spieler: so wie es ist, Gegner: tiefer und leiser).
 const WEAPON_SOUNDS := {"pulslaser": "laser_pulse", "schwerer_laser": "laser_heavy", "bordkanone": "cannon"}
 const HULL_ALARM := 0.3
@@ -198,14 +199,14 @@ func _quit_to_title() -> void:
 func _discover() -> void:
 	var fresh: Array[String] = []
 	if Codex.discover(Codex.KIND_SHIP, state.layout.id):
-		fresh.append(state.layout.display_name)
+		fresh.append(Loc.t(state.layout.display_name))
 	for member in state.crew:
 		if Codex.discover(Codex.KIND_SPECIES, member.species):
 			fresh.append(Species.display_name(member.species))
 	if enemy and Codex.discover(Codex.KIND_SHIP, enemy.layout.id):
-		fresh.append(enemy.layout.display_name)
+		fresh.append(Loc.t(enemy.layout.display_name))
 	if not fresh.is_empty():
-		_show_hint("Neu im Lexikon: " + ", ".join(fresh), 3.0)
+		_show_hint(Loc.t("Neu im Lexikon: ") + ", ".join(fresh), 3.0)
 
 
 func _tutorial_done(id: String) -> bool:
@@ -262,15 +263,6 @@ func _enter_node() -> void:
 	if run.result != "":
 		_show_run_over()
 		return
-	if run.sector_cleared:
-		_phase = "ruhe"
-		var text := "Flaggschiff vernichtet – Sektor %d geschafft" % run.sector
-		if run.last_reward != "":
-			text += "\nBeute: " + run.last_reward
-		_show_banner_text(text + "\nSprung ins nächste Universum …", SECTOR_DELAY)
-		Sfx.play("sector_clear")
-		get_tree().create_timer(SECTOR_DELAY).timeout.connect(_sector_jump)
-		return
 	if not run.dialog.is_empty():
 		_phase = "ruhe"
 		dialog.show_dialog(run.dialog)
@@ -279,9 +271,23 @@ func _enter_node() -> void:
 	if run.needs_battle():
 		_start_battle()
 		return
+	if run.sector_cleared:
+		# Sektor geschafft (Boss besiegt bzw. Ausgang erreicht): Man bleibt hier, bis man selbst
+		# mit SPRUNG in den nächsten Sektor springt. Erst dann kommt die neue Karte.
+		_phase = "ruhe"
+		if _cleared_announced:
+			return
+		_cleared_announced = true
+		var text := Loc.t("Flaggschiff vernichtet – Sektor %d geschafft") % run.sector if run.is_hunt() \
+			else Loc.t("Ausgang erreicht – Sektor %d geschafft") % run.sector
+		if run.last_reward != "" and run.is_hunt():
+			text += "\n" + Loc.t("Beute: ") + run.last_reward
+		_show_banner_text(text + "\n" + Loc.t("SPRUNG führt in den nächsten Sektor"), VICTORY_BANNER)
+		Sfx.play("sector_clear")
+		return
 	_phase = "ruhe"
 	if run.jumps_done() == 0:
-		_show_hint("Sektor %d · Antrieb lädt · dann SPRUNG antippen und Ziel wählen" % run.sector, 4.0)
+		_show_hint(Loc.t("Sektor %d · Antrieb lädt · dann SPRUNG antippen und Ziel wählen") % run.sector, 4.0)
 
 
 func _start_battle() -> void:
@@ -298,14 +304,14 @@ func _start_battle() -> void:
 	enemy_view.visible = true
 	_layout()
 	_discover()
-	var who := enemy.layout.display_name
+	var who := Loc.t(enemy.layout.display_name)
 	_weapons_ready.clear()
 	Sfx.play("warp_in", -3.0, 0.85)
 	if run.hunter_battle:
 		Sfx.play("alarm")
-		_show_hint("Die Jäger haben euch eingeholt: %s!" % who, 3.0)
+		_show_hint(Loc.t("Die Jäger haben euch eingeholt: %s!") % who, 3.0)
 	else:
-		_show_hint("Feindkontakt: %s" % who, 3.0)
+		_show_hint(Loc.t("Feindkontakt: %s") % who, 3.0)
 	# Gegner springt herein: Blase fällt zusammen, Schiff gleitet von rechts an seinen Platz
 	enemy_view.position = _enemy_base + Vector2(220, 0)
 	effects.warp_bubble(enemy_view, enemy_view.shield_ellipse()[0], enemy_view.shield_ellipse()[1], WARP_IN, false)
@@ -331,16 +337,19 @@ func _on_jump_requested() -> void:
 	if _phase in ["warp", "ende"]:
 		return
 	var why := jump_button.reason()
+	if why == "" and run.can_leave_sector():
+		_sector_jump()
+		return
 	if why != "" and why != "kein Treibstoff":
 		jump_button.deny()
 		Sfx.play("ui_deny")
 		match why:
 			"Pilot?":
-				_show_hint("Sprung: Jemand muss ins Cockpit")
+				_show_hint(Loc.t("Sprung: Jemand muss ins Cockpit"))
 			"Antrieb?":
-				_show_hint("Sprung: Der Antrieb braucht Energie")
+				_show_hint(Loc.t("Sprung: Der Antrieb braucht Energie"))
 			_:
-				_show_hint("Sprungantrieb lädt noch (%s)" % why)
+				_show_hint(Loc.t("Sprungantrieb lädt noch (%s)") % why)
 		return
 	_open_map()
 
@@ -364,19 +373,21 @@ func _close_map() -> void:
 
 func _map_hint() -> String:
 	if run.can_send_distress():
-		return "Kein Treibstoff mehr: Notsignal senden und hoffen, dass Freunde antworten"
+		return Loc.t("Kein Treibstoff mehr: Notsignal senden und hoffen, dass Freunde antworten")
+	if run.sector_cleared:
+		return Loc.t("Sektor geschafft: SPRUNG führt in den nächsten Sektor · ZURÜCK zum Schiff")
 	if not state.jump_ready():
 		match jump_button.reason():
 			"Pilot?":
-				return "Cockpit nicht besetzt: Karte nur ansehen · ZURÜCK zum Schiff"
+				return Loc.t("Cockpit nicht besetzt: Karte nur ansehen · ZURÜCK zum Schiff")
 			"Antrieb?":
-				return "Antrieb ohne Energie: Karte nur ansehen · ZURÜCK zum Schiff"
-		return "Antrieb lädt noch: Karte nur ansehen · ZURÜCK zum Schiff"
+				return Loc.t("Antrieb ohne Energie: Karte nur ansehen · ZURÜCK zum Schiff")
+		return Loc.t("Antrieb lädt noch: Karte nur ansehen · ZURÜCK zum Schiff")
 	if _phase == "kampf":
-		return "Flucht: Ziel antippen, nochmal antippen springt"
+		return Loc.t("Flucht: Ziel antippen, nochmal antippen springt")
 	if run.is_hunt() and run.jumps_done() == 0:
-		return "Gelbes Ziel antippen, nochmal antippen springt · Boss am Ausgang rechts · Jäger von links"
-	return "Gelbes Ziel antippen, nochmal antippen springt"
+		return Loc.t("Gelbes Ziel antippen, nochmal antippen springt · Boss am Ausgang rechts · Jäger von links")
+	return Loc.t("Gelbes Ziel antippen, nochmal antippen springt")
 
 
 func _on_map_node(id: int) -> void:
@@ -384,24 +395,26 @@ func _on_map_node(id: int) -> void:
 	if not can:
 		Sfx.play("ui_deny" if id != run.current else "ui_click")
 		map_view.selected = id if run.node().links.has(id) else -1
-		if id == run.current:
-			map_view.hint = "Hier ist das Schiff gerade"
+		if run.sector_cleared:
+			map_view.hint = _map_hint()
+		elif id == run.current:
+			map_view.hint = Loc.t("Hier ist das Schiff gerade")
 		elif not run.node().links.has(id):
-			map_view.hint = "Zu weit weg: nur direkt verbundene Ziele"
+			map_view.hint = Loc.t("Zu weit weg: nur direkt verbundene Ziele")
 		elif not state.jump_ready():
 			match jump_button.reason():
 				"Pilot?":
-					map_view.hint = "Sprung: Jemand muss ins Cockpit"
+					map_view.hint = Loc.t("Sprung: Jemand muss ins Cockpit")
 				"Antrieb?":
-					map_view.hint = "Sprung: Der Antrieb braucht Energie"
+					map_view.hint = Loc.t("Sprung: Der Antrieb braucht Energie")
 				_:
-					map_view.hint = "Antrieb lädt noch (%d %%)" % floori(state.jump_charge * 100.0)
+					map_view.hint = Loc.t("Antrieb lädt noch (%d %%)") % floori(state.jump_charge * 100.0)
 		elif run.fuel < run.jump_cost():
-			map_view.hint = "Kein Treibstoff für den Sprung: Notsignal senden"
+			map_view.hint = Loc.t("Kein Treibstoff für den Sprung: Notsignal senden")
 		return
 	if map_view.selected != id:
 		map_view.selected = id
-		map_view.hint = "Nochmal antippen: springen" + (" · Achtung, Jäger!" if run.is_overrun(id) else "")
+		map_view.hint = Loc.t("Nochmal antippen: springen") + (Loc.t(" · Achtung, Jäger!") if run.is_overrun(id) else "")
 		Sfx.play("map_select")
 		return
 	_jump(id)
@@ -419,18 +432,11 @@ func _jump(id: int) -> void:
 		battle.player_jump()
 		battle.take_events()
 		run.finish_battle("entkommen")
-	var sector := run.sector
 	run.jump_to(id)
 	Game.save()
-	if run.sector != sector:
-		# Ausgang (Endlos): Die neue Karte gilt schon, direkt in den nächsten Sektor springen
-		_close_map()
-		_warp_out(_arrive)
-		_show_hint("Ausgang erreicht · Sektor %d" % run.sector, 4.0)
-		return
 	map_view.ship_from = from
 	map_view.ship_to = id
-	map_view.hint = "Sprung …"
+	map_view.hint = Loc.t("Sprung …")
 	Sfx.play("map_travel")
 	var tween := create_tween()
 	tween.tween_method(map_view.set_ship_t, 0.0, 1.0, MAP_JUMP_TIME)
@@ -447,15 +453,16 @@ func _arrive() -> void:
 
 
 func _sector_jump() -> void:
-	if not run.sector_cleared:
+	if not run.can_leave_sector():
 		return
 	_phase = "warp"
 	Game.can_save = false
+	_cleared_announced = false
 	_warp_out(func() -> void:
-		run.next_sector()
+		run.leave_sector()
 		Game.save()
 		_arrive()
-		_show_hint("Sektor %d · neue Karte, die Jäger beginnen von vorn" % run.sector if run.is_hunt() else "Sektor %d" % run.sector, 4.0))
+		_show_hint(Loc.t("Sektor %d · neue Karte, die Jäger beginnen von vorn") % run.sector if run.is_hunt() else Loc.t("Sektor %d") % run.sector, 4.0))
 
 
 ## Abflug: Blase baut sich auf, Schiff leuchtet, schießt nach rechts davon, Sterne werden zu Streifen.
@@ -541,7 +548,7 @@ func _toggle_auto_pause() -> void:
 	if not pause_button.auto_pause and _auto_paused:
 		_auto_paused = false
 		_apply_pause()
-	_show_hint("Auto-Pause " + ("an: Kampf hält beim Auswählen von Crew oder Waffe an" if pause_button.auto_pause else "aus"))
+	_show_hint(Loc.t("Auto-Pause ") + (Loc.t("an: Kampf hält beim Auswählen von Crew oder Waffe an") if pause_button.auto_pause else Loc.t("aus")))
 
 
 ## Auto-Pause (nur im Kampf): Auswahl einer Figur oder Waffe hält an, Befehl oder Abwählen läuft weiter.
@@ -565,7 +572,7 @@ func _apply_pause() -> void:
 	pause_button.paused = paused
 	pause_overlay.visible = paused
 	pause_label.visible = paused
-	pause_label.text = "PAUSE" if _manual_pause else "AUTO-PAUSE"
+	pause_label.text = Loc.t("PAUSE") if _manual_pause else Loc.t("AUTO-PAUSE")
 	effects.set_process(not paused)
 	starfield.set_process(not paused)
 
@@ -705,12 +712,12 @@ func _on_battle_event(e: Dictionary) -> void:
 			Sfx.play("fire_start", _side_db(e.own_ship))
 			effects.explosion(pos, 0.3)
 			if e.own_ship:
-				effects.float_text(pos + Vector2(0, -6), "FEUER", Color("#EF9F27"))
+				effects.float_text(pos + Vector2(0, -6), Loc.t("FEUER"), Color("#EF9F27"))
 		"breach":
 			var pos := _tile_pos(e)
 			Sfx.play("breach", _side_db(e.own_ship))
 			if e.own_ship:
-				effects.float_text(pos + Vector2(0, -10), "HÜLLENBRUCH", Color("#85B7EB"))
+				effects.float_text(pos + Vector2(0, -10), Loc.t("HÜLLENBRUCH"), Color("#85B7EB"))
 		"extinguished":
 			var pos := _tile_pos(e)
 			Sfx.play("extinguish", _side_db(e.own_ship) - 2.0)
@@ -723,7 +730,7 @@ func _on_battle_event(e: Dictionary) -> void:
 			var pos := _tile_pos(e)
 			Sfx.play("crew_died", _side_db(e.own_ship))
 			effects.sparkle(pos, Color("#E24B4A"))
-			effects.float_text(pos + Vector2(0, -8), "%s gefallen" % e.name, Color("#F7C1C1"))
+			effects.float_text(pos + Vector2(0, -8), Loc.t("%s gefallen") % e.name, Color("#F7C1C1"))
 			if e.own_ship:
 				_red_flash = 0.15
 		"fire":
@@ -735,7 +742,7 @@ func _on_battle_event(e: Dictionary) -> void:
 			view.flash_shield()
 			if not b.is_empty():
 				effects.shield_ripple(b.edge, COLOR_SHIELD)
-				effects.float_text(b.edge + Vector2(0, -6), "SCHILD", COLOR_SHIELD)
+				effects.float_text(b.edge + Vector2(0, -6), Loc.t("SCHILD"), COLOR_SHIELD)
 			if not e.from_player:
 				_shake = maxf(_shake, 1.5)
 		"hit":
@@ -748,7 +755,7 @@ func _on_battle_event(e: Dictionary) -> void:
 			if int(e.get("system_damage", 0)) > 0:
 				Sfx.play("hit_system", _side_db(not e.from_player) - 2.0)
 				view.flash_room(e.room)
-				effects.float_text(pos + Vector2(0, 2), "SYSTEM", Color("#FAC775"))
+				effects.float_text(pos + Vector2(0, 2), Loc.t("SYSTEM"), Color("#FAC775"))
 			if not e.from_player:
 				_shake = maxf(_shake, 2.5 + e.damage * 1.5)
 				_red_flash = 0.12 + 0.05 * e.damage
@@ -759,7 +766,7 @@ func _on_battle_event(e: Dictionary) -> void:
 				var dir: Vector2 = (b.edge - b.from).normalized()
 				effects.stray(b.edge, dir, b.color, b.width)
 				Sfx.play("miss", _side_db(not e.from_player))
-				effects.float_text(b.edge + Vector2(0, -6), "AUSGEWICHEN", Color("#C4CAD3"))
+				effects.float_text(b.edge + Vector2(0, -6), Loc.t("AUSGEWICHEN"), Color("#C4CAD3"))
 		"repaired":
 			var view := ship_view if e.own_ship else enemy_view
 			if e.room >= 0:
@@ -767,12 +774,12 @@ func _on_battle_event(e: Dictionary) -> void:
 				effects.sparkle(pos, Color("#5DCAA5"))
 				Sfx.play("repaired", _side_db(e.own_ship) - (0.0 if e.own_ship else 4.0))
 				if e.own_ship:
-					effects.float_text(pos, "REPARIERT", Color("#5DCAA5"))
+					effects.float_text(pos, Loc.t("REPARIERT"), Color("#5DCAA5"))
 		"destroyed":
 			_on_destroyed(e.own_ship, e.reason)
 		"enemy_flee":
 			Sfx.play("alarm")
-			_show_hint("Gegner lädt den Sprungantrieb! Antrieb oder Cockpit treffen", 4.0)
+			_show_hint(Loc.t("Gegner lädt den Sprungantrieb! Antrieb oder Cockpit treffen"), 4.0)
 		"enemy_jumped":
 			_on_enemy_jumped()
 
@@ -879,21 +886,21 @@ func _on_hatch_toggled(kind: String, open: bool) -> void:
 	else:
 		Sfx.play("door_open" if open else "door_close")
 	if kind == "airlock":
-		_show_hint("Luftschleuse " + ("offen – Raum verliert Luft" if open else "geschlossen"))
+		_show_hint(Loc.t("Luftschleuse ") + (Loc.t("offen – Raum verliert Luft") if open else Loc.t("geschlossen")))
 	else:
-		_show_hint("Tür " + ("offen" if open else "geschlossen"))
+		_show_hint(Loc.t("Tür ") + (Loc.t("offen") if open else Loc.t("geschlossen")))
 
 
 func _on_system_tapped(system: String, changed: bool) -> void:
 	var sys := state.get_system(system)
-	var text := "%s: %s · Energie %d/%d" % [SystemInfo.display_name(system), SystemInfo.describe(system), sys.power, sys.usable()]
+	var text := Loc.t("%s: %s · Energie %d/%d") % [SystemInfo.display_name(system), SystemInfo.describe(system), sys.power, sys.usable()]
 	if system == "schilde":
 		var layers := state.max_shield_layers()
-		text += " · %d Schicht%s" % [layers, "" if layers == 1 else "en"]
+		text += " · " + (Loc.t("1 Schicht") if layers == 1 else Loc.t("%d Schichten") % layers)
 		if sys.power % 2 == 1:
-			text += " (1 Balken fehlt zum Paar)"
+			text += Loc.t(" (1 Balken fehlt zum Paar)")
 	if not changed:
-		text += " · " + ("kein Reaktor frei" if state.power_free() <= 0 and sys.power < sys.usable() else "nichts zu ändern")
+		text += " · " + (Loc.t("kein Reaktor frei") if state.power_free() <= 0 and sys.power < sys.usable() else Loc.t("nichts zu ändern"))
 	_show_hint(text)
 
 
@@ -1000,7 +1007,8 @@ func _update_explosions(delta: float) -> void:
 ## Kampf vorbei: Ergebnis in den Run, dann Ruhe (Sieg) oder Run-Ende (Niederlage).
 ## Nach einem Sieg muss nichts bestätigt werden: Das Banner blendet von selbst aus.
 func _battle_over(outcome: String, reason: String) -> void:
-	var name := enemy.layout.display_name if enemy else ""
+	var name := Loc.t(enemy.layout.display_name) if enemy else ""
+	var was_boss := run.is_boss_battle()
 	_tut_won = _tut_won or outcome == "sieg"
 	run.finish_battle(outcome)
 	_end_battle()
@@ -1008,19 +1016,19 @@ func _battle_over(outcome: String, reason: String) -> void:
 	if run.result == "verloren":
 		_show_run_over()
 		return
-	var text := ("Sieg – %s zerstört" % name) if reason == "hull" else "Sieg – Besatzung ausgeschaltet"
+	var text := (Loc.t("Sieg – %s zerstört") % name) if reason == "hull" else Loc.t("Sieg – Besatzung ausgeschaltet")
 	if outcome == "gegner_entkommen":
-		text = "%s ist entkommen – keine Beute" % name
+		text = Loc.t("%s ist entkommen – keine Beute") % name
 	if run.result == "geschafft":
 		_show_run_over()
 		return
 	if run.last_reward != "":
-		text += "\nBeute: " + run.last_reward
-	if run.sector_cleared:
-		_enter_node()  # Banner und Sprung in den nächsten Sektor
+		text += "\n" + Loc.t("Beute: ") + run.last_reward
+	if run.sector_cleared and was_boss:
+		_enter_node()  # Banner „Sektor geschafft“, weiter mit eigenem Sprung
 		return
 	_phase = "ruhe"
-	text += "\nCrew repariert · dann SPRUNG"
+	text += "\n" + Loc.t("Crew repariert · dann SPRUNG")
 	_show_banner_text(text, VICTORY_BANNER)
 	if outcome == "sieg":
 		Sfx.play("victory", 0.0, 1.0, 0.0)
@@ -1052,11 +1060,11 @@ func _show_run_over() -> void:
 	Sfx.loop("fire_loop", 0.0)
 	Sfx.play("run_complete" if run.result == "geschafft" else "defeat", 0.0, 1.0, 0.0)
 	if run.result == "geschafft":
-		text = "Alle %d Sektoren geschafft!\nDie Jäger haben das Nachsehen." % RunState.HUNT_SECTORS
+		text = Loc.t("Alle %d Sektoren geschafft!\nDie Jäger haben das Nachsehen.") % RunState.HUNT_SECTORS
 	else:
-		text = "Schiff verloren" if state.is_destroyed() else "Die ganze Crew ist tot"
-		text += "\nSektor %d, %d Sprünge insgesamt" % [run.sector, run.total_jumps]
-	banner.text = text + "\nTippen: Hauptmenü"
+		text = Loc.t("Schiff verloren") if state.is_destroyed() else Loc.t("Die ganze Crew ist tot")
+		text += "\n" + Loc.t("Sektor %d, %d Sprünge insgesamt") % [run.sector, run.total_jumps]
+	banner.text = text + "\n" + Loc.t("Tippen: Hauptmenü")
 	banner.visible = true
 	banner.modulate = Color(1, 1, 1, 0)
 	create_tween().tween_property(banner, "modulate", Color.WHITE, 0.4)
@@ -1112,38 +1120,40 @@ func _update_info() -> void:
 		info.text = _hint
 		return
 	if is_paused() and ship_view.selected == null and weapon_panel.selected < 0:
-		info.text = "Pause: Befehle geben, dann Pause-Knopf oder Leertaste"
+		info.text = Loc.t("Pause: Befehle geben, dann Pause-Knopf oder Leertaste")
 		return
 	if weapon_panel.selected >= 0:
-		info.text = "Waffe %d: Gegnerraum antippen (gleicher Raum = Ziel aufheben)" % (weapon_panel.selected + 1)
+		info.text = Loc.t("Waffe %d: Gegnerraum antippen (gleicher Raum = Ziel aufheben)") % (weapon_panel.selected + 1)
 		return
 	var member := ship_view.selected
 	if not member:
 		var ordered := ship_view.last_order
 		var room := ship_view.focused_room
 		if ordered and ordered.is_moving():
-			info.text = "%s » %s" % [ordered.display_name, state.layout.rooms[state.layout.room_index_at(ordered.destination())].name]
+			info.text = "%s » %s" % [ordered.display_name, Loc.t(state.layout.rooms[state.layout.room_index_at(ordered.destination())].name)]
 		elif room >= 0:
 			var system: String = state.layout.rooms[room].system
-			info.text = state.layout.rooms[room].name
+			info.text = Loc.t(state.layout.rooms[room].name)
 			if SystemInfo.describe(system) != "" and system != "":
 				info.text += ": " + SystemInfo.describe(system)
 			elif system == "" and state.layout.rooms[room].size == Vector2i(2, 2):
 				info.text += ": " + SystemInfo.describe("")
 		elif _phase == "kampf":
-			info.text = "Gegnerraum: alle Waffen zielen · Waffenkarte: einzeln" if not battle.player_has_target() else "Energie: antippen +1, halten −1 · ? = Symbole"
+			info.text = Loc.t("Gegnerraum: alle Waffen zielen · Waffenkarte: einzeln") if not battle.player_has_target() else Loc.t("Energie: antippen +1, halten −1 · ? = Symbole")
 		elif _phase == "ruhe":
 			var left := run.ship_damage_count()
-			if left > 0:
-				info.text = "Noch %d %s · Crew in beschädigte Räume schicken" % [left, "Schaden" if left == 1 else "Schäden"]
+			if run.sector_cleared and state.jump_ready() and run.fuel >= run.jump_cost():
+				info.text = Loc.t("Sektor geschafft · SPRUNG antippen: weiter in Sektor %d") % (run.sector + 1)
+			elif left > 0:
+				info.text = Loc.t("Noch %d %s · Crew in beschädigte Räume schicken") % [left, Loc.t("Schaden") if left == 1 else Loc.t("Schäden")]
 			elif state.jump_ready():
-				info.text = "Antrieb bereit · SPRUNG antippen und Ziel wählen"
+				info.text = Loc.t("Antrieb bereit · SPRUNG antippen und Ziel wählen")
 			elif state.level("antrieb") <= 0:
-				info.text = "Antrieb ohne Energie · kein Sprung möglich"
+				info.text = Loc.t("Antrieb ohne Energie · kein Sprung möglich")
 			elif state.operator_of_system("cockpit") == null:
-				info.text = "Cockpit leer · kein Sprung möglich"
+				info.text = Loc.t("Cockpit leer · kein Sprung möglich")
 			else:
-				info.text = "Antrieb lädt · mehr Energie im Antrieb lädt schneller"
+				info.text = Loc.t("Antrieb lädt · mehr Energie im Antrieb lädt schneller")
 		else:
 			info.text = ""
 		return
@@ -1152,10 +1162,10 @@ func _update_info() -> void:
 		return
 	var target_room := state.layout.room_index_at(member.destination())
 	var room_data: Dictionary = state.layout.rooms[target_room]
-	var text := "%s » %s" % [member.display_name, room_data.name] if member.is_moving() else "%s · %s" % [member.display_name, room_data.name]
+	var text := "%s » %s" % [member.display_name, Loc.t(room_data.name)] if member.is_moving() else "%s · %s" % [member.display_name, Loc.t(room_data.name)]
 	if member.activity != "":
-		text += " · " + ActivityIcons.NAMES.get(member.activity, "")
-	text += " · freie Kachel antippen = hinschicken"
+		text += " · " + Loc.t(ActivityIcons.NAMES.get(member.activity, ""))
+	text += Loc.t(" · freie Kachel antippen = hinschicken")
 	info.text = text
 
 

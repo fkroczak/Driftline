@@ -8,7 +8,7 @@ signal closed
 signal quit_requested
 
 const BOX := Vector2(260, 172)
-const ROW_H := 20.0
+const ROW_H := 19.0
 const COLOR_DIM_BG := Color("#07080F", 0.85)
 const COLOR_TITLE := Color("#FDE6BF")
 
@@ -33,19 +33,21 @@ func open() -> void:
 
 func _rows() -> Array:
 	var rows := [
-		{"key": "muted", "label": "Ton", "options": [[false, "An"], [true, "Aus"]],
-			"note": "Soundeffekte an oder aus"},
-		{"key": "crisp_text", "label": "Schrift", "options": [[true, "HD"], [false, "Retro"]],
-			"note": "HD: Schrift in voller Auflösung · Retro: alles im groben Pixelraster"},
-		{"key": "speed", "label": "Spieltempo", "options": [[0.75, "Langsam"], [1.0, "Normal"], [1.25, "Schnell"]],
-			"note": "Wie schnell Zeit an Bord und im Kampf vergeht"},
-		{"key": "auto_pause", "label": "Auto-Pause", "options": [[true, "An"], [false, "Aus"]],
-			"note": "Kampf hält an, solange Crew oder Waffe ausgewählt ist"},
-		{"key": "shake", "label": "Wackeln", "options": [[true, "An"], [false, "Aus"]],
-			"note": "Bildschirm wackelt bei Treffern und Explosionen"},
+		{"key": "language", "label": Loc.t("Sprache"), "options": [["de", "Deutsch"], ["en", "English"]],
+			"note": Loc.t("Sprache der Texte im Spiel"), "current": Loc.language()},
+		{"key": "muted", "label": Loc.t("Ton"), "options": [[false, Loc.t("An")], [true, Loc.t("Aus")]],
+			"note": Loc.t("Soundeffekte an oder aus")},
+		{"key": "crisp_text", "label": Loc.t("Schrift"), "options": [[true, "HD"], [false, "Retro"]],
+			"note": Loc.t("HD: Schrift in voller Auflösung · Retro: alles im groben Pixelraster")},
+		{"key": "speed", "label": Loc.t("Spieltempo"), "options": [[0.75, Loc.t("Langsam")], [1.0, Loc.t("Normal")], [1.25, Loc.t("Schnell")]],
+			"note": Loc.t("Wie schnell Zeit an Bord und im Kampf vergeht")},
+		{"key": "auto_pause", "label": Loc.t("Auto-Pause"), "options": [[true, Loc.t("An")], [false, Loc.t("Aus")]],
+			"note": Loc.t("Kampf hält an, solange Crew oder Waffe ausgewählt ist")},
+		{"key": "shake", "label": Loc.t("Wackeln"), "options": [[true, Loc.t("An")], [false, Loc.t("Aus")]],
+			"note": Loc.t("Bildschirm wackelt bei Treffern und Explosionen")},
 	]
 	if Settings.has_fullscreen():
-		rows.append({"key": "fullscreen", "label": "Vollbild", "options": [[true, "An"], [false, "Aus"]], "note": "Nur am Computer"})
+		rows.append({"key": "fullscreen", "label": Loc.t("Vollbild"), "options": [[true, Loc.t("An")], [false, Loc.t("Aus")]], "note": Loc.t("Nur am Computer")})
 	return rows
 
 
@@ -56,19 +58,19 @@ func _draw() -> void:
 	var h := 30.0 + rows.size() * ROW_H + 22.0 + 26.0
 	var box := Rect2(((size - Vector2(BOX.x, h)) / 2.0).floor(), Vector2(BOX.x, h))
 	HudStyle.box(self, box, HudStyle.COLOR_EDGE_HI)
-	HudStyle.text(self, box.position + Vector2(8, 15), "EINSTELLUNGEN", COLOR_TITLE, -1, 11)
+	HudStyle.text(self, box.position + Vector2(8, 15), Loc.t("EINSTELLUNGEN"), COLOR_TITLE, -1, 11)
 	var y := box.position.y + 26.0
 	for row: Dictionary in rows:
 		HudStyle.text(self, Vector2(box.position.x + 8, y + 12), row.label, HudStyle.COLOR_TEXT)
 		var opts: Array = row.options
 		var ow := 52.0 if opts.size() == 3 else 60.0
 		var x := box.end.x - 8 - opts.size() * (ow + 3) + 3
-		var current: Variant = Settings.get_value(row.key)
+		var current: Variant = row.get("current", Settings.get_value(row.key))
 		for opt: Array in opts:
 			var r := Rect2(x, y + 1, ow, ROW_H - 4)
 			var active := _same(current, opt[0])
 			HudStyle.button(self, r, opt[1], HudStyle.COLOR_OK if active else HudStyle.COLOR_DIM, active)
-			_hits.append({"rect": r, "key": row.key, "value": opt[0], "note": row.note})
+			_hits.append({"rect": r, "key": row.key, "value": opt[0]})
 			x += ow + 3
 		y += ROW_H
 	if _note != "":
@@ -76,10 +78,10 @@ func _draw() -> void:
 	y += 22.0
 	var bw := (box.size.x - 16 - 6) / 2.0
 	if in_game:
-		_action(Rect2(box.position.x + 8, y, bw, 18), "WEITERSPIELEN", HudStyle.COLOR_OK, "close")
-		_action(Rect2(box.position.x + 8 + bw + 6, y, bw, 18), "TUTORIAL BEENDEN" if tutorial else "HAUPTMENÜ", HudStyle.COLOR_WARN, "quit")
+		_action(Rect2(box.position.x + 8, y, bw, 18), Loc.t("WEITERSPIELEN"), HudStyle.COLOR_OK, "close")
+		_action(Rect2(box.position.x + 8 + bw + 6, y, bw, 18), Loc.t("TUTORIAL BEENDEN") if tutorial else Loc.t("HAUPTMENÜ"), HudStyle.COLOR_WARN, "quit")
 	else:
-		_action(Rect2(box.position.x + (box.size.x - bw) / 2.0, y, bw, 18), "ZURÜCK", HudStyle.COLOR_TEXT, "close")
+		_action(Rect2(box.position.x + (box.size.x - bw) / 2.0, y, bw, 18), Loc.t("ZURÜCK"), HudStyle.COLOR_TEXT, "close")
 
 
 func _action(rect: Rect2, label: String, color: Color, action: String) -> void:
@@ -109,7 +111,10 @@ func _gui_input(event: InputEvent) -> void:
 				closed.emit()
 		else:
 			Settings.set_value(hit.key, hit.value)
-			_note = hit.note
+			# Hinweis neu holen: Nach dem Umstellen der Sprache gleich in der neuen Sprache
+			for row: Dictionary in _rows():
+				if row.key == hit.key:
+					_note = row.note
 		queue_redraw()
 		return
 

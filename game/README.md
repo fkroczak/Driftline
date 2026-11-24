@@ -9,7 +9,15 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 - **Hauptmenü:** SPIELEN führt zur Moduswahl (Weiter / Neuer Run, ZURÜCK), dazu TUTORIAL, LEXIKON und EINSTELLUNGEN. Hinter dem Menü zieht der eigene Frachter vorbei.
 - **Tutorial:** ein Jagd-Run auf fester Karte, der nie gespeichert wird und keinen Spielstand berührt. Alle Nachbarn des Startsystems sind Kämpfe, der erste Sprung führt also sicher zu einem Piratenkutter. 13 Schritte (Crew wählen und bewegen, Energie, Türen, Pause, Sprung, Karte, Ziel wählen, Kampf gewinnen) in einem Kasten oben; ein blinkender Rahmen zeigt auf das Bedienelement. Aufgaben gehen von selbst weiter, sobald sie erledigt sind, Info-Schritte mit WEITER (das Spiel steht so lange). Jeder Schritt lässt sich überspringen, BEENDEN führt ins Hauptmenü (`scripts/view/tutorial_coach.gd`).
 - **Lexikon:** Reiter SCHIFFE und SPEZIES mit Bild, Werten und Beschreibung (`description`/`role` in `data/ships/*.json`, `lore` in `data/species.json`). Freigeschaltet wird über alle Runs hinweg (`user://codex.json`): ein Schiff, sobald man gegen es kämpft, eine Spezies, sobald sie in der eigenen Crew ist. Frachter und Menschen sind von Anfang an bekannt; neue Einträge meldet die Infozeile („Neu im Lexikon: …“). Unbekannte Einträge zeigen nur einen Schatten und einen Hinweis.
-- **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Ton, Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
+- **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Sprache (Deutsch/English), Ton, Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
+
+### Mehrsprachigkeit
+
+- **Deutsch und Englisch**, umschaltbar in den Einstellungen (gilt sofort). Beim ersten Start gilt die Systemsprache (Deutsch bei deutschem System, sonst Englisch); gespeichert in `user://settings.json` (`language`).
+- **Der deutsche Text ist der Schlüssel:** Im Code steht `Loc.t("Händler")` (`scripts/core/loc.gd`), die Übersetzungen liegen in `i18n/en.json`. Fehlt eine, erscheint der deutsche Text. Formatierte Texte erst übersetzen, dann einsetzen: `Loc.t("Sektor %d") % n`.
+- **Spieldaten** (Ereignisse, Spezies, Schiffe, Räume, Waffen) bleiben auf Deutsch in `data/`; angezeigt wird über dieselbe Tabelle.
+- **Prüfen:** `python3 tools/i18n_check.py` listet fehlende Übersetzungen, falsche Platzhalter (`%d`, `%s` …) und unbenutzte Einträge. Texte in Konstanten werden mit `# i18n` am Zeilenende markiert, damit das Skript sie findet.
+- **Weitere Sprache:** `i18n/<code>.json` anlegen (Vorlage: `python3 tools/i18n_check.py <code> --missing-json`), den Code in `Loc.LANGUAGES` und eine Option in `scripts/view/settings_panel.gd` ergänzen.
 
 ### Ablauf: Schiff, Sprung, Ankunft
 
@@ -24,14 +32,14 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 
 ### Die Jagd
 
-- **4 Sektoren**, je mit einem Boss am Ausgang (rechts auf der Karte). Nach dem Sieg über den Boss springt das Schiff von selbst in den nächsten Sektor (neue Karte, Front von vorn). Nach dem vierten ist der Run geschafft.
+- **4 Sektoren**, je mit einem Boss am Ausgang (rechts auf der Karte). Nach dem Sieg über den Boss bleibt das Schiff am Ausgang; erst ein eigener Sprung (SPRUNG, sobald der Antrieb geladen ist und jemand im Cockpit sitzt; kostet wie jeder Sprung 1 Treibstoff, ohne Treibstoff hilft das Notsignal) führt in den nächsten Sektor, dann erscheint die neue Karte und die Front beginnt von vorn. Nach dem vierten ist der Run geschafft.
 - **Jägerfront:** Sie rückt mit jedem Sprung um 0,1 Kartenbreite von links vor (rote Fläche, gestrichelt die Lage nach dem nächsten Sprung). Nach 10 Sprüngen hat sie den Ausgang erreicht. Einen Sprungzähler gibt es nicht mehr, die Front auf der Karte zeigt die Lage.
 - **Springen kann man trotzdem, solange Treibstoff da ist.** Jedes System hinter der Front ist von den Jägern besetzt: Wer dort ankommt (auch zurück in besuchte Systeme), kämpft gegen eine **Jäger-Fregatte** (Hülle 22, Reaktor 9, Pulslaser, Schwerlaser und Bordkanone). Ab Sprung 11 kommen je Sprung 2 Hülle dazu. Händler und Ereignisse hinter der Front sind weg. Der Sieg bringt wenig Beute (4–8 Rohstoffe); die Flucht ist der Notausgang.
 - **Vorwarnung:** Das Infofeld auf der Karte zeigt „Jäger in 1/2 Sprüngen hier“.
 
 ### Endloses Universum
 
-- Keine Front und kein Boss. Am Ausgang geht es sofort in den nächsten Sektor.
+- Keine Front und kein Boss. Am Ausgang ist der Sektor geschafft; wie in der Jagd führt erst ein eigener Sprung (SPRUNG) in den nächsten Sektor.
 - Die Gegner werden mit jedem Sektor stärker (Stufe +3, Hülle +2, Beute +2 Rohstoffe je Sektor, siehe `data/enemies.json`).
 - **Rekord:** der erreichte Sektor, im Hauptmenü angezeigt (`user://highscore.json`, auch der beste Sektor der Jagd).
 
@@ -62,7 +70,7 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 ### Crew
 
 - **Auswählen:** Figur im Schiff (knapp daneben zählt auch) oder Porträt in der Leiste antippen; eine andere Figur antippen wechselt die Auswahl
-- **Schicken:** danach eine freie Kachel antippen; die Figur läuft genau dorthin, die Auswahl endet
+- **Schicken:** danach eine freie Kachel antippen; die Figur läuft genau dorthin, die Auswahl endet. Zur Bestätigung blinkt der Zielraum kurz grün auf und bleibt grün umrandet, bis die Figur angekommen ist
 - **Verdrängen:** auf einer besetzten Kachel gedrückt halten; wer dort steht, weicht auf die nächste freie Kachel aus
 - **Schleusen nicht aus Versehen:** Mit ausgewählter Figur ist ein Tipp in einen Raum immer ein Laufbefehl, auch direkt an der Schleuse. Schleusen schaltet man ohne Auswahl. Ein Loslassen zählt nur, wenn auch das Drücken im Schiff war (vorher konnte das Loslassen nach einer Dialog-Option eine Schleuse öffnen).
 - **Abwählen:** die ausgewählte Figur erneut antippen oder neben das Schiff tippen

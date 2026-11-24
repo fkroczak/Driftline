@@ -52,10 +52,10 @@ func _draw() -> void:
 		x += 8.0
 	HudStyle.text(self, Vector2(x, y), member.display_name, Color("#E6EAF0"), W - x - 4)
 	if member.is_captain():
-		var cw := HudStyle.text_width("Captain")
-		HudStyle.text(self, Vector2(W - cw - 5, y), "Captain", HudStyle.COLOR_GOLD)
+		var cw := HudStyle.text_width(Loc.t("Captain"))
+		HudStyle.text(self, Vector2(W - cw - 5, y), Loc.t("Captain"), HudStyle.COLOR_GOLD)
 	y += LINE
-	var hp := "%d/%d LP" % [roundi(member.hp), roundi(member.max_hp)]
+	var hp := Loc.t("%d/%d LP") % [roundi(member.hp), roundi(member.max_hp)]
 	HudStyle.text(self, Vector2(5, y), Species.display_name(member.species), Species.tint(member.species).lerp(HudStyle.COLOR_TEXT, 0.3))
 	var ratio := member.hp / member.max_hp
 	var hp_color := HudStyle.COLOR_OK if ratio > 0.6 else (HudStyle.COLOR_WARN if ratio > 0.3 else HudStyle.COLOR_BAD)
@@ -73,6 +73,6 @@ func _draw() -> void:
 		var row := i / 2
 		var p := Vector2(5 + col * 68, y + LINE * (row + 1))
 		var lvl := member.level(system)
-		HudStyle.text(self, p, "Reparatur" if system == CrewMember.REPAIR_SKILL else SystemInfo.display_name(system), HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, 44)
+		HudStyle.text(self, p, Loc.t("Reparatur") if system == CrewMember.REPAIR_SKILL else SystemInfo.display_name(system), HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, 44)
 		for dot in int(CrewMember.MAX_EXPERIENCE):
 			draw_rect(Rect2(p + Vector2(45 + dot * 4, -5), Vector2(3, 3)), HudStyle.COLOR_GOLD if dot < lvl else HudStyle.COLOR_OFF)

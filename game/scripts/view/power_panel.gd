@@ -65,8 +65,8 @@ func _draw() -> void:
 	if not state:
 		return
 	HudStyle.box(self, Rect2(0, 3, size.x, size.y - 3))
-	draw_rect(Rect2(5, 0, HudStyle.text_width("ENERGIE") + 4, 7), HudStyle.COLOR_BG)
-	HudStyle.text(self, Vector2(7, 7), "ENERGIE", HudStyle.COLOR_TEXT)
+	draw_rect(Rect2(5, 0, HudStyle.text_width(Loc.t("ENERGIE")) + 4, 7), HudStyle.COLOR_BG)
+	HudStyle.text(self, Vector2(7, 7), Loc.t("ENERGIE"), HudStyle.COLOR_TEXT)
 	# Reaktor: unten freie Balken (gelb), darüber belegte (dunkel), oben zerstörte (rot)
 	var reactor := state.get_system("reaktor")
 	if reactor:

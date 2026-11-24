@@ -10,6 +10,7 @@ var _current := ""
 
 
 func _init() -> void:
+	Loc.set_language("de")  # Tests prüfen deutsche Texte, unabhängig von der Systemsprache
 	var tests := get_method_list().filter(func(m): return m.name.begins_with("test_"))
 	for m in tests:
 		_current = m.name
@@ -837,7 +838,17 @@ func test_endless_mode_has_exit_and_no_front() -> void:
 	run.map.node(run.current).type = "leer"
 	run.fuel = 5
 	check(run.jump_to(exit_id), "Sprung zum Ausgang nicht möglich")
-	check(run.sector == 2 and run.current == run.map.start_id() and run.score() == 2, "Ausgang führt nicht in Sektor 2")
+	# Erst ankommen, dann mit eigenem Sprung in den nächsten Sektor
+	check(run.sector == 1 and run.current == exit_id and run.sector_cleared, "Am Ausgang nicht angekommen oder Sektor nicht geschafft")
+	check(not run.can_jump_to(run.node().links[0]), "Am geschafften Ausgang noch Sprünge auf der alten Karte möglich")
+	# Auch dieser Sprung kostet Treibstoff; ohne Treibstoff hilft das Notsignal
+	run.fuel = 0
+	check(not run.leave_sector() and run.sector == 1, "Sektorsprung ohne Treibstoff möglich")
+	check(run.can_send_distress(), "Am Ausgang ohne Treibstoff kein Notsignal")
+	run.fuel = 2
+	check(run.leave_sector(), "Sektorsprung mit Treibstoff nicht möglich")
+	check(run.fuel == 1, "Sektorsprung kostet keinen Treibstoff")
+	check(run.sector == 2 and run.current == run.map.start_id() and run.score() == 2 and not run.sector_cleared, "Sprung führt nicht in Sektor 2")
 
 
 func test_hits_damage_systems_only_by_chance() -> void:
@@ -1229,3 +1240,52 @@ func test_settings_have_defaults() -> void:
 	for key: String in Settings.DEFAULTS:
 		check(typeof(Settings.get_value(key)) == typeof(Settings.DEFAULTS[key]), "Einstellung %s hat falschen Typ" % key)
 	check(Settings.speed() > 0.0, "Spieltempo muss positiv sein")
+
+
+# --- Mehrsprachigkeit ---
+
+
+func test_loc_german_returns_source_text() -> void:
+	Loc.set_language("de")
+	check(Loc.t("Händler") == "Händler", "Deutsch muss den Schlüssel selbst liefern")
+	check(Loc.t("") == "", "Leerer Text bleibt leer")
+
+
+func test_loc_english_translates_and_falls_back() -> void:
+	Loc.set_language("en")
+	check(Loc.t("Händler") == "Trader", "Händler nicht übersetzt: %s" % Loc.t("Händler"))
+	check(Loc.t("Sektor %d") % 3 == "Sector 3", "Format nach Übersetzung falsch")
+	check(Loc.t("Gibt es nicht 123") == "Gibt es nicht 123", "Fehlende Übersetzung muss den deutschen Text liefern")
+	check(Species.display_name("androide") == "Android", "Speziesname nicht übersetzt")
+	check(SystemInfo.display_name("schilde") == "Shields", "Systemname nicht übersetzt")
+	Loc.set_language("de")
+
+
+func test_loc_unknown_language_uses_system_language() -> void:
+	Loc.set_language("xx")
+	check(Loc.LANGUAGES.has(Loc.language()), "Unbekannte Sprache: %s" % Loc.language())
+	Loc.set_language("de")
+
+
+func test_loc_english_table_is_consistent() -> void:
+	Loc.set_language("en")
+	var table := Loc.table()
+	check(table.size() > 300, "Englische Tabelle fehlt oder ist zu klein: %d" % table.size())
+	var placeholder := RegEx.create_from_string("%[+\\-0-9.]*[dsf%]")
+	for key: String in table:
+		var a := placeholder.search_all(key).map(func(m: RegExMatch) -> String: return m.get_string())
+		var b := placeholder.search_all(table[key]).map(func(m: RegExMatch) -> String: return m.get_string())
+		a.sort()
+		b.sort()
+		check(a == b, "Platzhalter passen nicht: %s -> %s" % [key, table[key]])
+	Loc.set_language("de")
+
+
+func test_run_dialogs_follow_language() -> void:
+	Loc.set_language("en")
+	var run := RunState.new(7)
+	run._open_shop()
+	check(run.dialog.title == "Trader", "Händler-Dialog nicht übersetzt: %s" % run.dialog.title)
+	check(run.dialog.choices.back().text == "Undock", "Ablegen nicht übersetzt")
+	Loc.set_language("de")
+

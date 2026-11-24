@@ -22,8 +22,8 @@ const COLOR_SELECTED := Color("#5DCAA5")
 const INFO_LINE := 8.0
 ## Kurze Namen, damit Name und Erfahrungspunkte in die schmale Spalte passen.
 const SKILLS := [
-	["cockpit", "Cockpit"], ["waffen", "Waffen"], ["schilde", "Schilde"],
-	["antrieb", "Antrieb"], ["sensoren", "Sens."], [CrewMember.REPAIR_SKILL, "Repar."],
+	["cockpit", "Cockpit"], ["waffen", "Waffen"], ["schilde", "Schilde"],  # i18n
+	["antrieb", "Antrieb"], ["sensoren", "Sens."], [CrewMember.REPAIR_SKILL, "Repar."],  # i18n
 ]
 
 var state: ShipState
@@ -150,7 +150,7 @@ func _draw_info(rect: Rect2) -> void:
 	for skill: Array in SKILLS:
 		y += INFO_LINE
 		var lvl := m.level(skill[0])
-		HudStyle.text(self, Vector2(3, y), skill[1], HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, dots_x - 4)
+		HudStyle.text(self, Vector2(3, y), Loc.t(skill[1]), HudStyle.COLOR_TEXT if lvl > 0 else HudStyle.COLOR_DIM, dots_x - 4)
 		for dot in int(CrewMember.MAX_EXPERIENCE):
 			draw_rect(Rect2(Vector2(dots_x + dot * 3, y - 4), Vector2(2, 2)), HudStyle.COLOR_GOLD if dot < lvl else HudStyle.COLOR_OFF)
 
