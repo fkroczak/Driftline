@@ -112,6 +112,36 @@ func validate() -> PackedStringArray:
 	return errors
 
 
+## Systeme, an denen jemand an einer Konsole sitzt.
+const CONSOLE_SYSTEMS := ["cockpit", "waffen", "schilde", "antrieb", "sensoren"]
+
+
+## Verteilt die Systeme zufällig auf die Räume (Grundriss, Türen und Schleusen bleiben). Räume
+## behalten ihre Konsolen-Kachel; braucht ein System eine Konsole und der Raum hat keine, sitzt sie
+## in der Ecke oben links. Für Gegner, damit man die Lage der Schilde nicht auswendig kennt.
+func shuffle_systems(rng: RandomNumberGenerator) -> void:
+	var contents: Array = []
+	for r: Dictionary in rooms:
+		contents.append({"id": r.id, "name": r.name, "system": r.system})
+	for i in range(contents.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp: Variant = contents[i]
+		contents[i] = contents[j]
+		contents[j] = tmp
+	for i in rooms.size():
+		var slot: Dictionary = rooms[i]
+		var c: Dictionary = contents[i]
+		var console: Variant = slot.get("slot_console", slot.console)
+		slot["slot_console"] = console
+		slot.id = c.id
+		slot.name = c.name
+		slot.system = c.system
+		if c.system in CONSOLE_SYSTEMS:
+			slot.console = console if console != null else slot.pos
+		else:
+			slot.console = null
+
+
 func room_index_at(tile: Vector2i) -> int:
 	return _room_at.get(tile, -1)
 

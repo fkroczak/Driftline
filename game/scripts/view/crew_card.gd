@@ -56,7 +56,7 @@ func _draw() -> void:
 		HudStyle.text(self, Vector2(W - cw - 5, y), Loc.t("Captain"), HudStyle.COLOR_GOLD)
 	y += LINE
 	var hp := Loc.t("%d/%d LP") % [roundi(member.hp), roundi(member.max_hp)]
-	HudStyle.text(self, Vector2(5, y), Species.display_name(member.species), Species.tint(member.species).lerp(HudStyle.COLOR_TEXT, 0.3))
+	HudStyle.text(self, Vector2(5, y), Species.display_name(member.species) + " · " + Species.gender_label(member.gender), Species.tint(member.species).lerp(HudStyle.COLOR_TEXT, 0.3))
 	var ratio := member.hp / member.max_hp
 	var hp_color := HudStyle.COLOR_OK if ratio > 0.6 else (HudStyle.COLOR_WARN if ratio > 0.3 else HudStyle.COLOR_BAD)
 	HudStyle.text(self, Vector2(W - HudStyle.text_width(hp) - 5, y), hp, hp_color)

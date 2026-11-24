@@ -1,13 +1,18 @@
 {
-  "_doc": "Gegnerstufen: from_jump ist der Fortschritt (Lage auf der Karte 0..10, je Sektor + depth_per_sector). pool = gewichtete Schiffe, hull_bonus, reward = Beute nach dem Sieg [min, max]. Je Sektor kommen hull_per_sector Hülle und scrap_per_sector Rohstoffe dazu. hunter: Jäger hinter der Front (Jagd), ab Sprung 11 je Sprung hull_per_late_jump Hülle mehr. boss: am Ausgang (Jagd).",
+  "_doc": "Gegnerstufen: from_jump ist der Fortschritt (Lage auf der Karte 0..10, je Sektor + depth_per_sector). pool = gewichtete Schiffe, hull_bonus, reward = Beute nach dem Sieg [min, max]. weapons: zusätzliche Waffen (Reaktor und Waffensystem wachsen mit), shield_bonus: zusätzliche Schildbalken (2 = 1 Schicht). Je Sektor kommen hull_per_sector Hülle und scrap_per_sector Rohstoffe dazu. repair_speed: Tempo der Gegner-Crew beim Löschen, Flicken und Reparieren (1 = wie die eigene). hunter: Jäger hinter der Front (Jagd), ab Sprung 11 je Sprung hull_per_late_jump Hülle mehr, ab Sektor weapons_from_sector die Zusatzwaffen. boss: am Ausgang (Jagd); upgrades: ab Sektor from_sector Zusatzwaffen und Schildbalken.",
   "depth_per_sector": 3,
   "hull_per_sector": 2,
   "scrap_per_sector": 2,
+  "repair_speed": 0.9,
   "stages": [
-    {"from_jump": 0, "pool": [["piraten_kutter", 1.0]], "reward": {"scrap": [8, 12], "fuel": [0, 1]}},
-    {"from_jump": 4, "pool": [["piraten_kutter", 0.65], ["piraten_kutter_schwer", 0.35]], "reward": {"scrap": [10, 15], "fuel": [0, 2]}},
-    {"from_jump": 7, "pool": [["piraten_kutter", 0.35], ["piraten_kutter_schwer", 0.65]], "hull_bonus": 2, "reward": {"scrap": [12, 18], "fuel": [1, 2]}}
+    {"from_jump": 0, "pool": [["piraten_kutter", 0.7], ["pluenderer", 0.3]], "reward": {"scrap": [8, 12], "fuel": [0, 1]}},
+    {"from_jump": 4, "pool": [["piraten_kutter", 0.4], ["pluenderer", 0.3], ["piraten_kutter_schwer", 0.3]], "reward": {"scrap": [10, 15], "fuel": [0, 2]}},
+    {"from_jump": 7, "pool": [["piraten_kutter", 0.2], ["pluenderer", 0.25], ["piraten_kutter_schwer", 0.3], ["kanonenboot", 0.25]], "hull_bonus": 2, "reward": {"scrap": [12, 18], "fuel": [1, 2]}},
+    {"from_jump": 10, "pool": [["pluenderer", 0.25], ["piraten_kutter_schwer", 0.4], ["kanonenboot", 0.35]], "hull_bonus": 2, "weapons": ["durchschlaglaser"], "reward": {"scrap": [13, 19], "fuel": [1, 2]}},
+    {"from_jump": 14, "pool": [["pluenderer", 0.2], ["piraten_kutter_schwer", 0.4], ["kanonenboot", 0.4]], "hull_bonus": 4, "weapons": ["durchschlaglaser"], "reward": {"scrap": [14, 20], "fuel": [1, 2]}},
+    {"from_jump": 18, "pool": [["pluenderer", 0.2], ["piraten_kutter_schwer", 0.4], ["kanonenboot", 0.4]], "hull_bonus": 4, "weapons": ["durchschlaglaser"], "shield_bonus": 2, "reward": {"scrap": [15, 22], "fuel": [1, 2]}},
+    {"from_jump": 22, "pool": [["pluenderer", 0.2], ["piraten_kutter_schwer", 0.4], ["kanonenboot", 0.4]], "hull_bonus": 6, "weapons": ["torpedo"], "shield_bonus": 2, "reward": {"scrap": [16, 24], "fuel": [1, 2]}}
   ],
-  "hunter": {"ship": "jaeger_fregatte", "name": "Jäger-Fregatte", "hull_bonus": 0, "hull_per_late_jump": 2, "reward": {"scrap": [4, 8]}},
-  "boss": {"ship": "piraten_kutter_schwer", "name": "Piraten-Flaggschiff", "hull_bonus": 6, "hull_per_sector": 4, "reward": {"scrap": [20, 30], "fuel": [3, 4]}}
+  "hunter": {"ship": "jaeger_fregatte", "name": "Jäger-Fregatte", "hull_bonus": 0, "hull_per_late_jump": 2, "weapons_from_sector": 2, "weapons": ["durchschlaglaser"], "reward": {"scrap": [4, 8]}},
+  "boss": {"ship": "piraten_kutter_schwer", "name": "Piraten-Flaggschiff", "hull_bonus": 6, "hull_per_sector": 4, "reward": {"scrap": [20, 30], "fuel": [3, 4]}, "upgrades": [{"from_sector": 2, "weapons": ["durchschlaglaser"]}, {"from_sector": 3, "shield_bonus": 2}, {"from_sector": 4, "weapons": ["torpedo"]}]}
 }

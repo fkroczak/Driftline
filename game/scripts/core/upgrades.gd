@@ -5,7 +5,7 @@ extends RefCounted
 
 const PATH := "res://data/upgrades.json"
 ## Reihenfolge auf der Seite SYSTEME.
-const SYSTEM_ORDER := ["reaktor", "schilde", "waffen", "antrieb", "medbay", "lebenserhaltung"]
+const SYSTEM_ORDER := ["reaktor", "batterie", "schilde", "waffen", "antrieb", "sensoren", "medbay", "lebenserhaltung"]
 
 static var _defs: Dictionary = {}
 
@@ -49,6 +49,10 @@ static func sell_factor() -> float:
 
 static func shop_weapons() -> int:
 	return int(defs().get("shop_weapons", 2))
+
+
+static func shop_perks() -> int:
+	return int(defs().get("shop_perks", 2))
 
 
 static func crew_offers() -> int:

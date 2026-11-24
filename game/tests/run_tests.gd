@@ -286,8 +286,9 @@ func test_enemy_layout_is_valid() -> void:
 
 func test_start_power_fits_reactor() -> void:
 	var state := ShipState.new(_layout())
-	check(state.reactor_output() == 7, "Reaktor sollte 7 liefern, liefert %d" % state.reactor_output())
-	check(state.power_used() == 7, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
+	check(state.reactor_output() == 8, "Reaktor sollte 8 liefern, liefert %d" % state.reactor_output())
+	check(state.level("sensoren") == 1, "Sensoren sollten am Start 1 Balken haben (Räume des Gegners sehen)")
+	check(state.power_used() == 8, "Startverteilung sollte den Reaktor ausschöpfen, belegt %d" % state.power_used())
 	check(state.level("antrieb") == 1, "Antrieb sollte am Start 1 Balken haben (Sprung braucht Energie)")
 	check(state.weapons[0].powered and state.weapons[1].powered, "Beide Waffen sollten Energie haben")
 	check(state.shield_layers == 1, "Eine Schildschicht erwartet")
@@ -297,8 +298,8 @@ func test_power_is_limited() -> void:
 	var state := ShipState.new(_layout())
 	check(not state.add_power("antrieb"), "Mehr Energie verteilt, als der Reaktor hat")
 	check(state.remove_power("schilde"), "Schilde ließen sich nicht herunterfahren")
-	check(state.add_power("sensoren"), "Freie Energie nicht nutzbar")
-	check(not state.add_power("sensoren"), "Mehr Energie als Stufen im System")
+	check(state.add_power("medbay"), "Freie Energie nicht nutzbar")
+	check(not state.add_power("medbay"), "Mehr Energie als Stufen im System")
 	check(state.power_free() == 0, "Rechnung stimmt nicht")
 
 
@@ -329,8 +330,8 @@ func test_damage_cuts_power_and_repair_restores_it() -> void:
 func test_reactor_damage_lowers_output() -> void:
 	var state := ShipState.new(_layout())
 	state.take_hit(state.layout.room_index_by_id("reaktor"), 2)
-	check(state.reactor_output() == 5, "Reaktorschaden senkt die Leistung nicht")
-	check(state.power_used() <= 5, "Systeme verbrauchen mehr als der Reaktor liefert")
+	check(state.reactor_output() == 6, "Reaktorschaden senkt die Leistung nicht")
+	check(state.power_used() <= 6, "Systeme verbrauchen mehr als der Reaktor liefert")
 	check(state.level("lebenserhaltung") == 1 and state.level("schilde") == 2, "Wichtige Systeme zuerst versorgen")
 
 
@@ -789,7 +790,7 @@ func test_enemy_stages_follow_progress() -> void:
 	for n in run.map.nodes:
 		if n.column <= 3 and n.type != "start":
 			var spec := run.enemy_spec(n.id)
-			check(spec.ship.ends_with("piraten_kutter.json") and spec.hull_bonus == 0, "Vorne auf der Karte nur der einfache Kutter")
+			check((spec.ship.ends_with("piraten_kutter.json") or spec.ship.ends_with("pluenderer.json")) and spec.hull_bonus == 0, "Vorne auf der Karte nur Kutter und Plünderer")
 	var boss := run.create_enemy(run.map.boss_id())
 	check(boss.layout.display_name == "Piraten-Flaggschiff", "Boss heißt nicht Piraten-Flaggschiff")
 	check(boss.max_hull == 24 and boss.hull == 24, "Boss hat nicht 18 + 6 Hülle: %d" % boss.max_hull)
@@ -1341,7 +1342,7 @@ func test_system_upgrade_costs_and_limits() -> void:
 	while run.upgrade_system("schilde"):
 		pass
 	check(shields.capacity == 8 and run.system_upgrade_price("schilde") == -1, "Schilde gehen über das Maximum")
-	check(run.system_upgrade_price("sensoren") == -1, "Sensoren sind ausbaubar, obwohl sie nichts tun")
+	check(run.system_upgrade_price("sensoren") == 15, "Sensoren nicht für 15 ausbaubar")
 	var free := run.ship.power_free()
 	check(run.upgrade_system("reaktor") and run.ship.power_free() == free + 1, "Reaktorausbau bringt keine Energie")
 	run.scrap = 0
@@ -1414,27 +1415,47 @@ func test_shop_weapons_and_crew() -> void:
 	var run := RunState.new(12)
 	run.scrap = 500
 	run._open_shop()
-	var main_count: int = run.dialog.choices.size()
-	check(main_count == 6, "Händler-Hauptseite hat nicht 6 Optionen: %d" % main_count)
-	check(run.choose(3) and run._ctx.page == "weapons", "Waffenseite öffnet nicht")
-	var stock: Array = run._stock().weapons
-	check(stock.size() == 2, "Nicht 2 Waffen im Angebot")
-	var id: String = stock[0]
+	check(run.is_shop_open(), "Händler nicht offen")
+	var goods := run.shop_goods()
+	check(goods.weapons.size() == 3, "Nicht 3 Waffen im Angebot: %d" % goods.weapons.size())
+	var id: String = goods.weapons[0]
 	var before := run.scrap
-	check(run.choose(0) and run.scrap == before - Weapon.price_of(id) and run.ship.all_weapon_ids().has(id), "Waffenkauf klappt nicht")
-	check(run._stock().weapons.size() == 1, "Gekaufte Waffe bleibt im Angebot")
-	# Verkaufen: erste eigene Waffe steht nach dem restlichen Angebot
+	check(run.shop_buy_weapon(0) != "" and run.scrap == before - Weapon.price_of(id) and run.ship.all_weapon_ids().has(id), "Waffenkauf klappt nicht")
+	check(run.shop_goods().weapons.size() == 2, "Gekaufte Waffe bleibt im Angebot")
 	var owned := run.ship.all_weapon_ids()
 	before = run.scrap
-	check(run.choose(1) and run.scrap == before + run.sell_price(owned[0]), "Verkauf bringt nicht den halben Preis")
+	check(run.shop_sell_weapon(0) != "" and run.scrap == before + run.sell_price(owned[0]), "Verkauf bringt nicht den halben Preis")
 	check(run.ship.all_weapon_ids().size() == owned.size() - 1, "Verkaufte Waffe noch an Bord")
-	check(run.choose(run.dialog.choices.size() - 1) and run._ctx.page == "main", "Zurück führt nicht zur Hauptseite")
-	check(run.choose(4) and run._ctx.page == "crew", "Crew-Seite öffnet nicht")
 	var crew_before := run.ship.crew.size()
-	var hire: Dictionary = run._stock().crew[0]
-	check(run.choose(0) and run.ship.crew.size() == crew_before + 1, "Anheuern klappt nicht")
+	var hire: Dictionary = run.shop_goods().crew[0]
+	check(run.shop_hire(0) != "" and run.ship.crew.size() == crew_before + 1, "Anheuern klappt nicht")
 	check(run.ship.crew.back().display_name == hire.name and run.ship.crew.back().species == hire.species, "Falsche Person an Bord")
-	check(run.choose(run.dialog.choices.size() - 1) and run.choose(run.dialog.choices.size() - 1) and run.dialog.is_empty(), "Ablegen klappt nicht")
+	run.close_shop()
+	check(run.dialog.is_empty() and not run.is_shop_open(), "Ablegen klappt nicht")
+
+
+func test_shop_sells_random_perks_and_battery() -> void:
+	var offered := {}
+	var battery := 0
+	for s in range(1, 40):
+		var run := RunState.new(s)
+		run._open_shop()
+		var goods := run.shop_goods()
+		check(goods.perks.size() == 2, "Nicht 2 Perks im Angebot")
+		for p: String in goods.perks:
+			offered[p] = true
+		if goods.battery:
+			battery += 1
+	check(offered.size() == Upgrades.perk_ids().size(), "Nicht alle Perks kommen vor: %s" % offered.keys())
+	check(battery > 5 and battery < 30, "Batterie zu oft oder nie im Angebot: %d von 39" % battery)
+	var run := RunState.new(3)
+	run.scrap = 500
+	run._open_shop()
+	var perk: String = run.shop_goods().perks[0]
+	check(run.shop_buy_perk(0) != "" and run.ship.has_perk(perk) and run.scrap == 500 - run.perk_price(perk), "Perk-Kauf klappt nicht")
+	run.shop_goods().battery = true
+	check(run.shop_buy_battery() != "" and run.ship.get_system("batterie") != null, "Batteriekauf klappt nicht")
+	check(not run.shop_can_buy_battery(), "Zweite Batterie kaufbar")
 
 
 func test_last_weapon_cannot_be_sold() -> void:
@@ -1461,7 +1482,7 @@ func test_save_keeps_refit() -> void:
 	check(loaded != null, "Stand lädt nicht")
 	if loaded == null:
 		return
-	check(loaded.ship.get_system("schilde").capacity == 3 and loaded.ship.get_system("reaktor").capacity == 8, "Ausbau verloren")
+	check(loaded.ship.get_system("schilde").capacity == 3 and loaded.ship.get_system("reaktor").capacity == 9, "Ausbau verloren")
 	check(loaded.ship.perks == ["panzerung"] and loaded.ship.max_hull == run.ship.max_hull, "Perk verloren")
 	check(loaded.ship.all_weapon_ids() == run.ship.all_weapon_ids(), "Waffen oder Lager verloren")
 	check(loaded._stock().weapons == run._stock().weapons, "Händlerwaren verloren")
@@ -1470,10 +1491,10 @@ func test_save_keeps_refit() -> void:
 
 func test_scrap_gain_from_loot_and_events() -> void:
 	var run := RunState.new(5)
-	check(is_equal_approx(float(run.rules.get("scrap_gain", 1.0)), 1.25), "scrap_gain ist nicht 1,25")
+	check(is_equal_approx(float(run.rules.get("scrap_gain", 1.0)), 1.15), "scrap_gain ist nicht 1,15")
 	var scrap := run.scrap
 	run._apply({"scrap": 12})
-	check(run.scrap == scrap + 15, "+12 Rohstoffe werden nicht zu +15: %d" % (run.scrap - scrap))
+	check(run.scrap == scrap + 14, "+12 Rohstoffe werden nicht zu +14: %d" % (run.scrap - scrap))
 	scrap = run.scrap
 	run._apply({"scrap": -4})
 	check(run.scrap == scrap - 4, "Verluste werden mit vervielfacht")
@@ -1632,3 +1653,191 @@ func test_bad_reputation_raises_prices() -> void:
 	check(run._price(8) == 9, "Schlechter Ruf macht Hülle +5 nicht teurer: %d" % run._price(8))
 	run.flags["gilde_freund"] = true
 	check(run._price(8) == 7, "Gildenbrief und schlechter Ruf verrechnen sich nicht: %d" % run._price(8))
+
+
+func test_piercing_weapons_pass_shields() -> void:
+	var player := ShipState.new(_layout())
+	var enemy := _enemy_ship()
+	var battle := Battle.new(player, enemy, 3)
+	enemy.shield_layers = 1
+	var laser := Weapon.create("durchschlaglaser")
+	check(laser.pierce == 1 and Weapon.create("torpedo").pierce >= 9, "Durchschlag fehlt in den Waffenwerten")
+	player.weapons.append(laser)
+	var room := enemy.layout.room_index_by_id("waffen")
+	battle._resolve({"id": 1, "player": true, "weapon": player.weapons.size() - 1, "room": room, "damage": 2})
+	var events := battle.take_events()
+	var hit := events.filter(func(e: Dictionary) -> bool: return e.get("type", "") == "hit")
+	check(hit.size() == 1 and hit[0].get("pierced", false), "Durchschlaglaser kommt nicht durch eine Schicht")
+	check(enemy.shield_layers == 1, "Durchschlag verbraucht die Schildschicht")
+	enemy.shield_layers = 2
+	battle._resolve({"id": 2, "player": true, "weapon": player.weapons.size() - 1, "room": room, "damage": 2})
+	check(enemy.shield_layers == 1, "Zwei Schichten halten den Durchschlaglaser nicht auf")
+
+
+func test_enemies_get_stronger_deep_in_the_universe() -> void:
+	var run := RunState.new(12, RunState.MODE_ENDLESS)
+	check(is_equal_approx(run.create_enemy().repair_speed, 0.9), "Gegner reparieren nicht 10 % langsamer")
+	run.sector = 7  # Tiefe ab 18: Durchschlaglaser und eine Schildschicht mehr
+	var spec := run.enemy_spec(run.map.start_id())
+	check(spec.weapons.has("durchschlaglaser") and spec.shield_bonus == 2, "Tiefe Gegner ohne Zusatzwaffe oder Schild: %s" % spec)
+	var enemy := run.create_enemy(run.map.start_id())
+	check(enemy.max_shield_layers() == 2, "Zusatzschild ohne Energie")
+	for w in enemy.weapons:
+		check(w.powered, "Zusatzwaffe %s ohne Energie" % w.id)
+	var hunt := RunState.new(12)
+	hunt.sector = 4
+	var boss := hunt.enemy_spec(hunt.map.exit_id())
+	check(boss.weapons.has("torpedo") and boss.weapons.has("durchschlaglaser") and boss.shield_bonus == 2, "Boss in Sektor 4 nicht aufgerüstet")
+
+
+func test_sensors_reveal_enemy_step_by_step() -> void:
+	check(not Sensors.shows_rooms(0) and not Sensors.shows_crew(0) and not Sensors.shows_power(0), "Ohne Sensoren sichtbar")
+	check(Sensors.shows_rooms(1) and not Sensors.shows_crew(1), "Stufe 1 zeigt nicht nur die Räume")
+	check(Sensors.shows_crew(2) and not Sensors.shows_power(2), "Stufe 2 zeigt nicht die Crew")
+	check(Sensors.shows_power(3), "Stufe 3 zeigt keine Energie")
+	var run := RunState.new(5)
+	run.ship.get_system("sensoren").damage = 1
+	run.ship._rebalance()
+	check(run.ship.level("sensoren") == 0, "Beschädigte Sensoren zeigen weiter alles")
+
+
+func test_reactor_goes_to_20() -> void:
+	var run := RunState.new(31)
+	run.scrap = 10000
+	while run.upgrade_system("reaktor"):
+		pass
+	check(run.ship.get_system("reaktor").capacity == 20, "Reaktor nicht bis 20: %d" % run.ship.get_system("reaktor").capacity)
+	check(run.scrap == 10000 - 318, "Reaktor 8 → 20 kostet nicht 318: %d" % (10000 - run.scrap))
+
+
+func test_all_enemy_ships_are_valid_and_crewable() -> void:
+	for id in ["piraten_kutter", "piraten_kutter_schwer", "pluenderer", "kanonenboot", "jaeger_fregatte"]:
+		var path := "res://data/ships/%s.json" % id
+		var layout := ShipLayout.load_json(path)
+		check(layout.validate().is_empty(), "%s: %s" % [id, ", ".join(layout.validate())])
+		check(ResourceLoader.exists(layout.sprite_path), "%s: Grafik fehlt" % id)
+		for room in ["cockpit", "waffen", "schilde", "antrieb", "reaktor"]:
+			check(layout.room_index_by_id(room) >= 0, "%s: Raum %s fehlt" % [id, room])
+		for room in ["cockpit", "waffen", "schilde"]:
+			check(layout.console_of(layout.room_index_by_id(room)) != null, "%s: keine Konsole in %s" % [id, room])
+		var ship := ShipState.new(layout)
+		for w in ship.weapons:
+			check(w.powered, "%s: %s ohne Energie" % [id, w.id])
+		check(ship.max_shield_layers() == 1, "%s: nicht genau eine Schildschicht" % id)
+		check(ship.level("antrieb") > 0, "%s: Antrieb ohne Energie (kann nicht fliehen)" % id)
+
+
+func test_enemy_variety_on_the_map() -> void:
+	var seen := {}
+	for s in range(1, 30):
+		var run := RunState.new(s, RunState.MODE_ENDLESS)
+		run.sector = 3
+		for n in run.map.nodes:
+			if n.type == "kampf":
+				seen[str(run.enemy_spec(n.id).ship).get_file().get_basename()] = true
+	for id in ["piraten_kutter", "piraten_kutter_schwer", "pluenderer", "kanonenboot"]:
+		check(seen.has(id), "%s kommt nie vor" % id)
+
+
+func test_enemy_rooms_are_shuffled_but_fixed_per_node() -> void:
+	var layouts := {}
+	for s in range(1, 12):
+		var run := RunState.new(s)
+		var enemy := run.create_enemy(run.map.node(run.current).links[0])
+		check(enemy.layout.validate().is_empty(), "Gemischtes Layout ungültig: %s" % ", ".join(enemy.layout.validate()))
+		for sys in ["cockpit", "waffen", "schilde"]:
+			var room := enemy.layout.room_of_system(sys)
+			check(room >= 0 and enemy.layout.console_of(room) != null and enemy.layout.room_index_at(enemy.layout.console_of(room)) == room, "%s ohne Konsole im eigenen Raum" % sys)
+		check(enemy.layout.console_of(enemy.layout.room_of_system("reaktor")) == null, "Reaktor mit Konsole")
+		check(enemy.crew.size() == 3, "Crew fehlt")
+		layouts[str(enemy.layout.room_of_system("schilde"))] = true
+		var again := run.create_enemy(run.map.node(run.current).links[0])
+		check(again.layout.room_of_system("schilde") == enemy.layout.room_of_system("schilde"), "Raumverteilung nicht fest je Knoten")
+	check(layouts.size() >= 3, "Schilde sitzen fast immer im selben Raum: %s" % layouts.keys())
+
+
+func test_petrani_heal_by_themselves() -> void:
+	var state := ShipState.new(_layout())
+	var rock := state.add_crew("Quarz-Aun", "petrani", Vector2i(8, 1))
+	rock.hp = 50.0
+	_settle(state, 20.0)
+	check(rock.hp >= 59.0, "Petrani heilen nicht von selbst: %.1f" % rock.hp)
+
+
+func test_battery_adds_power_and_survives_save() -> void:
+	_save_paths()
+	var run := RunState.new(31)
+	var before := run.ship.reactor_output()
+	check(run.ship.install_battery(2), "Batterie lässt sich nicht einbauen")
+	check(not run.ship.install_battery(2), "Zweite Batterie eingebaut")
+	check(run.ship.reactor_output() == before + 2, "Batterie bringt keine 2 Energie")
+	var room := run.ship.layout.room_of_system("batterie")
+	check(room >= 0 and str(run.ship.layout.rooms[room].id).begins_with("erweiterung"), "Batterie nicht im Erweiterungsraum")
+	run.scrap = 100
+	check(run.system_upgrade_price("batterie") == 30 and run.upgrade_system("batterie"), "Batterie nicht für 30 erweiterbar")
+	run.ship.take_hit(room, 1)
+	run.ship._rebalance()
+	check(run.ship.get_system("batterie").damage >= 0, "Batterie nicht beschädigbar")
+	SaveGame.save(run)
+	var loaded := SaveGame.load_run()
+	check(loaded != null and loaded.ship.get_system("batterie") != null and loaded.ship.get_system("batterie").capacity == 3, "Batterie nach Laden weg")
+	check(loaded != null and loaded.ship.battery_room_id() == run.ship.battery_room_id(), "Batterie in anderem Raum")
+	SaveGame.clear()
+	var quest := _event_run("konvoi_dank")
+	quest.choose(quest.dialog.choices.size() - 1)
+	check(quest.ship.get_system("batterie") != null, "Auftrag bringt keine Batterie")
+
+
+func test_crew_has_gender_and_look() -> void:
+	var run := RunState.new(5)
+	var genders := run.ship.crew.map(func(m: CrewMember) -> String: return m.gender)
+	check(genders == ["w", "m", "w"], "Startcrew Mara/Jonas/Ilka hat falsches Geschlecht: %s" % [genders])
+	var seen := {}
+	for id in Species.ids():
+		for n: String in Species.value(id, "names", []):
+			var m := CrewMember.new(n, id, Vector2i.ZERO)
+			check(m.look >= 0 and m.look < 3, "Variante außerhalb 0–2")
+			check(m.gender == ("w" if (Species.value(id, "names_w", []) as Array).has(n) else "m"), "Geschlecht passt nicht zum Namen %s" % n)
+			check(ResourceLoader.exists(CrewArt.SHEET % ("%s_%s%d" % [id, m.gender, m.look])), "Grafik fehlt für %s" % n)
+			seen["%s_%s" % [id, m.gender]] = true
+	check(seen.size() == Species.ids().size() * 2, "Nicht jede Spezies hat Frauen und Männer")
+
+
+func test_shop_goods_stay_the_same_on_revisits() -> void:
+	_save_paths()
+	var run := RunState.new(21, RunState.MODE_ENDLESS)  # ohne Jägerfront, die den Rückweg besetzen würde
+	var shop := -1
+	for n in run.map.nodes:
+		if n.type == "haendler":
+			shop = n.id
+	var home := run.current
+	run.map.node(home).links.append(shop)
+	run.map.node(shop).links.append(home)
+	run.fuel = 20
+	run.scrap = 500
+	check(run.jump_to(shop) and run.is_shop_open(), "Händler öffnet nicht")
+	var first := run.shop_goods().duplicate(true)
+	run.shop_buy_weapon(0)
+	var after_buy := run.shop_goods().duplicate(true)
+	run.close_shop()
+	for i in 3:  # weg und wieder hin, mehrmals
+		run.jump_to(home)
+		run.close_shop()
+		run.jump_to(shop)
+		check(run.is_shop_open(), "Händler beim Wiederbesuch zu")
+		check(run.shop_goods().weapons == after_buy.weapons and run.shop_goods().perks == after_buy.perks \
+			and run.shop_goods().crew == after_buy.crew, "Waren ändern sich beim Wiederbesuch")
+		run.close_shop()
+	check(after_buy.weapons.size() == first.weapons.size() - 1, "Gekaufte Waffe nicht weg")
+	SaveGame.save(run)
+	var loaded := SaveGame.load_run(RunState.MODE_ENDLESS)
+	check(loaded != null and loaded._stock().weapons == after_buy.weapons, "Waren nach dem Laden anders")
+	SaveGame.clear(RunState.MODE_ENDLESS)
+	# Perk woanders gekauft: verschwindet aus diesem Angebot
+	run.jump_to(shop)
+	var perk: String = run.shop_goods().perks[0]
+	run.ship.perks.append(perk)
+	check(not run.shop_goods().perks.has(perk), "Perk an Bord noch im Angebot")
+	run.close_shop()
+	run.next_sector()
+	check(run.shop_stock.is_empty(), "Neuer Sektor behält alte Waren")

@@ -1,0 +1,33 @@
+{
+  "id": "kanonenboot",
+  "name": "Kanonenboot",
+  "role": "Gegner",
+  "description": "Ein schwer gepanzerter Kasten mit Geschützturm auf dem Rücken. Langsam und kaum fähig auszuweichen, aber zäh und mit drei Waffen gefährlich. Die eigene Medbay flickt die Mannschaft wieder zusammen.",
+  "sprite": "res://assets/ships/gegner_kanonenboot.png",
+  "tile_size": 14,
+  "grid_origin": [24, 18],
+  "grid_size": [5, 4],
+  "hull": 24,
+  "reactor": 8,
+  "oxygen_regen": 0.04,
+  "systems": {"schilde": 2, "waffen": 4, "antrieb": 1, "medbay": 1, "cockpit": 1},
+  "power": {"schilde": 2, "antrieb": 1, "medbay": 1},
+  "weapons": ["schwerer_laser", "bordkanone", "bordkanone"],
+  "weapons_powered": 3,
+  "weapon_mount": [40, 10],
+  "engines": [[106, 32], [106, 53], [106, 67]],
+  "engine_dir": 1,
+  "shield_ellipse": [56, 46, 56, 45],
+  "rooms": [
+    {"id": "waffen", "name": "Waffen", "system": "waffen", "pos": [1, 0], "size": [3, 1], "console": [2, 0]},
+    {"id": "cockpit", "name": "Cockpit", "system": "cockpit", "pos": [0, 1], "size": [1, 2], "console": [0, 1]},
+    {"id": "schilde", "name": "Schilde", "system": "schilde", "pos": [1, 1], "console": [1, 2]},
+    {"id": "reaktor", "name": "Reaktor", "system": "reaktor", "pos": [3, 1], "size": [1, 3]},
+    {"id": "antrieb", "name": "Antrieb", "system": "antrieb", "pos": [4, 0], "size": [1, 4], "console": [4, 1]},
+    {"id": "medbay", "name": "Medbay", "system": "medbay", "pos": [1, 3], "size": [2, 1]}
+  ],
+  "airlocks": [[[0, 2], [-1, 0]]],
+  "doors": [
+    [[0, 1], [1, 1]], [[1, 0], [1, 1]], [[3, 0], [3, 1]], [[3, 0], [4, 0]], [[2, 2], [3, 2]], [[1, 2], [1, 3]], [[2, 3], [3, 3]], [[3, 2], [4, 2]]
+  ]
+}
