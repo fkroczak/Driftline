@@ -11,7 +11,6 @@ const COLOR_TITLE := Color("#FDE6BF")
 const COLOR_NAME := Color("#E6EAF0")
 const LIST_W := 104.0
 const ITEM_H := 16.0
-const CREW_SHEET := preload("res://assets/crew/mensch_klein_sheet.png")
 
 var _tab := Codex.KIND_SHIP
 var _selected := {Codex.KIND_SHIP: 0, Codex.KIND_SPECIES: 0}
@@ -146,8 +145,8 @@ func _draw_species(panel: Rect2, id: String, known: bool) -> void:
 	var frame: int = [0, 3, 1, 2][int(_time * 1.5) % 4]
 	var pic := Rect2(panel.position + Vector2(8, 8), Vector2(48, 48))
 	draw_rect(pic, Color("#20263A"))
-	var tint := Species.tint(id) if known else Color(0.05, 0.06, 0.1, 1.0)
-	draw_texture_rect_region(CREW_SHEET, Rect2(pic.position, Vector2(48, 48)), Rect2(frame * 16, 0, 16, 16), tint)
+	var shade := Color.WHITE if known else Color(0.05, 0.06, 0.1, 1.0)
+	draw_texture_rect_region(CrewArt.sheet(id), Rect2(pic.position, Vector2(48, 48)), Rect2(frame * 16, 0, 16, 16), shade)
 	var tx := pic.end.x + 8
 	var tw := panel.end.x - 8 - tx
 	var y := pic.position.y + 10

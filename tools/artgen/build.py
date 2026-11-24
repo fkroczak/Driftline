@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from PIL import Image
 import pipeline as P
 import crew_human as CH
+import crew_species as CS
 import ship_human_freighter as FR
 import ship_pirate_cutter as PC
 
@@ -25,7 +26,12 @@ def save_sprite(img, rel):
 def build_crew(species="mensch"):
     sheets = {}
     for size in ("gross", "klein"):
-        if size == "gross":
+        if species != "mensch":
+            if size == "gross":
+                (w, h), shadow, make = CS.SIZE, CS.SHADOW, lambda d: CS.build_svg(species, d)
+            else:
+                (w, h), shadow, make = CH.SMALL_SIZE, CH.SMALL_SHADOW, lambda d: CS.build_svg_small(species, d)
+        elif size == "gross":
             w, h = CH.SPECS["gross"]["size"]
             shadow, make = CH.SPECS["gross"]["shadow"], lambda d: CH.build_svg("gross", d)
         else:
@@ -87,6 +93,27 @@ def previews(crew, ship):
     P.on_space(P.upscale(small, 8), 32).save(path("preview", "mensch_crew_klein_x8.png"))
 
 
+def species_preview(all_crew):
+    """Alle Spezies nebeneinander: oben groß (x4), darunter klein (x8), je 4 Richtungen."""
+    rows = []
+    for sheets in all_crew.values():
+        big = Image.new("RGBA", (40 * 4, 44), (0, 0, 0, 0))
+        small = Image.new("RGBA", (16 * 4, 16), (0, 0, 0, 0))
+        for i, d in enumerate(CH.DIRECTIONS):
+            big.alpha_composite(sheets["gross"][d], (i * 40, 0))
+            small.alpha_composite(sheets["klein"][d], (i * 16, 0))
+        rows.append((P.upscale(big, 2), P.upscale(small, 5)))
+    W = sum(max(b.width, s.width) for b, s in rows) + 16 * len(rows)
+    H = max(b.height + s.height for b, s in rows) + 8
+    sheet = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    x = 0
+    for b, s in rows:
+        sheet.alpha_composite(b, (x, 0))
+        sheet.alpha_composite(s, (x, b.height + 8))
+        x += max(b.width, s.width) + 16
+    P.on_space(sheet, 24).save(path("preview", "spezies_crew.png"))
+
+
 def palette_files():
     with open(path("palette", "hullbound.hex"), "w") as f:
         f.write("\n".join(h.lstrip("#").lower() for h in P.PALETTE_HEX) + "\n")
@@ -103,6 +130,12 @@ def palette_files():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["spezies"]:
+        # Nur die Crew-Sprites der Spezies neu bauen (Mensch, Schiffe und Palette bleiben unberührt)
+        all_crew = {sp: build_crew(sp) for sp in CS.SPECIES}
+        species_preview(all_crew)
+        print("fertig:", ", ".join(CS.SPECIES))
+        sys.exit(0)
     palette_files()
     crew = build_crew()
     ship = build_freighter()

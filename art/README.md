@@ -50,7 +50,7 @@ Erzeugt mit `python3 tools/artgen/build.py` (Pipeline in `tools/artgen/`, Detail
 
 | Pfad | Inhalt |
 | --- | --- |
-| `export/1x/`, `export/4x/` | Spielfertige PNGs (transparent): Crew Mensch groß 40×44 und klein 16×16 je 4 Richtungen, Mensch-Frachter 280×140 |
-| `preview/` | Vorschauen auf #07080F, u. a. Frachter mit Crew an Bord |
+| `export/1x/`, `export/4x/` | Spielfertige PNGs (transparent): Crew aller sechs Spezies groß 40×44 und klein 16×16 je 4 Richtungen (Mensch: `crew_human.py`, übrige: `crew_species.py`), Mensch-Frachter 280×140 |
+| `preview/` | Vorschauen auf #07080F, u. a. Frachter mit Crew an Bord, `spezies_crew.png` (alle Spezies groß und klein) |
 | `palette/` | Palette als `.gpl`, `.hex`, `.png` |
 | `source/crew/`, `source/ships/` | SVG-Quellen dieser Sprites (werden vom Build überschrieben) |

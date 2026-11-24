@@ -338,7 +338,7 @@ func test_shields_recharge() -> void:
 	var state := ShipState.new(_layout())
 	state.shield_layers = 0
 	_settle(state, 2.0)
-	check(state.shield_layers == 0, "Schildwand steht zu schnell wieder (unter 3 s)")
+	check(state.shield_layers == 0, "Schildwand steht zu schnell wieder (unter 2,6 s)")
 	_settle(state, 1.1)
 	check(state.shield_layers == 1, "Schild lädt nicht nach")
 
@@ -1466,3 +1466,127 @@ func test_save_keeps_refit() -> void:
 	check(loaded.ship.all_weapon_ids() == run.ship.all_weapon_ids(), "Waffen oder Lager verloren")
 	check(loaded._stock().weapons == run._stock().weapons, "Händlerwaren verloren")
 	SaveGame.clear()
+
+
+func test_scrap_gain_from_loot_and_events() -> void:
+	var run := RunState.new(5)
+	check(is_equal_approx(float(run.rules.get("scrap_gain", 1.0)), 1.25), "scrap_gain ist nicht 1,25")
+	var scrap := run.scrap
+	run._apply({"scrap": 12})
+	check(run.scrap == scrap + 15, "+12 Rohstoffe werden nicht zu +15: %d" % (run.scrap - scrap))
+	scrap = run.scrap
+	run._apply({"scrap": -4})
+	check(run.scrap == scrap - 4, "Verluste werden mit vervielfacht")
+	run._open_shop()
+	run.scrap = 20
+	run._open_shop()
+	run.choose(0)
+	check(run.scrap == 17, "Kaufpreise ändern sich mit scrap_gain")
+
+
+func test_player_shield_recharges_faster() -> void:
+	var player := RunState.create_player_ship()
+	check(is_equal_approx(player.shield_recharge, 2.6), "Frachter lädt Schilde nicht in 2,6 s")
+	var enemy := ShipState.new(ShipLayout.load_json("res://data/ships/piraten_kutter.json"))
+	check(is_equal_approx(enemy.shield_recharge, ShipState.SHIELD_RECHARGE), "Gegner lädt Schilde schneller")
+
+
+func test_every_species_has_crew_art() -> void:
+	for id in Species.ids():
+		check(ResourceLoader.exists(CrewArt.SHEET % id), "Figur fehlt: %s" % id)
+		check(ResourceLoader.exists(CrewArt.PORTRAIT % id), "Porträt fehlt: %s" % id)
+		var crop := CrewArt.square_crop(id)
+		check(Rect2(0, 0, 40, 44).encloses(crop) and Rect2(0, 0, 40, 44).encloses(CrewArt.head_crop(id)), "Porträtausschnitt ragt heraus: %s" % id)
+	check(CrewArt.sheet("unbekannt") == CrewArt.sheet("mensch"), "Unbekannte Spezies ohne Rückfall")
+
+
+## Run mit offenem Auftrag: Auftraggeber öffnen und annehmen.
+func _quest_run(giver: String, seed := 5) -> RunState:
+	var run := RunState.new(seed)
+	run.scrap = 50
+	run._open_event(giver)
+	run.choose(0)
+	run.choose(0)
+	return run
+
+
+func test_quest_marks_target_and_concludes_there() -> void:
+	var run := _quest_run("auftrag_sonde")
+	check(run.quests.size() == 1, "Auftrag nicht vergeben")
+	if run.quests.is_empty():
+		return
+	var target: int = run.quests.keys()[0]
+	check(target != run.current and run.map.node(target).type in ["ereignis", "leer"], "Ziel ist kein Ereignis- oder leeres System")
+	check(run.is_quest_target(target) and not run.is_overrun(target), "Ziel nicht markiert oder überrannt")
+	var d := run.map.distance(run.current, target)
+	check(d >= 1, "Ziel nicht erreichbar")
+	# direkt hinspringen (Verbindung erzwingen, damit der Test nicht vom Weg abhängt)
+	run.map.node(run.current).links.append(target)
+	run.fuel = 5
+	check(run.jump_to(target), "Sprung zum Ziel klappt nicht")
+	check(run.dialog.get("title", "") == "Die verschollene Sonde", "Abschluss öffnet sich nicht: %s" % run.dialog.get("title", ""))
+	check(not run.is_quest_target(target), "Auftrag bleibt nach dem Abschluss offen")
+
+
+func test_quest_chain_with_species_option_and_weapon() -> void:
+	var run := _quest_run("auftrag_sonde")
+	run._open_event("sonde_abschluss")
+	var labels: Array = run.dialog.choices.map(func(c: Dictionary) -> String: return c.text)
+	check(not labels.any(func(t: String) -> bool: return t.begins_with("[Veyari]")), "Veyari-Option ohne Veyari sichtbar")
+	run.ship.add_crew_anywhere("Ylen", "veyari")
+	run._open_event("sonde_abschluss")
+	var idx := -1
+	for i in run.dialog.choices.size():
+		if run.dialog.choices[i].text.begins_with("[Veyari]"):
+			idx = i
+	check(idx >= 0 and run.dialog.choices[idx].special, "Veyari-Option fehlt oder ist nicht hervorgehoben")
+	run.choose(idx)
+	run.choose(0)  # Weiter -> Datenkern
+	check(run.dialog.get("title", "") == "Der Datenkern", "Folgestufe fehlt")
+	var weapons := run.ship.all_weapon_ids().size()
+	run.choose(0)
+	check(run.ship.all_weapon_ids().size() == weapons + 1 and run.ship.all_weapon_ids().has("salvenlaser"), "Belohnungswaffe fehlt")
+	check(run.flags.has("gilde_freund"), "Gildenbrief fehlt")
+
+
+func test_quest_battle_gives_victory_reward() -> void:
+	var run := _quest_run("auftrag_kopfgeld")
+	check(run.quests.size() == 1, "Kopfgeld vergeben")
+	run._open_event("kopfgeld_versteck")
+	run.choose(0)  # sofort angreifen
+	run.choose(0)  # Kampf!
+	check(run.needs_battle(), "Auftragskampf startet nicht")
+	var scrap := run.scrap
+	run.finish_battle("sieg")
+	check(run.scrap >= scrap + 37, "Kopfgeld zu klein: %d" % (run.scrap - scrap))
+
+
+func test_quest_lost_when_front_overruns_or_sector_ends() -> void:
+	var run := _quest_run("auftrag_mine")
+	check(run.quests.size() == 1, "Auftrag nicht vergeben")
+	var target: int = run.quests.keys()[0]
+	run.front = run.map.node(target).pos.x + 0.5
+	run._drop_overrun_quests()
+	check(run.quests.is_empty() and run.quest_note != "", "Überranntes Ziel bleibt Auftrag")
+	run = _quest_run("auftrag_mine")
+	run.next_sector()
+	check(run.quests.is_empty() and run.quest_note != "", "Auftrag überlebt den Sektorwechsel")
+
+
+func test_save_keeps_quests() -> void:
+	_save_paths()
+	var run := _quest_run("auftrag_konvoi")
+	SaveGame.save(run)
+	var loaded := SaveGame.load_run()
+	check(loaded != null and loaded.quests == run.quests, "Auftrag nicht gespeichert")
+	SaveGame.clear()
+
+
+func test_quest_givers_are_in_event_pool() -> void:
+	var book := EventBook.load_default()
+	var pool := book.ids_in_pool("ereignis")
+	for giver in ["auftrag_sonde", "auftrag_kopfgeld", "auftrag_konvoi", "auftrag_mine"]:
+		check(pool.has(giver), "Auftraggeber fehlt im Pool: %s" % giver)
+	check(not book.ids_in_pool("auftrag").is_empty(), "Keine Abschlussereignisse")
+	for id in book.ids_in_pool("auftrag"):
+		check(not pool.has(id), "Abschluss im normalen Pool: %s" % id)

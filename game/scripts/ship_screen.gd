@@ -482,6 +482,9 @@ func _jump(id: int) -> void:
 func _arrive() -> void:
 	_end_battle()
 	map_view.refresh()
+	if run.quest_note != "":
+		_show_hint(run.quest_note, 4.0)
+		run.quest_note = ""
 	starfield.reseed(hash([run.seed_value, run.sector, run.current, run.total_jumps]))
 	_warp_in(_enter_node)
 
@@ -495,8 +498,10 @@ func _sector_jump() -> void:
 	_warp_out(func() -> void:
 		run.leave_sector()
 		Game.save()
+		var note := run.quest_note
 		_arrive()
-		_show_hint(Loc.t("Sektor %d · neue Karte, die Jäger beginnen von vorn") % run.sector if run.is_hunt() else Loc.t("Sektor %d") % run.sector, 4.0))
+		var text: String = Loc.t("Sektor %d · neue Karte, die Jäger beginnen von vorn") % run.sector if run.is_hunt() else Loc.t("Sektor %d") % run.sector
+		_show_hint(text + (" · " + note if note != "" else ""), 4.0))
 
 
 ## Abflug: Blase baut sich auf, Schiff leuchtet, schießt nach rechts davon, Sterne werden zu Streifen.

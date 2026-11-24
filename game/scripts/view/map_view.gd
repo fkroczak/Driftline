@@ -7,7 +7,8 @@ extends Control
 ##
 ## Besucht = grün, erreichbar = gelb (pulsiert, nur wenn der Antrieb geladen ist), unbekannt = weiß,
 ## von Jägern besetzt = rot, Boss = roter Rhombus, Ausgang = blauer Ring, Händler = oranges und
-## Reparaturstation = blaues Quadrat (immer sichtbar), Notruf = roter Ring (SENSOR_RANGE Sprünge weit).
+## Reparaturstation = blaues Quadrat (immer sichtbar), Notruf = roter Ring (SENSOR_RANGE Sprünge weit),
+## Auftragsziel = violettes Banner mit „!“ und Beschriftung AUFTRAG (immer sichtbar).
 
 signal node_tapped(id: int)
 signal background_tapped
@@ -39,6 +40,7 @@ const COLOR_SCRAP := Color("#A9B0BB")
 const COLOR_SHOP := Color("#EF9F27")
 const COLOR_REPAIR := Color("#85B7EB")
 const COLOR_EXIT := Color("#85B7EB")
+const COLOR_QUEST := Color("#A6A0EA")
 const COLOR_WARN := Color("#FAC775")
 const COLOR_BOX := Color("#0A0B16", 0.9)
 const COLOR_SHIP := Color("#E6EAF0")
@@ -256,7 +258,9 @@ func _draw_node(n: Dictionary) -> void:
 		draw_rect(Rect2(p - Vector2(4, 4), Vector2(8, 8)), COLOR_OUTLINE)
 		draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), c if not run.visited.has(n.id) else c.darkened(0.3))
 		return
-	if _beacon_visible(n.id):
+	if run.is_quest_target(n.id) and not overrun:
+		_draw_quest_marker(p, pulse)
+	elif _beacon_visible(n.id):
 		draw_arc(p, 4.5, 0.0, TAU, 14, COLOR_BOSS, 1.0)
 	var color := COLOR_UNKNOWN
 	var radius := 2.0
@@ -270,6 +274,19 @@ func _draw_node(n: Dictionary) -> void:
 		radius = 3.0
 	draw_circle(p, radius + 1.0, COLOR_OUTLINE)
 	draw_circle(p, radius, color)
+
+
+## Auftragsziel: pulsierender Ring und ein Fähnchen mit „!“ über dem System.
+func _draw_quest_marker(p: Vector2, pulse: float) -> void:
+	draw_arc(p, 5.5 + pulse, 0.0, TAU, 18, Color(COLOR_QUEST, 0.5 + 0.4 * pulse), 1.0)
+	var top := p + Vector2(0, -13)
+	var pts := PackedVector2Array([top + Vector2(0, -5), top + Vector2(5, 0), top + Vector2(0, 5), top + Vector2(-5, 0)])
+	draw_colored_polygon(pts, COLOR_OUTLINE)
+	pts = PackedVector2Array([top + Vector2(0, -4), top + Vector2(4, 0), top + Vector2(0, 4), top + Vector2(-4, 0)])
+	draw_colored_polygon(pts, COLOR_QUEST)
+	draw_rect(Rect2(top + Vector2(-0.5, -2.5), Vector2(1, 3)), COLOR_OUTLINE)
+	draw_rect(Rect2(top + Vector2(-0.5, 1.5), Vector2(1, 1)), COLOR_OUTLINE)
+	draw_line(top + Vector2(0, 5), p + Vector2(0, -4), COLOR_QUEST, 1.0)
 
 
 ## Pfeil in Flugrichtung, beim Sprung mit kurzem Lichtschweif.
@@ -303,7 +320,9 @@ func _draw_labels() -> void:
 		if run.is_overrun(n.id):
 			continue
 		var below := node_screen_pos(n.id) + Vector2(0, 6)
-		if n.type == "haendler" and not run.visited.has(n.id):
+		if run.is_quest_target(n.id):
+			_draw_tag(below, Loc.t("AUFTRAG"), COLOR_QUEST, true)
+		elif n.type == "haendler" and not run.visited.has(n.id):
 			_draw_tag(below, Loc.t("HÄNDLER"), COLOR_SHOP, true)
 		elif n.type == "reparatur" and not run.visited.has(n.id):
 			_draw_tag(below, Loc.t("REPARATUR"), COLOR_REPAIR, true)
@@ -355,6 +374,8 @@ func _draw_info_box(id: int) -> void:
 			title = Loc.t("Reparaturstation")
 	if _beacon_visible(id):
 		title = Loc.t("Notruf empfangen")
+	if run.is_quest_target(id):
+		title = Loc.t("Auftrag: %s") % Loc.t(run.quests[id].title)
 	var line := Loc.t("%d Treibstoff · nochmal antippen") % run.jump_cost()
 	var line_color := COLOR_REACH
 	var soon := run.jumps_until_overrun(id)

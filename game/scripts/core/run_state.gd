@@ -27,6 +27,14 @@ extends RefCounted
 ## Ansehen: Ereignisse setzen Merker (`flags`), z. B. "gilde_freund" (Händler billiger) oder
 ## "kolonie_dank" (eine Komplettreparatur in der Reparaturstation gratis).
 ##
+## Aufträge: Ein Ereignis mit dem Effekt "quest" vergibt einen Auftrag. Sein Ziel ist ein anderes
+## System im selben Sektor (2–4 Sprünge entfernt, möglichst unbesucht und vor der Jägerfront), die
+## Karte markiert es. Dort wartet das Abschlussereignis (Pool "auftrag") mit mehreren Stufen, oft
+## einem Kampf und großer Belohnung. Überrennt die Front das Ziel oder endet der Sektor, verfällt
+## der Auftrag (`quest_note` meldet es).
+##
+## Rohstoffe aus Beute und Ereignissen werden mit `scrap_gain` aus data/run.json multipliziert.
+##
 ## Dialoge: `dialog` ist leer oder {title, text, scene, choices: [{text, enabled, special}]}.
 ## Die Darstellung zeigt ihn an und ruft `choose(index)` auf. Solange ein Dialog offen ist,
 ## kann nicht gesprungen werden.
@@ -91,6 +99,10 @@ var last_reward := ""
 var shop_stock: Dictionary = {}
 ## Der letzte Sprung war dank Treibstoffrecycler gratis (für den Hinweis).
 var last_jump_free := false
+## Offene Aufträge: Ziel-Knoten -> {event (Abschlussereignis), title}.
+var quests: Dictionary = {}
+## Meldung für die Darstellung, wenn ein Auftrag verfallen ist ("" = keine); wer sie zeigt, leert sie.
+var quest_note := ""
 
 var rules: Dictionary = {}
 var _enemy_table: Dictionary = {}
@@ -126,6 +138,9 @@ func _setup_sector() -> void:
 	front = FRONT_START
 	hunter_battle = false
 	sector_cleared = false
+	if not quests.is_empty():
+		quest_note = Loc.t("Neuer Sektor: offene Aufträge sind verfallen")
+	quests = {}
 	var used := {}
 	for n in map.nodes:
 		if n.type == "ereignis":
@@ -241,6 +256,7 @@ func jump_to(id: int) -> bool:
 	total_jumps += 1
 	if mode == MODE_HUNT:
 		front += FRONT_STEP
+		_drop_overrun_quests()
 	var first_visit := not visited.has(id)
 	visited[id] = true
 	if result != "":
@@ -251,9 +267,60 @@ func jump_to(id: int) -> bool:
 	if mode == MODE_ENDLESS and node().type == "ausgang":
 		sector_cleared = true
 		return true
+	if quests.has(id):
+		var quest: Dictionary = quests[id]
+		quests.erase(id)
+		_open_event(quest.event)
+		return true
 	if first_visit or node().type in ["haendler", "reparatur"]:
 		_open_node_dialog()
 	return true
+
+
+## Ziele hinter der Front sind von den Jägern besetzt: Der Auftrag verfällt.
+func _drop_overrun_quests() -> void:
+	for id: int in quests.keys():
+		if is_overrun(id):
+			quest_note = Loc.t("Auftrag verloren: Die Jäger haben das Ziel besetzt (%s)") % Loc.t(quests[id].title)
+			quests.erase(id)
+
+
+## Auftrag annehmen: Ziel wählen und auf der Karte markieren. Liefert den Text für den Dialog.
+func _start_quest(event_id: String) -> String:
+	var e := events.get_event(event_id)
+	var target := _quest_target()
+	if e.is_empty() or target < 0:
+		return Loc.t("Kein Ziel in Reichweite: Der Auftrag entfällt")
+	quests[target] = {"event": event_id, "title": str(e.get("quest", e.get("title", "")))}
+	return Loc.t("Auftrag: %s · Ziel auf der Karte markiert") % Loc.t(quests[target].title)
+
+
+## Ziel eines neuen Auftrags: Ereignis- oder leeres System, möglichst 2–4 Sprünge entfernt und
+## unbesucht; nie eines, das die Jäger erreichen, bevor man dort sein kann. -1 = keines.
+func _quest_target() -> int:
+	var best: Array[int] = []
+	var other: Array[int] = []
+	for n: Dictionary in map.nodes:
+		var id: int = n.id
+		if id == current or quests.has(id) or not n.type in ["ereignis", "leer"] or is_overrun(id):
+			continue
+		var d := map.distance(current, id)
+		if d < 1:
+			continue
+		var soon := jumps_until_overrun(id)
+		if soon >= 0 and soon <= d + 1:
+			continue
+		if d >= 2 and d <= 4 and not visited.has(id):
+			best.append(id)
+		else:
+			other.append(id)
+	var pool := best if not best.is_empty() else other
+	return pool[_rng.randi() % pool.size()] if not pool.is_empty() else -1
+
+
+## Ist an diesem Knoten ein Auftrag zu erledigen?
+func is_quest_target(id: int) -> bool:
+	return quests.has(id)
 
 
 ## Treibstoff für einen Sprung; der Treibstoffrecycler spart ihn manchmal.
@@ -408,15 +475,22 @@ func _open_event(id: String) -> void:
 		var req: Dictionary = c.get("requires", {})
 		if req.has("flag") and not flags.has(req.flag):
 			continue  # Ansehens-Optionen erscheinen nur, wenn man sie hat
+		if req.has("species") and not has_species(req.species):
+			continue  # Spezies-Optionen nur mit passender Crew an Bord
 		var cost: Dictionary = c.get("cost", {})
 		var label: String = Loc.t(c.text)
 		if not cost.is_empty():
 			label += " (%s)" % _cost_text(cost)
 		var enabled := _can_pay(cost) and ship.crew.size() >= int(req.get("crew_min", 0))
-		choices.append({"text": label, "enabled": enabled, "special": req.has("flag")})
+		choices.append({"text": label, "enabled": enabled, "special": req.has("flag") or req.has("species")})
 		options.append(c)
 	dialog = {"title": Loc.t(e.title), "text": Loc.t(e.text), "scene": e.get("scene", ""), "choices": choices}
 	_ctx = {"kind": "event", "id": id, "options": options}
+
+
+## Ist jemand dieser Spezies an Bord?
+func has_species(species: String) -> bool:
+	return ship.crew.any(func(m: CrewMember) -> bool: return m.species == species)
 
 
 func _choose_event(index: int) -> void:
@@ -711,6 +785,8 @@ func _cost_text(cost: Dictionary) -> String:
 func _apply(effects: Dictionary) -> Array[String]:
 	var parts: Array[String] = []
 	var s := int(effects.get("scrap", 0))
+	if s > 0:
+		s = roundi(s * float(rules.get("scrap_gain", 1.0)))
 	if s != 0:
 		scrap = maxi(scrap + s, 0)
 		parts.append(Loc.t("%+d Rohstoffe") % s)
@@ -744,9 +820,19 @@ func _apply(effects: Dictionary) -> Array[String]:
 		var name: String = free[_rng.randi() % free.size()] if not free.is_empty() else Loc.t("Neuling")
 		if ship.add_crew_anywhere(name, species):
 			parts.append(Loc.t("%s (%s) kommt an Bord") % [name, Species.display_name(species)])
+	if effects.has("weapon") and Weapon.known(str(effects.weapon)):
+		var wid := str(effects.weapon)
+		if ship.weapons.size() < ship.weapon_slots() or ship.stored_weapons.size() < Upgrades.weapon_storage():
+			ship.add_weapon(wid)
+			parts.append(Loc.t("Neue Waffe: %s") % Weapon.name_of(wid))
+		else:
+			scrap += sell_price(wid)
+			parts.append(Loc.t("Kein Platz für %s: verkauft (+%d Rohstoffe)") % [Weapon.name_of(wid), sell_price(wid)])
 	if effects.has("flag"):
 		flags[effects.flag] = true
 		parts.append(_flag_text(effects.flag))
+	if effects.has("quest"):
+		parts.append(_start_quest(str(effects.quest)))
 	ship.events.clear()  # Todesmeldungen gehören nicht in den nächsten Kampf
 	if ship.is_destroyed() or ship.is_crew_dead():
 		result = "verloren"

@@ -18,9 +18,6 @@ signal selection_changed(member: CrewMember, room_idx: int)
 signal room_tapped(room_idx: int)
 signal hatch_toggled(kind: String, open: bool)
 
-const CREW_SHEETS := {
-	"mensch": preload("res://assets/crew/mensch_klein_sheet.png"),
-}
 ## Reihenfolge im Sprite-Sheet: unten, oben, links, rechts.
 const FRAME_BY_FACING := {
 	Vector2i.DOWN: 0,
@@ -109,12 +106,10 @@ func setup(p_state: ShipState) -> void:
 
 func _add_sprite(member: CrewMember) -> void:
 	var sprite := Sprite2D.new()
-	sprite.texture = CREW_SHEETS.get(member.species, CREW_SHEETS["mensch"])
+	sprite.texture = CrewArt.sheet(member.species)
 	sprite.hframes = 4
-	# Platzhalter: andere Spezies als eingefärbte Menschen, bis es eigene Sprites gibt
-	sprite.modulate = Species.tint(member.species)
 	if hostile:
-		sprite.modulate *= Color(1.0, 0.82, 0.78)
+		sprite.modulate = Color(1.0, 0.82, 0.78)
 	add_child(sprite)
 	_crew_sprites[member] = sprite
 

@@ -1,5 +1,5 @@
 {
-  "_doc": "Ereignisse der Sternenkarte. pool: ereignis (normale Systeme), notsignal (Notsignal ohne Treibstoff). beacon: auf der Karte als NOTRUF sichtbar. scene: Bild links (wrack, planet, notruf, station, schiff, asteroiden, nebel). Choice: text, cost {fuel, scrap} wird vorher abgezogen und ist Bedingung, requires {flag, crew_min} blendet die Option sonst aus (flag) bzw. graut sie aus. Outcome: weight, text, effects {scrap, fuel, hull, hull_full, crew_hp, crew_lose, crew_add, flag}, battle (danach Kampf), victory (Effekte nach dem Sieg), next (Folgeereignis).",
+  "_doc": "Ereignisse der Sternenkarte. pool: ereignis (normale Systeme), notsignal (Notsignal ohne Treibstoff), auftrag (Abschluss eines Auftrags, nur über den Effekt quest). quest: kurzer Name des Auftrags für die Karte (bei Abschlussereignissen). beacon: auf der Karte als NOTRUF sichtbar. scene: Bild links (wrack, planet, notruf, station, schiff, asteroiden, nebel). Choice: text, cost {fuel, scrap} wird vorher abgezogen und ist Bedingung, requires {flag, species, crew_min} blendet die Option sonst aus (flag, species: jemand dieser Spezies an Bord) bzw. graut sie aus. Outcome: weight, text, effects {scrap, fuel, hull, hull_full, crew_hp, crew_lose, crew_add (species: feste Spezies), flag, weapon (Waffe einbauen oder ins Lager), quest (Auftrag: ID des Abschlussereignisses, Ziel wird auf der Karte markiert)}, battle (danach Kampf), victory (Effekte nach dem Sieg), next (Folgeereignis).",
   "events": [
     {
       "id": "wrack_frachter", "pool": "ereignis", "scene": "wrack",
@@ -204,6 +204,190 @@
         ]},
         {"text": "Um Treibstoff bitten", "outcomes": [
           {"text": "Sie geben euch das Nötigste, mit einem strengen Blick.", "effects": {"fuel": 1}}
+        ]}
+      ]
+    },
+    {
+      "id": "auftrag_sonde", "pool": "ereignis", "scene": "station",
+      "title": "Kartografen der Gilde",
+      "text": "Eine Forschungsstation der Gilde hat den Kontakt zu ihrer Messsonde verloren. Die Leiterin bittet euch, den Datenkern zu bergen. Die letzte Peilung liegt ein paar Sprünge entfernt.",
+      "choices": [
+        {"text": "Auftrag annehmen", "outcomes": [
+          {"text": "Die Leiterin überspielt euch die letzte Peilung. Als Anzahlung gibt es eine Tankzelle.", "effects": {"fuel": 1, "quest": "sonde_abschluss"}}
+        ]},
+        {"text": "Ablehnen", "outcomes": [{"text": "Die Leiterin nickt enttäuscht und schließt den Kanal.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "sonde_abschluss", "pool": "auftrag", "scene": "wrack", "quest": "Verschollene Sonde",
+      "title": "Die verschollene Sonde",
+      "text": "An der Peilung treibt die Sonde, eingesponnen in ein Netz aus Kabeln. Ein Schrottsammler hat sie angezapft, seine Drohnen schwirren um den Datenkern.",
+      "choices": [
+        {"text": "Die Drohnen abschießen", "outcomes": [
+          {"text": "Der Schrottsammler will seine Beute nicht hergeben und eröffnet das Feuer.", "battle": true, "victory": {"scrap": 24, "weapon": "salvenlaser"}}
+        ]},
+        {"text": "Außenteam schleicht sich an die Sonde", "requires": {"crew_min": 2}, "outcomes": [
+          {"weight": 0.6, "text": "Eure Leute gleiten im Schatten der Sonde heran und erreichen den Datenkern unbemerkt.", "next": "sonde_kern"},
+          {"weight": 0.4, "text": "Eine Drohne entdeckt das Außenteam. Ein Schuss streift einen Raumanzug, dann eröffnet das Sammlerschiff das Feuer.", "effects": {"crew_hp": -40}, "battle": true, "victory": {"scrap": 24, "weapon": "salvenlaser"}}
+        ]},
+        {"text": "[Veyari] Das Steuersignal der Drohnen nachahmen", "requires": {"species": "veyari"}, "outcomes": [
+          {"text": "Eure Veyari lauscht den Drohnen ihr Funkmuster ab und schickt sie nach Hause. Der Sammler merkt nichts.", "next": "sonde_kern"}
+        ]},
+        {"text": "Den Auftrag aufgeben", "outcomes": [{"text": "Ihr lasst die Sonde dem Sammler.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "sonde_kern", "pool": "auftrag", "scene": "wrack",
+      "title": "Der Datenkern",
+      "text": "Der Kern ist intakt und voller Sternkarten. Daneben klemmt ein ungeöffneter Waffencontainer der Gilde, offenbar Teil der Sondenfracht.",
+      "choices": [
+        {"text": "Kern und Container mitnehmen", "outcomes": [
+          {"text": "Die Kartografen zahlen gut für die Daten und schreiben euch einen Gildenbrief. Den Container dürft ihr behalten: ein fabrikneuer Salvenlaser.", "effects": {"scrap": 20, "weapon": "salvenlaser", "flag": "gilde_freund"}}
+        ]},
+        {"text": "Nur den Kern abliefern, den Container verkaufen", "outcomes": [
+          {"text": "Die Kartografen zahlen für die Daten, ein Händler für den Container. Zusammen eine stattliche Summe.", "effects": {"scrap": 40, "fuel": 1}}
+        ]}
+      ]
+    },
+    {
+      "id": "auftrag_kopfgeld", "pool": "ereignis", "scene": "station",
+      "title": "Steckbrief",
+      "text": "Am Schwarzen Brett der Station hängt ein Steckbrief: Kapitän Rask hat drei Gildenfrachter geplündert. Ein Informant an der Bar behauptet, sein Versteck zu kennen.",
+      "choices": [
+        {"text": "Den Informanten bezahlen", "cost": {"scrap": 5}, "outcomes": [
+          {"text": "Der Informant nennt euch das Versteck: ein ausgehöhlter Asteroid. Die Gilde zahlt das Kopfgeld sofort bei Erfolg.", "effects": {"quest": "kopfgeld_versteck"}}
+        ]},
+        {"text": "Kein Interesse", "outcomes": [{"text": "Ihr lasst den Steckbrief hängen.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "kopfgeld_versteck", "pool": "auftrag", "scene": "asteroiden", "quest": "Kopfgeld auf Rask",
+      "title": "Rasks Versteck",
+      "text": "Im Schatten eines ausgehöhlten Asteroiden liegt ein Piratenkutter vor Anker. Der Funkverkehr verrät: Rask ist an Bord, seine Leute laden gerade Beute um.",
+      "choices": [
+        {"text": "Sofort angreifen", "outcomes": [
+          {"text": "Rask lässt die Ladeluken schließen und geht auf Abfangkurs.", "battle": true, "victory": {"scrap": 30, "fuel": 2}}
+        ]},
+        {"text": "Erst die Beutekisten stehlen", "requires": {"crew_min": 3}, "outcomes": [
+          {"weight": 0.55, "text": "Euer Trupp schafft zwei Kisten an Bord, bevor der Alarm losgeht. Rask nimmt die Verfolgung auf.", "effects": {"scrap": 14}, "battle": true, "victory": {"scrap": 26, "fuel": 1}},
+          {"weight": 0.45, "text": "Ein Wachposten schlägt Alarm. Im Feuergefecht wird ein Crewmitglied schwer verletzt.", "effects": {"crew_hp": -60}, "battle": true, "victory": {"scrap": 30, "fuel": 2}}
+        ]},
+        {"text": "[Ormok] Rask zum Zweikampf fordern", "requires": {"species": "ormok"}, "outcomes": [
+          {"text": "Euer Ormok funkt eine Herausforderung, die jeder Pirat im System hört. Rask kann nicht ablehnen, ohne sein Gesicht zu verlieren.", "next": "kopfgeld_zweikampf"}
+        ]},
+        {"text": "[Kith'ra] Durch die Lüftungsschächte schleichen", "requires": {"species": "kithra"}, "outcomes": [
+          {"text": "Eure Kith'ra krabbelt durch die Lüftungsschächte des Kutters und legt seinen Reaktor still. Rask ergibt sich ohne einen Schuss, die Beute gehört euch.", "effects": {"scrap": 36, "fuel": 2}}
+        ]},
+        {"text": "Abziehen", "outcomes": [{"text": "Ihr lasst Rask in seinem Versteck.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "kopfgeld_zweikampf", "pool": "auftrag", "scene": "asteroiden",
+      "title": "Ehrenkampf",
+      "text": "Rask lacht über die Herausforderung, nimmt sie aber vor seiner Mannschaft an. Auf dem Felsen des Asteroiden stehen sich der Pirat und euer Ormok gegenüber.",
+      "choices": [
+        {"text": "Kämpfen", "outcomes": [
+          {"weight": 0.75, "text": "Nach drei Schlägen liegt Rask im Staub. Seine Leute ergeben sich und übergeben die Beute. Die Gilde zahlt das volle Kopfgeld.", "effects": {"scrap": 40, "fuel": 2}},
+          {"weight": 0.25, "text": "Rask kämpft unfair, seine Leute mischen sich ein. Im Getümmel wird jemand aus eurer Crew verletzt, doch am Ende liegt Rask am Boden.", "effects": {"crew_hp": -50, "scrap": 34, "fuel": 1}}
+        ]}
+      ]
+    },
+    {
+      "id": "auftrag_konvoi", "pool": "ereignis", "scene": "planet",
+      "title": "Evakuierung",
+      "text": "Eine Siedlung auf einem sterbenden Mond wird evakuiert. Der letzte Transporter hat einen kaputten Sprungantrieb und bittet euch, Ersatzteile zum Treffpunkt zu bringen.",
+      "choices": [
+        {"text": "Die Ersatzteile mitnehmen", "outcomes": [
+          {"text": "Die Siedler laden euch Kisten mit Antriebsteilen ein und markieren den Treffpunkt.", "effects": {"quest": "konvoi_treffpunkt"}}
+        ]},
+        {"text": "Keine Zeit", "outcomes": [
+          {"text": "Ihr fliegt weiter. Hinter euch startet ein Shuttle nach dem anderen.", "effects": {}}
+        ]}
+      ]
+    },
+    {
+      "id": "konvoi_treffpunkt", "pool": "auftrag", "scene": "notruf", "quest": "Treffpunkt der Evakuierung",
+      "title": "Der Treffpunkt",
+      "text": "Am Treffpunkt hängt der Transporter manövrierunfähig im All. Piraten kreisen bereits um ihn wie Geier um ein verletztes Tier.",
+      "choices": [
+        {"text": "Die Piraten vertreiben", "outcomes": [
+          {"text": "Ihr schiebt euch zwischen Transporter und Kutter.", "battle": true, "victory": {"scrap": 22, "hull": 6, "crew_add": 1}}
+        ]},
+        {"text": "Die Piraten mit Fracht ablenken", "cost": {"scrap": 10}, "outcomes": [
+          {"text": "Ihr werft Frachtkisten ab. Die Piraten stürzen sich darauf, ihr dockt am Transporter an.", "next": "konvoi_andocken"}
+        ]},
+        {"text": "[Androide] Den Antrieb im Vakuum reparieren", "requires": {"species": "androide"}, "outcomes": [
+          {"text": "Euer Androide steigt aus, ohne Luft zu brauchen, und flickt den Antrieb im Vakuum, während die Piraten noch zielen. Der Transporter springt davon, ihr hinterher.", "next": "konvoi_dank"}
+        ]}
+      ]
+    },
+    {
+      "id": "konvoi_andocken", "pool": "auftrag", "scene": "schiff",
+      "title": "Andocken",
+      "text": "Die Mechaniker des Transporters brauchen Zeit, um die Teile einzubauen. Die Piraten haben die Kisten bald durchsucht.",
+      "choices": [
+        {"text": "Eure Crew hilft beim Einbau", "requires": {"crew_min": 2}, "outcomes": [
+          {"weight": 0.7, "text": "Mit vereinten Kräften läuft der Antrieb in Minuten wieder.", "next": "konvoi_dank"},
+          {"weight": 0.3, "text": "Ein Kurzschluss verletzt einen Helfer. Der Antrieb läuft, doch die Piraten kommen zurück.", "effects": {"crew_hp": -40}, "battle": true, "victory": {"scrap": 24, "crew_add": 1}}
+        ]},
+        {"text": "Die Piraten abfangen", "outcomes": [
+          {"text": "Ihr legt ab und stellt euch den Kuttern.", "battle": true, "victory": {"scrap": 24, "crew_add": 1}}
+        ]}
+      ]
+    },
+    {
+      "id": "konvoi_dank", "pool": "auftrag", "scene": "planet",
+      "title": "Gerettet",
+      "text": "Der Transporter ist sicher. Die Siedler wollen euch danken, so gut sie können: Vorräte, Ersatzteile, und eine Freiwillige möchte mitfliegen.",
+      "choices": [
+        {"text": "Vorräte und die Freiwillige an Bord nehmen", "outcomes": [
+          {"text": "Die Siedler winken euch nach, bis der Sprung euch fortträgt.", "effects": {"scrap": 22, "fuel": 2, "crew_add": 1}}
+        ]},
+        {"text": "Die Mechaniker den Rumpf überholen lassen", "outcomes": [
+          {"text": "Die Mechaniker schweißen jede Delle aus, die sie finden, und legen noch Ersatzteile dazu.", "effects": {"hull": 12, "scrap": 22}}
+        ]}
+      ]
+    },
+    {
+      "id": "auftrag_mine", "pool": "ereignis", "scene": "asteroiden",
+      "title": "Verschüttete Bergleute",
+      "text": "Ormok-Bergleute melden einen Einsturz in ihrer Asteroidenmine. Sie brauchen Sprengladungen aus einem Depot in der Nähe, um den Stollen freizulegen, und bieten einen Anteil am Erz.",
+      "choices": [
+        {"text": "Die Sprengladungen holen", "outcomes": [
+          {"text": "Der Vorarbeiter gibt euch die Koordinaten des Depots und seinen Zugangscode.", "effects": {"quest": "mine_depot"}}
+        ]},
+        {"text": "Ablehnen", "outcomes": [{"text": "Das Funksignal der Mine bricht ab.", "effects": {}}]}
+      ]
+    },
+    {
+      "id": "mine_depot", "pool": "auftrag", "scene": "asteroiden", "quest": "Verschüttete Bergleute",
+      "title": "Das Sprengstoffdepot",
+      "text": "Das Depot ist verlassen, die Sprengladungen liegen noch im Regal. Doch der Zugangscode ist veraltet, und die Selbstschussanlage am Tor ist scharf.",
+      "choices": [
+        {"text": "Die Anlage zerschießen", "outcomes": [
+          {"text": "Ein gezielter Schuss, und die Anlage schweigt. Ihr ladet die Kisten ein und fliegt zurück zur Mine.", "effects": {"hull": -2}, "next": "mine_rettung"}
+        ]},
+        {"text": "Außenteam schleicht vorbei", "requires": {"crew_min": 2}, "outcomes": [
+          {"weight": 0.7, "text": "Das Außenteam kriecht unter dem Sichtfeld der Anlage hindurch und holt die Kisten.", "next": "mine_rettung"},
+          {"weight": 0.3, "text": "Die Anlage erwischt jemanden am Bein. Die Kisten sind trotzdem an Bord.", "effects": {"crew_hp": -35}, "next": "mine_rettung"}
+        ]}
+      ]
+    },
+    {
+      "id": "mine_rettung", "pool": "auftrag", "scene": "asteroiden",
+      "title": "Der verschüttete Stollen",
+      "text": "Zurück an der Mine: Die Bergleute sitzen hinter tonnenweise Geröll. Zu viel Sprengstoff bringt den Stollen ganz zum Einsturz, zu wenig bewegt nichts.",
+      "choices": [
+        {"text": "Vorsichtig sprengen", "outcomes": [
+          {"weight": 0.65, "text": "Das Geröll bricht genau richtig weg. Die Bergleute kriechen jubelnd ins Licht und überschütten euch mit Erz. Einer von ihnen heuert bei euch an.", "effects": {"scrap": 30, "crew_add": 1, "species": "ormok"}},
+          {"weight": 0.35, "text": "Die Decke gibt nach, ein Brocken trifft euer Schiff. Die Bergleute kommen trotzdem frei und teilen ihr Erz.", "effects": {"hull": -4, "scrap": 30}}
+        ]},
+        {"text": "[Petrani] Euer Petrani gräbt sich durch", "requires": {"species": "petrani"}, "outcomes": [
+          {"text": "Unbeeindruckt von Staub und Vakuum schiebt sich euer Petrani durch das Geröll und öffnet einen Gang. Die Bergleute sind gerettet und zahlen doppelt.", "effects": {"scrap": 44, "crew_add": 1, "species": "ormok"}}
+        ]},
+        {"text": "Mit voller Ladung sprengen", "outcomes": [
+          {"weight": 0.4, "text": "Ein gewaltiger Knall, dann Stille, dann Jubel. Der Weg ist frei, und die Explosion hat eine neue Erzader freigelegt.", "effects": {"scrap": 42}},
+          {"weight": 0.6, "text": "Der ganze Stollen bricht ein. Die Bergleute überleben in einer Luftblase, ihr müsst sie mühsam herausschneiden. Der Lohn fällt mager aus.", "effects": {"scrap": 12, "hull": -3}}
         ]}
       ]
     }

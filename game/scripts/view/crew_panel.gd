@@ -1,7 +1,7 @@
 class_name CrewPanel
 extends Control
 ## Crew-Liste links (wie im Mockup): je Person ein Kasten mit Porträt, Name und Lebensbalken.
-## Der Captain trägt einen goldenen Stern, die Farbe des Porträts zeigt die Spezies.
+## Der Captain trägt einen goldenen Stern, das Porträt zeigt die Spezies (CrewArt).
 ## Oben rechts im Kasten das Symbol der Tätigkeit (löschen, flicken, reparieren, geheilt werden).
 ## Antippen wählt die Person aus. Ist `expanded` gesetzt, erscheint direkt unter ihrem Eintrag
 ## ein Infokasten (Spezies, LP, Erfahrung je System); die Einträge darunter rücken nach unten.
@@ -11,10 +11,6 @@ extends Control
 
 signal crew_selected(member: CrewMember)
 
-const PORTRAITS := {
-	"mensch": preload("res://assets/crew/mensch_gross_unten.png"),
-}
-const CROP := Rect2(10, 10, 20, 20)
 const WIDE := Vector2(54, 18)
 const NARROW := Vector2(24, 26)
 const GAP := 2.0
@@ -105,18 +101,17 @@ func _draw() -> void:
 		var member := state.crew[i]
 		var rect := Rect2(Vector2(0, entry_y(i)), s)
 		HudStyle.box(self, rect, COLOR_SELECTED if member == selected else HudStyle.COLOR_EDGE)
-		var portrait: Texture2D = PORTRAITS.get(member.species, PORTRAITS["mensch"])
-		var tint := Species.tint(member.species)
+		var portrait := CrewArt.portrait(member.species)
 		var ratio := member.hp / member.max_hp
 		var hp_color := HudStyle.COLOR_OK if ratio > 0.6 else (HudStyle.COLOR_WARN if ratio > 0.3 else HudStyle.COLOR_BAD)
 		if compact:
-			draw_texture_rect_region(portrait, Rect2(rect.position + Vector2(2, 1), CROP.size), CROP, tint)
+			var crop := CrewArt.square_crop(member.species)
+			draw_texture_rect_region(portrait, Rect2(rect.position + Vector2(2, 1), crop.size), crop)
 			var hp_bar := Rect2(rect.position + Vector2(2, s.y - 4), Vector2(s.x - 4, 2))
 			draw_rect(hp_bar, HudStyle.COLOR_OFF)
 			draw_rect(Rect2(hp_bar.position, Vector2(roundf(hp_bar.size.x * ratio), 2)), hp_color)
 		else:
-			var head := Rect2(10, 8, 20, 14)
-			draw_texture_rect_region(portrait, Rect2(rect.position + Vector2(1, 2), Vector2(14, 10)), head, tint)
+			draw_texture_rect_region(portrait, Rect2(rect.position + Vector2(1, 2), Vector2(14, 10)), CrewArt.head_crop(member.species))
 			var first := member.display_name.split(" ")[0]
 			HudStyle.text(self, rect.position + Vector2(17, 9), first, HudStyle.COLOR_TEXT, s.x - 19)
 			var hp_bar := Rect2(rect.position + Vector2(17, 12), Vector2(s.x - 20, 3))

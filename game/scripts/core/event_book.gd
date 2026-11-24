@@ -51,7 +51,7 @@ func pick(pool: String, rng: RandomNumberGenerator, exclude := {}) -> String:
 
 ## Prüft alle Ereignisse auf Tippfehler in Effekten und Bedingungen. Liefert Fehlertexte.
 func validate() -> Array[String]:
-	const EFFECTS := ["scrap", "fuel", "hull", "hull_full", "crew_hp", "crew_lose", "crew_add", "flag"]
+	const EFFECTS := ["scrap", "fuel", "hull", "hull_full", "crew_hp", "crew_lose", "crew_add", "species", "flag", "weapon", "quest"]
 	var errors: Array[String] = []
 	for id: String in events:
 		var e: Dictionary = events[id]
@@ -66,6 +66,15 @@ func validate() -> Array[String]:
 					for key: String in effects:
 						if not EFFECTS.has(key):
 							errors.append("%s: unbekannter Effekt %s" % [id, key])
+					if effects.has("quest") and events.get(effects.quest, {}).get("pool", "") != "auftrag":
+						errors.append("%s: Auftrag %s fehlt oder liegt nicht im Pool auftrag" % [id, effects.quest])
+					if effects.has("weapon") and not Weapon.known(str(effects.weapon)):
+						errors.append("%s: unbekannte Waffe %s" % [id, effects.weapon])
+					if effects.has("species") and not Species.known(str(effects.species)):
+						errors.append("%s: unbekannte Spezies %s" % [id, effects.species])
 				if outcome.has("next") and not events.has(outcome.next):
 					errors.append("%s: Folgeereignis %s fehlt" % [id, outcome.next])
+			var req: Dictionary = choice.get("requires", {})
+			if req.has("species") and not Species.known(str(req.species)):
+				errors.append("%s: unbekannte Spezies %s in requires" % [id, req.species])
 	return errors
