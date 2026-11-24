@@ -49,7 +49,8 @@ rim_light = hull.difference(affinity.translate(hull, 1.6, 1.6))
 rim_dark = hull.difference(affinity.translate(hull, -1.6, -1.6))
 
 
-def build_svg():
+def build_svg(with_icons=False):
+    """Ohne Raumsymbole (zeigt das Spiel je nach Sensorstufe, die Räume werden neu verteilt)."""
     s = []
     defs = [
         '<linearGradient id="hullG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="110" y2="80">'
@@ -96,7 +97,8 @@ def build_svg():
                 f = "#2B3249" if (i + j) % 2 == 0 else "#20263A"
                 s.append(f'<rect x="{x + i * T}" y="{y + j * T}" width="{T}" height="{T}" fill="{f}"/>')
         s.append(f'<path d="M{x},{y + T + .5} H{x + 2 * T} M{x + T + .5},{y} V{y + 2 * T}" stroke="#161B2B" stroke-width="1"/>')
-        s.append(icon_svg(name, x + 8, y + 8))
+        if with_icons:
+            s.append(icon_svg(name, x + 8, y + 8))
     for _, c, r in ROOMS:
         x, y = px(c, r)
         s.append(f'<rect x="{x}" y="{y}" width="{2 * T}" height="{2 * T}" fill="none" stroke="#0A0B16" stroke-width="2"/>')

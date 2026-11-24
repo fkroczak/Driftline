@@ -92,6 +92,8 @@ var shield_layers := 0
 var shield_progress := 0.0
 ## Sekunden je Schildschicht (aus `shield_recharge` im Schiffs-JSON, sonst SHIELD_RECHARGE).
 var shield_recharge := SHIELD_RECHARGE
+## Tempo beim Löschen, Flicken und Reparieren (Gegner: repair_speed aus data/enemies.json).
+var repair_speed := 1.0
 var oxygen: Array[float] = []  # je Raum
 var fires: Dictionary = {}  # Kachel -> Stärke (0..1)
 var breaches: Dictionary = {}  # Kachel -> Reparaturfortschritt (0..1)
@@ -149,8 +151,35 @@ func level(id: String) -> int:
 	return sys.level() if sys else 0
 
 
+## Verfügbare Energie: Reaktor plus Batterie (beide verlieren Balken, wenn sie getroffen werden).
 func reactor_output() -> int:
-	return level("reaktor")
+	return level("reaktor") + level("batterie")
+
+
+## Batterie in den ersten freien Erweiterungsraum einbauen (oder in `room_id`). Falsch, wenn schon
+## eine an Bord ist oder kein Erweiterungsraum frei ist.
+func install_battery(bars := 2, room_id := "") -> bool:
+	if systems.has("batterie"):
+		return false
+	var room := layout.room_index_by_id(room_id) if room_id != "" else -1
+	if room < 0:
+		for i in layout.rooms.size():
+			if layout.rooms[i].system == "" and str(layout.rooms[i].id).begins_with("erweiterung"):
+				room = i
+				break
+	if room < 0 or layout.rooms[room].system != "":
+		return false
+	layout.rooms[room].system = "batterie"
+	layout.rooms[room].name = "Batterie"  # i18n
+	systems["batterie"] = ShipSystem.new("batterie", bars)
+	_rebalance()
+	return true
+
+
+## Raum der Batterie ("" = keine).
+func battery_room_id() -> String:
+	var room := layout.room_of_system("batterie")
+	return str(layout.rooms[room].id) if room >= 0 else ""
 
 
 func power_used() -> int:
@@ -384,7 +413,7 @@ func _crew_work(delta: float) -> void:
 				var t: Vector2i = room_fires[i % room_fires.size()]
 				workers[i].set_activity("loeschen", t)
 				if fires.has(t):
-					fires[t] -= delta * EXTINGUISH * workers[i].repair_factor()
+					fires[t] -= delta * EXTINGUISH * workers[i].repair_factor() * repair_speed
 					if fires[t] <= 0.0:
 						fires.erase(t)
 						events.append({"type": "extinguished", "tile": t, "room": room})
@@ -397,7 +426,7 @@ func _crew_work(delta: float) -> void:
 			for member: CrewMember in workers:
 				member.set_activity("flicken", t)
 				power += member.repair_factor()
-			breaches[t] += delta * power / BREACH_REPAIR_TIME
+			breaches[t] += delta * power * repair_speed / BREACH_REPAIR_TIME
 			if breaches[t] >= 1.0:
 				breaches.erase(t)
 				events.append({"type": "breach_fixed", "tile": t, "room": room})
@@ -411,7 +440,7 @@ func _crew_work(delta: float) -> void:
 				member.set_activity("reparieren", console if console != null and console != member.tile else layout.rooms[room].pos)
 		if workers <= 0.0 and sys.damage > 0:
 			workers = perk_value("drone_repair")  # Reparaturdrohne arbeitet, wo niemand steht
-		if sys.repair(delta, workers):
+		if sys.repair(delta, workers * repair_speed):
 			events.append({"type": "repaired", "system": sys.id, "room": room})
 
 
@@ -494,6 +523,9 @@ func _update_crew_health(delta: float) -> void:
 			if member.hp < member.max_hp and member.activity == "":
 				member.activity = "heilen"
 			member.hp = minf(member.hp + level("medbay") * HEAL_PER_LEVEL * heal * delta, member.max_hp)
+		var regen := float(Species.value(member.species, "regen", 0.0))
+		if regen > 0.0 and damage <= 0.0 and member.hp < member.max_hp:
+			member.hp = minf(member.hp + regen * delta, member.max_hp)  # Petrani wachsen nach
 		if damage > 0.0:
 			_hurt(member, damage * delta)
 

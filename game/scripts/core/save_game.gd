@@ -23,10 +23,12 @@ extends RefCounted
 ## Version 2: Modus, Sektor, Sprungzähler, Jägerfront, freie Karte mit Verbindungen in beide Richtungen.
 ## Version 3: Schiffsausbau (Perks, Waffenlager) und Händlerwaren; ältere Stände bekommen leere Listen.
 ## Version 4: Aufträge (`quests`, Ziel-Knoten -> Abschlussereignis); ältere Stände starten ohne Auftrag.
-## Version 5: Startausrüstung (`loadout`: Schiffsvariante, Schwierigkeit …); ältere Stände sind
+## Version 5: Batterie (`battery_room`) und Perks/Batterie im Händlerangebot; fehlt beides, wird es
+## beim nächsten Besuch des Händlers nachgewürfelt.
+## Version 6: Startausrüstung (`loadout`: Schiffsvariante, Schwierigkeit …); ältere Stände sind
 ## der Standardstart (Frachter, Normal).
 
-const VERSION := 5
+const VERSION := 6
 const PATH := "user://savegame.json"
 const BACKUP := "user://savegame.bak.json"
 const TEMP := "user://savegame.tmp"
@@ -137,7 +139,8 @@ static func _migrate(data: Dictionary) -> Dictionary:
 				c["role"] = CrewMember.ROLE_CAPTAIN
 	# v2 -> v3: nichts umzurechnen; perks, stored_weapons und shop_stock fehlen und starten leer.
 	# v3 -> v4: nichts umzurechnen; quests fehlt und startet leer.
-	# v4 -> v5: nichts umzurechnen; loadout fehlt und gilt als Standardstart.
+	# v4 -> v5: nichts umzurechnen; ohne battery_room keine Batterie, Händlerperks werden nachgetragen.
+	# v5 -> v6: nichts umzurechnen; loadout fehlt und gilt als Standardstart.
 	data.version = VERSION
 	data["run"] = r
 	return data
@@ -224,6 +227,9 @@ static func from_dict(data: Dictionary, mode := RunState.MODE_HUNT) -> RunState:
 		var entry: Dictionary = stock[key]
 		var weapons: Array = (entry.get("weapons", []) as Array).filter(func(id: Variant) -> bool: return Weapon.known(str(id)))
 		run.shop_stock[int(key)] = {"weapons": weapons, "crew": entry.get("crew", [])}
+		if entry.has("perks"):
+			run.shop_stock[int(key)]["perks"] = (entry.perks as Array).filter(func(id: Variant) -> bool: return not Upgrades.perk(str(id)).is_empty())
+			run.shop_stock[int(key)]["battery"] = bool(entry.get("battery", false))
 	run.quests = {}
 	var quests: Dictionary = r.get("quests", {})
 	for key: Variant in quests:
@@ -262,6 +268,7 @@ static func _ship_to_dict(ship: ShipState) -> Dictionary:
 		"weapons": weapons,
 		"stored_weapons": ship.stored_weapons,
 		"perks": ship.perks,
+		"battery_room": ship.battery_room_id(),
 		"crew": crew,
 		"shield_layers": ship.shield_layers,
 		"shield_progress": ship.shield_progress,
@@ -283,6 +290,8 @@ static func _ship_from_dict(ship: ShipState, s: Dictionary) -> void:
 	ship.max_hull = int(s.get("max_hull", ship.max_hull))
 	ship.hull = clampi(int(s.get("hull", ship.hull)), 0, ship.max_hull)
 	var systems: Dictionary = s.get("systems", {})
+	if systems.has("batterie"):
+		ship.install_battery(int(systems.batterie.get("capacity", 2)), str(s.get("battery_room", "")))
 	for id: String in systems:
 		if not ship.systems.has(id):
 			continue

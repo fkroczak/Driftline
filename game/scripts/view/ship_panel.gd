@@ -6,7 +6,8 @@ extends Control
 ## - **SYSTEME:** je System die Stufe als Balken (grün = ausgebaut, dunkel = noch möglich) und ein
 ##   Knopf „+1“ mit dem Preis in Rohstoffen. Den Namen antippen erklärt das System.
 ## - **WAFFEN & PERKS:** links die Waffenplätze und das Lager (Waffe ins Lager oder wieder
-##   einbauen; kaufen und verkaufen nur beim Händler), rechts die Perks zum einmaligen Kauf.
+##   einbauen; kaufen und verkaufen nur beim Händler), rechts die Perks an Bord (gekauft werden
+##   sie beim Händler).
 ##
 ## Preise und Grenzen stehen in data/upgrades.json, die Logik in RunState (Abschnitt Schiffsausbau).
 
@@ -155,17 +156,11 @@ func _draw_perks(area: Rect2) -> void:
 	var y := area.position.y
 	HudStyle.text(self, Vector2(area.position.x, y + 8), Loc.t("PERKS"), HudStyle.COLOR_SHIELD)
 	y += 12.0
-	for id in Upgrades.perk_ids():
-		var owned := run.ship.has_perk(id)
-		HudStyle.text(self, Vector2(area.position.x, y + 11), Upgrades.perk_name(id), HudStyle.COLOR_OK if owned else HudStyle.COLOR_TEXT,
-			area.size.x - BTN_W - 4)
-		_hits.append({"rect": Rect2(area.position.x, y, area.size.x - BTN_W - 4, ROW_H - 2), "action": "info_perk", "arg": id})
-		var btn := Rect2(area.end.x - BTN_W, y, BTN_W, ROW_H - 3)
-		if owned:
-			HudStyle.button(self, btn, Loc.t("AN BORD"), HudStyle.COLOR_OK, true)
-		else:
-			_price_button(btn, "", run.perk_price(id), run.can_buy_perk(id))
-			_hits.append({"rect": btn, "action": "perk", "arg": id})
+	if run.ship.perks.is_empty():
+		HudStyle.paragraph(self, Vector2(area.position.x, y + 9), Loc.t("Noch keine Perks an Bord. Händler bieten wechselnde Perks an."), area.size.x, HudStyle.COLOR_DIM, 9.0)
+	for id in run.ship.perks:
+		HudStyle.text(self, Vector2(area.position.x, y + 11), Upgrades.perk_name(id), HudStyle.COLOR_OK, area.size.x)
+		_hits.append({"rect": Rect2(area.position.x, y, area.size.x, ROW_H - 2), "action": "info_perk", "arg": id})
 		y += ROW_H
 
 

@@ -10,6 +10,7 @@ ROOM_COLORS = {
     "Sensoren": ("#7F77DD", "#CECBF6"),
     "Lebenserhaltung": ("#85B7EB", "#D3E6F8"),
     "Modul": ("#D4537E", "#FBE3EB"),
+    "Batterie": ("#D4537E", "#FBE3EB"),
 }
 
 ICONS = {
@@ -125,7 +126,45 @@ ICONS = {
         "..X......X..",
         "...XXXXXX...",
     ],
+    "Batterie": [
+        "............",
+        "....XXXX....",
+        "..XXXXXXXX..",
+        "..X......X..",
+        "..X.oooo.X..",
+        "..X......X..",
+        "..X.oooo.X..",
+        "..X......X..",
+        "..X.oooo.X..",
+        "..X......X..",
+        "..XXXXXXXX..",
+        "............",
+    ],
 }
+
+# Reihenfolge im Atlas game/assets/ui/system_icons.png (je 14 × 14 px, Symbol + Schattenkante)
+ATLAS = ["Reaktor", "Schilde", "Waffen", "Antrieb", "Cockpit", "Medbay", "Sensoren", "Lebenserhaltung", "Batterie"]
+
+
+def atlas_image():
+    from PIL import Image
+    cell = 14
+    img = Image.new("RGBA", (cell * len(ATLAS), cell), (0, 0, 0, 0))
+    hexrgb = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) + (255,)
+    for n, name in enumerate(ATLAS):
+        base, light = ROOM_COLORS[name]
+        rows = ICONS[name]
+        for dy, row in enumerate(rows):
+            for dx, ch in enumerate(row):
+                if ch != ".":
+                    img.putpixel((n * cell + dx + 1, dy + 1), hexrgb("#0A0B16"))
+        for dy, row in enumerate(rows):
+            for dx, ch in enumerate(row):
+                if ch == "X":
+                    img.putpixel((n * cell + dx, dy), hexrgb(base))
+                elif ch == "o":
+                    img.putpixel((n * cell + dx, dy), hexrgb(light))
+    return img
 
 for k, v in ICONS.items():
     assert len(v) == 12 and all(len(r) == 12 for r in v), k

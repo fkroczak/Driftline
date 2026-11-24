@@ -647,6 +647,8 @@ func _shop_offers() -> Array[Dictionary]:
 	var s: Dictionary = rules.get("shop", {})
 	var amount := int(s.get("hull_amount", 5))
 	var missing := ship.max_hull - ship.hull
+	if missing <= 0:
+		missing = 99  # volle Hülle: zeigt die normale Menge (Kauf ist dann gesperrt)
 	return [
 		{"text": Loc.t("1 Treibstoff kaufen"), "cost": {"scrap": _price(int(s.get("fuel_price", 3)))}, "fuel": 1},
 		{"text": Loc.t("Hülle +%d reparieren") % mini(amount, missing), "cost": {"scrap": _price(int(s.get("hull_price", 8)))},
@@ -789,7 +791,162 @@ func _stock() -> Dictionary:
 		taken.append(name)
 		crew.append({"name": name, "species": species})
 	shop_stock[current] = {"weapons": weapons, "crew": crew}
+	_stock_extras(shop_stock[current])
 	return shop_stock[current]
+
+
+## Perks und Batterie im Angebot (auch für Händlerwaren aus älteren Spielständen nachgetragen).
+func _stock_extras(stock: Dictionary) -> void:
+	if stock.has("perks"):
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([seed_value, sector, current, "haendler_perks"])
+	var pool := Upgrades.perk_ids().filter(func(id: String) -> bool: return not ship.has_perk(id))
+	var perks: Array = []
+	for i in mini(Upgrades.shop_perks(), pool.size()):
+		perks.append(pool.pop_at(rng.randi() % pool.size()))
+	stock["perks"] = perks
+	stock["battery"] = rng.randf() < float(Upgrades.defs().get("battery_chance", 0.0))
+
+
+# --- Händler als eigener Bildschirm (ShopPanel): direkte Käufe statt Textoptionen ---
+
+
+func is_shop_open() -> bool:
+	return _ctx.get("kind", "") == "shop"
+
+
+func close_shop() -> void:
+	if is_shop_open():
+		dialog = {}
+		_ctx = {}
+
+
+## Waren des offenen Händlers: weapons (IDs), perks (IDs), crew ([{name, species}]), battery (bool).
+## Die Waren stehen je Händler für den ganzen Sektor fest (auch nach vielen Sprüngen und nach dem
+## Laden); Gekauftes ist weg, Perks, die schon an Bord sind, verschwinden aus allen Angeboten.
+func shop_goods() -> Dictionary:
+	var stock := _stock()
+	_stock_extras(stock)
+	stock.perks = (stock.perks as Array).filter(func(id: String) -> bool: return not ship.has_perk(id))
+	return stock
+
+
+## Vorräte: [{text, cost, fuel?, hull?, enabled}]
+func shop_supplies() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for offer in _shop_offers():
+		var o: Dictionary = offer.duplicate()
+		o["enabled"] = _can_pay(offer.cost) and not (offer.get("needs_damage", false) and ship.hull >= ship.max_hull)
+		out.append(o)
+	return out
+
+
+func shop_buy_supply(index: int) -> String:
+	var offers := shop_supplies()
+	if index < 0 or index >= offers.size() or not offers[index].enabled:
+		return ""
+	var offer: Dictionary = offers[index]
+	_pay(offer.cost)
+	var effects := {}
+	for key in ["fuel", "hull"]:
+		if offer.has(key):
+			effects[key] = offer[key]
+	return Loc.t("Gekauft: ") + " · ".join(_apply(effects))
+
+
+func shop_price(base: int) -> int:
+	return _price(base)
+
+
+func weapon_room() -> bool:
+	return ship.weapons.size() < ship.weapon_slots() or ship.stored_weapons.size() < Upgrades.weapon_storage()
+
+
+func shop_can_buy_weapon(index: int) -> bool:
+	var goods := shop_goods()
+	return index >= 0 and index < goods.weapons.size() and weapon_room() and scrap >= _price(Weapon.price_of(goods.weapons[index]))
+
+
+func shop_buy_weapon(index: int) -> String:
+	if not shop_can_buy_weapon(index):
+		return ""
+	var goods := shop_goods()
+	var id: String = goods.weapons[index]
+	_pay({"scrap": _price(Weapon.price_of(id))})
+	ship.add_weapon(id)
+	goods.weapons.remove_at(index)
+	return Loc.t("Gekauft: ") + Weapon.name_of(id)
+
+
+## Verkauf einer eigenen Waffe (Index über eingebaute und gelagerte, wie all_weapon_ids).
+func shop_sell_weapon(index: int) -> String:
+	var owned := ship.all_weapon_ids()
+	if index < 0 or index >= owned.size() or owned.size() <= 1:
+		return ""
+	var price := sell_price(owned[index])
+	var sold := ship.remove_weapon_at(index)
+	scrap += price
+	return Loc.t("Verkauft: %s (+%d Rohstoffe)") % [Weapon.name_of(sold), price]
+
+
+func shop_can_buy_perk(index: int) -> bool:
+	var goods := shop_goods()
+	return index >= 0 and index < goods.perks.size() and not ship.has_perk(goods.perks[index]) \
+		and scrap >= _price(perk_price(goods.perks[index]))
+
+
+func shop_buy_perk(index: int) -> String:
+	if not shop_can_buy_perk(index):
+		return ""
+	var goods := shop_goods()
+	var id: String = goods.perks[index]
+	scrap -= _price(perk_price(id))
+	grant_perk(ship, id)
+	goods.perks.remove_at(index)
+	return Loc.t("Eingebaut: ") + Upgrades.perk_name(id)
+
+
+func shop_can_hire(index: int) -> bool:
+	var goods := shop_goods()
+	return index >= 0 and index < goods.crew.size() and ship.crew.size() < MAX_CREW \
+		and scrap >= _price(Upgrades.crew_price(goods.crew[index].species))
+
+
+func shop_hire(index: int) -> String:
+	if not shop_can_hire(index):
+		return ""
+	var goods := shop_goods()
+	var c: Dictionary = goods.crew[index]
+	_pay({"scrap": _price(Upgrades.crew_price(c.species))})
+	if not ship.add_crew_anywhere(c.name, c.species):
+		return ""
+	goods.crew.remove_at(index)
+	return Loc.t("%s (%s) kommt an Bord") % [c.name, Species.display_name(c.species)]
+
+
+func battery_price() -> int:
+	return _price(int(Upgrades.defs().get("battery_price", 55)))
+
+
+func shop_can_buy_battery() -> bool:
+	return shop_goods().get("battery", false) and ship.get_system("batterie") == null and _has_free_expansion() and scrap >= battery_price()
+
+
+func shop_buy_battery() -> String:
+	if not shop_can_buy_battery():
+		return ""
+	scrap -= battery_price()
+	ship.install_battery(int(Upgrades.defs().get("battery_bars", 2)))
+	shop_goods().battery = false
+	return Loc.t("Batterie eingebaut: +%d Energie") % ship.get_system("batterie").capacity
+
+
+func _has_free_expansion() -> bool:
+	for r: Dictionary in ship.layout.rooms:
+		if r.system == "" and str(r.id).begins_with("erweiterung"):
+			return true
+	return false
 
 
 ## Schäden außer der Hülle: beschädigte Systembalken, Lecks und Brände.
@@ -930,6 +1087,12 @@ func _apply(effects: Dictionary) -> Array[String]:
 		else:
 			scrap += sell_price(wid)
 			parts.append(Loc.t("Kein Platz für %s: verkauft (+%d Rohstoffe)") % [Weapon.name_of(wid), sell_price(wid)])
+	if effects.get("battery", false):
+		if ship.install_battery(int(Upgrades.defs().get("battery_bars", 2))):
+			parts.append(Loc.t("Batterie eingebaut: +%d Energie") % ship.get_system("batterie").capacity)
+		else:
+			scrap += 20
+			parts.append(Loc.t("Kein Platz für eine Batterie: verkauft (+20 Rohstoffe)"))
 	if effects.has("flag"):
 		flags[effects.flag] = true
 		parts.append(_flag_text(effects.flag))
@@ -978,17 +1141,28 @@ func enemy_spec(id := -1) -> Dictionary:
 	if id == current and hunter_battle:
 		var hunter: Dictionary = _enemy_table.get("hunter", {})
 		var extra := maxi(jumps - HUNT_JUMPS, 0) * int(hunter.get("hull_per_late_jump", 0))
+		var armed: bool = sector >= int(hunter.get("weapons_from_sector", 99))
 		return {
 			"ship": SHIPS_DIR % hunter.get("ship", "jaeger_fregatte"),
 			"name": hunter.get("name", ""),
 			"hull_bonus": int(hunter.get("hull_bonus", 0)) + per_sector + extra,
+			"weapons": hunter.get("weapons", []) if armed else [],
+			"shield_bonus": 0,
 		}
 	if n.type == "boss":
 		var boss: Dictionary = _enemy_table.get("boss", {})
+		var weapons: Array = []
+		var shield_bonus := 0
+		for up: Dictionary in boss.get("upgrades", []):
+			if sector >= int(up.get("from_sector", 99)):
+				weapons.append_array(up.get("weapons", []))
+				shield_bonus += int(up.get("shield_bonus", 0))
 		return {
 			"ship": SHIPS_DIR % boss.get("ship", "piraten_kutter_schwer"),
 			"name": boss.get("name", ""),
 			"hull_bonus": int(boss.get("hull_bonus", 0)) + (sector - 1) * int(boss.get("hull_per_sector", 0)) + int(difficulty().get("enemy_hull", 0)),
+			"weapons": weapons,
+			"shield_bonus": shield_bonus,
 		}
 	var stage := _stage_for(_depth(n.column))
 	var pool: Array = stage.get("pool", [["piraten_kutter", 1.0]])
@@ -1004,13 +1178,19 @@ func enemy_spec(id := -1) -> Dictionary:
 		if roll <= 0.0:
 			pick = entry[0]
 			break
-	return {"ship": SHIPS_DIR % pick, "name": "", "hull_bonus": int(stage.get("hull_bonus", 0)) + per_sector}
+	return {"ship": SHIPS_DIR % pick, "name": "", "hull_bonus": int(stage.get("hull_bonus", 0)) + per_sector,
+		"weapons": stage.get("weapons", []), "shield_bonus": int(stage.get("shield_bonus", 0))}
 
 
 ## Baut das Gegnerschiff für den Knoten samt Besatzung (Kapitänin, Schütze, Mechaniker).
 func create_enemy(id := -1) -> ShipState:
+	if id < 0:
+		id = current
 	var spec := enemy_spec(id)
 	var layout := ShipLayout.load_json(spec.ship)
+	var rooms_rng := RandomNumberGenerator.new()
+	rooms_rng.seed = hash([seed_value, sector, id, hunter_battle, "raeume"])
+	layout.shuffle_systems(rooms_rng)
 	for error in layout.validate():
 		push_error("%s: %s" % [spec.ship, error])
 	if spec.name != "":
@@ -1018,10 +1198,33 @@ func create_enemy(id := -1) -> ShipState:
 	var enemy := ShipState.new(layout)
 	enemy.max_hull += spec.hull_bonus
 	enemy.hull = enemy.max_hull
+	enemy.repair_speed = float(_enemy_table.get("repair_speed", 1.0))
+	_arm_enemy(enemy, spec.get("weapons", []), int(spec.get("shield_bonus", 0)))
 	for crew_spec in [[Loc.t("Kapitänin"), "cockpit"], [Loc.t("Schütze"), "waffen"], [Loc.t("Mechaniker"), "schilde"]]:
 		var console: Vector2i = layout.console_of(layout.room_index_by_id(crew_spec[1]))
 		enemy.add_crew(crew_spec[0], "mensch", console, {crew_spec[1]: 1.0})
 	return enemy
+
+
+## Tiefer im Universum: zusätzliche Waffen und Schildbalken. Reaktor und Waffensystem wachsen mit,
+## damit alles Energie hat.
+static func _arm_enemy(enemy: ShipState, weapons: Array, shield_bonus: int) -> void:
+	var reactor := enemy.get_system("reaktor")
+	for id: Variant in weapons:
+		if not Weapon.known(str(id)):
+			continue
+		var w := Weapon.create(str(id))
+		w.wanted = true
+		enemy.weapons.append(w)
+		enemy.get_system("waffen").capacity += w.cost
+		reactor.capacity += w.cost
+	var shields := enemy.get_system("schilde")
+	if shield_bonus > 0 and shields:
+		shields.capacity += shield_bonus
+		shields.wanted += shield_bonus
+		reactor.capacity += shield_bonus
+	enemy._rebalance()
+	enemy.shield_layers = enemy.max_shield_layers()
 
 
 # --- Schiffsausbau (Knopf SCHIFF, nur außerhalb des Kampfs) ---
@@ -1039,7 +1242,7 @@ func system_upgrade_price(id: String) -> int:
 	if rule.is_empty() or sys == null or sys.capacity >= int(rule.get("max", 0)):
 		return -1
 	var start := int(ship.layout.stats.get("reactor", sys.capacity)) if id == "reaktor" \
-		else int((ship.layout.stats.get("systems", {}) as Dictionary).get(id, sys.capacity))
+		else int((ship.layout.stats.get("systems", {}) as Dictionary).get(id, 0 if id == "batterie" else sys.capacity))
 	return int(rule.get("base", 20)) + int(rule.get("step", 10)) * maxi(sys.capacity - start, 0)
 
 

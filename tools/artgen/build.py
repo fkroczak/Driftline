@@ -5,8 +5,10 @@ from PIL import Image
 import pipeline as P
 import crew_human as CH
 import crew_species as CS
+import crew_variants as CV
 import ship_human_freighter as FR
 import ship_pirate_cutter as PC
+import ship_enemies as SE
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 ART = os.path.join(ROOT, "art")
@@ -93,6 +95,74 @@ def previews(crew, ship):
     P.on_space(P.upscale(small, 8), 32).save(path("preview", "mensch_crew_klein_x8.png"))
 
 
+def build_crew_variants():
+    """Alle Spezies je Frau/Mann und drei Farben; nur das Sheet (klein) und das Porträt (unten)."""
+    out_dir = os.path.join(ROOT, "game", "assets", "crew")
+    for sp in ["mensch"] + list(CS.SPECIES):
+        for g in CV.GENDERS:
+            for look in range(CV.LOOKS):
+                key = f"{sp}_{g}{look}"
+                if sp == "mensch":
+                    colors, spec, small = CV.human_variant(g, look)
+                    saved = (CH.COLORS, CH.SPECS["gross"], CH.SMALL_MAP)
+                    CH.COLORS, CH.SPECS["gross"], CH.SMALL_MAP = colors, spec, small
+                    try:
+                        big = lambda d: CH.build_svg("gross", d)
+                        little = CH.build_svg_small
+                        frames = _variant_frames(big, little, spec["size"], spec["shadow"])
+                    finally:
+                        CH.COLORS, CH.SPECS["gross"], CH.SMALL_MAP = saved
+                else:
+                    CS.SPECIES["_v"] = CV.species_variant(sp, g, look)
+                    frames = _variant_frames(lambda d: CS.build_svg("_v", d), lambda d: CS.build_svg_small("_v", d), CS.SIZE, CS.SHADOW)
+                    del CS.SPECIES["_v"]
+                frames["gross"]["unten"].save(os.path.join(out_dir, f"{key}_gross_unten.png"))
+                w, h = CH.SMALL_SIZE
+                sheet = Image.new("RGBA", (w * 4, h), (0, 0, 0, 0))
+                for i, d in enumerate(CH.DIRECTIONS):
+                    sheet.alpha_composite(frames["klein"][d], (i * w, 0))
+                sheet.save(os.path.join(out_dir, f"{key}_klein_sheet.png"))
+                yield key, frames
+
+
+def _variant_frames(big, little, big_size, big_shadow):
+    out = {"gross": {}, "klein": {}}
+    for d in CH.DIRECTIONS:
+        if d == "unten":
+            out["gross"][d] = P.process(big(d), big_size[0], big_size[1], big_shadow)
+        out["klein"][d] = P.process(little(d), CH.SMALL_SIZE[0], CH.SMALL_SIZE[1], CH.SMALL_SHADOW)
+    return out
+
+
+def crew_variants_preview(rows):
+    """Vorschau: je Spezies eine Zeile, Porträts (x2) und Figuren (x4)."""
+    by_species = {}
+    for key, frames in rows:
+        by_species.setdefault(key.split("_")[0], []).append(frames)
+    cell_w, cell_h = 40 * 2 + 4, 44 * 2 + 16 * 4 + 6
+    sheet = Image.new("RGBA", (cell_w * 6, cell_h * len(by_species)), (0, 0, 0, 0))
+    for r, (sp, frames_list) in enumerate(by_species.items()):
+        for c, fr in enumerate(frames_list):
+            sheet.alpha_composite(P.upscale(fr["gross"]["unten"], 2), (c * cell_w, r * cell_h))
+            sheet.alpha_composite(P.upscale(fr["klein"]["unten"], 4), (c * cell_w + 10, r * cell_h + 44 * 2 + 2))
+    P.on_space(sheet, 12).save(path("preview", "crew_varianten.png"))
+
+
+def build_enemies():
+    """Weitere Gegnerschiffe (ship_enemies.py): Sprite, Vorschau, Grafikpunkte fürs JSON."""
+    out = {}
+    for name in SE.SHIPS:
+        svg = SE.build_svg(name)
+        with open(path("source", "ships", f"gegner_{name}.svg"), "w") as f:
+            f.write(svg)
+        w, h = SE.SHIPS[name]["size"]
+        img = P.process(svg, w, h, 3)
+        save_sprite(img, f"ships/gegner_{name}.png")
+        P.on_space(P.upscale(img), 40).save(path("preview", f"gegner_{name}.png"))
+        out[name] = SE.meta(name)
+    return out
+
+
 def species_preview(all_crew):
     """Alle Spezies nebeneinander: oben groß (x4), darunter klein (x8), je 4 Richtungen."""
     rows = []
@@ -130,6 +200,17 @@ def palette_files():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["gegner"]:
+        import json
+        import icons
+        build_cutter()
+        icons.atlas_image().save(os.path.join(ROOT, "game", "assets", "ui", "system_icons.png"))
+        print(json.dumps(build_enemies(), indent=1))
+        sys.exit(0)
+    if sys.argv[1:] == ["crew"]:
+        crew_variants_preview(list(build_crew_variants()))
+        print("fertig: Crew-Varianten")
+        sys.exit(0)
     if sys.argv[1:] == ["spezies"]:
         # Nur die Crew-Sprites der Spezies neu bauen (Mensch, Schiffe und Palette bleiben unberührt)
         all_crew = {sp: build_crew(sp) for sp in CS.SPECIES}

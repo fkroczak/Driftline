@@ -345,6 +345,9 @@
         ]},
         {"text": "Die Mechaniker den Rumpf überholen lassen", "outcomes": [
           {"text": "Die Mechaniker schweißen jede Delle aus, die sie finden, und legen noch Ersatzteile dazu.", "effects": {"hull": 12, "scrap": 22}}
+        ]},
+        {"text": "Die Notstrombatterie des Transporters nehmen", "outcomes": [
+          {"text": "Die Siedler bauen euch ihre Reservebatterie ein. Sie brauchen sie nicht mehr, ihr schon.", "effects": {"battery": true}}
         ]}
       ]
     },

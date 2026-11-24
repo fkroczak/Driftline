@@ -17,9 +17,9 @@
     },
     "bergung": {
       "name": "Bergungsfrachter", "base": "mensch_frachter", "cost": 1, "start_scrap": 10, "tint": "#e8d8b0",
-      "text": "Dicke Panzerung, große Medbay und 10 Rohstoffe extra. Aber nur 6 Reaktor, 2 Waffenbalken und ein schwacher Antrieb.",
+      "text": "Dicke Panzerung, große Medbay und 10 Rohstoffe extra. Aber nur 7 Reaktor, 2 Waffenbalken und ein schwacher Antrieb.",
       "unlock": {"sector": 2},
-      "stats": {"hull": 34, "reactor": 6, "systems": {"waffen": 2, "antrieb": 1, "medbay": 2}, "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 1}},
+      "stats": {"hull": 34, "reactor": 7, "systems": {"waffen": 2, "antrieb": 1, "medbay": 2}, "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 1}},
       "weapons": ["bordkanone", "brandkanone"]
     },
     "kurier": {
@@ -31,13 +31,13 @@
     },
     "kanone": {
       "name": "Kanonenfrachter", "base": "mensch_frachter", "cost": 3, "tint": "#f0b8a8",
-      "text": "Reaktor 8 und vier Waffenbalken mit Salvenlaser. Die Hülle ist dafür dünn.",
+      "text": "Reaktor 9 und vier Waffenbalken mit Salvenlaser. Die Hülle ist dafür dünn.",
       "unlock": {"sector": 3},
-      "stats": {"hull": 24, "reactor": 8, "systems": {"waffen": 4}, "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 1}},
+      "stats": {"hull": 24, "reactor": 9, "systems": {"waffen": 4}, "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 1}},
       "weapons": ["salvenlaser", "bordkanone"]
     }
   },
-  "weapons": {"pulslaser": 3, "schwerer_laser": 4, "bordkanone": 2, "salvenlaser": 5, "brandkanone": 3, "schwere_kanone": 6},
+  "weapons": {"pulslaser": 3, "schwerer_laser": 4, "bordkanone": 2, "salvenlaser": 5, "brandkanone": 3, "schwere_kanone": 6, "durchschlaglaser": 6, "torpedo": 7},
   "crew": {"mensch": 2, "kithra": 2, "androide": 3, "veyari": 2, "ormok": 2, "petrani": 3},
   "perks": {"panzerung": 3, "zielcomputer": 3, "ausweichduesen": 3, "reparaturdrohne": 4, "brandschutz": 2, "bergungsgreifer": 3, "treibstoffrecycler": 3}
 }

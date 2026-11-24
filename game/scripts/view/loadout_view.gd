@@ -306,15 +306,15 @@ func _draw_weapons(c: Rect2) -> void:
 	HudStyle.text(self, Vector2(x, y + 8), Loc.t("Antippen zum Einbauen"), HudStyle.COLOR_DIM)
 	y += 13
 	for wid in Loadout.weapon_ids():
-		var r := Rect2(x, y, col_w, 18)
+		var r := Rect2(x, y, col_w, 16)
 		var fits := weapons.size() < slots and Loadout.weapon_cost(wid) <= Loadout.remaining(cfg)
 		HudStyle.box(self, r, HudStyle.COLOR_EDGE if fits else HudStyle.COLOR_OFF)
-		HudStyle.text(self, r.position + Vector2(5, 8), Weapon.name_of(wid), COLOR_NAME if fits else HudStyle.COLOR_DIM, col_w - 30)
-		HudStyle.text(self, r.position + Vector2(5, 16), Weapon.summary(wid), HudStyle.COLOR_DIM, col_w - 10)
+		HudStyle.text(self, r.position + Vector2(5, 7), Weapon.name_of(wid), COLOR_NAME if fits else HudStyle.COLOR_DIM, col_w - 30)
+		HudStyle.text(self, r.position + Vector2(5, 14), Weapon.summary(wid), HudStyle.COLOR_DIM, col_w - 10)
 		var price := _points(Loadout.weapon_cost(wid))
-		HudStyle.text(self, Vector2(r.end.x - 5 - HudStyle.text_width(price), r.position.y + 8), price, HudStyle.COLOR_GOLD if fits else HudStyle.COLOR_DIM)
+		HudStyle.text(self, Vector2(r.end.x - 5 - HudStyle.text_width(price), r.position.y + 7), price, HudStyle.COLOR_GOLD if fits else HudStyle.COLOR_DIM)
 		_hit(r, "weapon_add", wid)
-		y += 19
+		y += 17
 
 
 func _draw_perks(c: Rect2) -> void:

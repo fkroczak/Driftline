@@ -1,45 +1,52 @@
 {
-  "_doc": "Spezies der Crew. hp: Lebenspunkte. speed: Lauftempo (1 = Mensch). repair: Tempo beim Löschen, Flicken und Reparieren. learn: Erfahrung an Konsolen. console: Faktor auf den Konsolenbonus. bonus: Systeme, an denen die Spezies +15 % bringt. fire: Schaden durch Feuer (0 = immun). breathes: braucht Luft. medbay: Heilung in der Medbay (0 = keine). tint: Farbe der Spezies (Texte in Crew-Karte und Lexikon). face: Mitte des Kopfs im Porträt assets/crew/<id>_gross_unten.png (Pixel), danach richtet sich der Ausschnitt in der Crew-Liste. traits: Texte für die Crew-Karte. weight: Häufigkeit neuer Crew aus Ereignissen. lore: Beschreibung für das Lexikon.",
+  "_doc": "Spezies der Crew. hp: Lebenspunkte. speed: Lauftempo (1 = Mensch). repair: Tempo beim Löschen, Flicken und Reparieren. learn: Erfahrung an Konsolen. console: Faktor auf den Konsolenbonus. bonus: Systeme, an denen die Spezies +15 % bringt. fire: Schaden durch Feuer (0 = immun). breathes: braucht Luft. medbay: Heilung in der Medbay (0 = keine). regen: Lebenspunkte je Sekunde, die von selbst nachwachsen (überall, solange nichts schadet). tint: Farbe der Spezies (Texte in Crew-Karte und Lexikon). face: Mitte des Kopfs im Porträt assets/crew/<id>_gross_unten.png (Pixel), danach richtet sich der Ausschnitt in der Crew-Liste. traits: Texte für die Crew-Karte. weight: Häufigkeit neuer Crew aus Ereignissen. names_w/names_m: Namen von Frauen und Männern (names = beide, daraus wird gezogen; das Geschlecht folgt aus dem Namen), genders: feste Namen (Startcrew, Gegner) mit Geschlecht. lore: Beschreibung für das Lexikon.",
   "mensch": {
     "name": "Mensch", "hp": 100, "speed": 1.0, "repair": 1.0, "learn": 1.25, "console": 1.0, "bonus": [],
     "fire": 1.0, "breathes": true, "medbay": 1.0, "tint": "#ffffff", "face": [20, 21], "weight": 4,
     "traits": ["Allrounder", "Lernt an Konsolen 25 % schneller"],
     "lore": "Die Menschen sind über hundert Systeme verstreut und fliegen fast alles, was einen Reaktor hat. Keine Stärke ragt heraus, keine Schwäche bremst sie: Wer lange an einer Konsole sitzt, lernt schneller als jede andere Spezies.",
-    "names": ["Tess Okafor", "Ruben Lind", "Nia Sato", "Pavel Dorn", "Elin Marsh", "Kofi Brandt", "Lena Vasquez", "Ivo Kern", "Suri Haldane", "Mats Ober"]
+    "genders": {"Mara Voss": "w", "Ilka Brandt": "w", "Jonas Reil": "m", "Kapitänin": "w", "Schütze": "m", "Mechaniker": "m"},
+    "names_w": ["Tess Okafor", "Nia Sato", "Elin Marsh", "Lena Vasquez", "Suri Haldane", "Aiko Brenner", "Mira Kovač"], "names_m": ["Ruben Lind", "Pavel Dorn", "Kofi Brandt", "Ivo Kern", "Mats Ober", "Tomás Reyes", "Jan Holm"],
+    "names": ["Tess Okafor", "Nia Sato", "Elin Marsh", "Lena Vasquez", "Suri Haldane", "Aiko Brenner", "Mira Kovač", "Ruben Lind", "Pavel Dorn", "Kofi Brandt", "Ivo Kern", "Mats Ober", "Tomás Reyes", "Jan Holm"]
   },
   "kithra": {
     "name": "Kith’ra", "hp": 110, "speed": 1.2, "repair": 0.6, "learn": 1.0, "console": 0.8, "bonus": [],
     "fire": 0.5, "breathes": true, "medbay": 1.0, "tint": "#9fd18a", "face": [20, 30], "weight": 1,
     "traits": ["Läuft 20 % schneller", "Halber Schaden durch Feuer", "Repariert langsam (60 %)", "Schwächer an Konsolen"],
     "lore": "Insektoide Jäger aus den Gluthöhlen von Kith. Ihr Chitinpanzer hält Hitze gut aus, und auf sechs Beinen sind sie schneller als alle anderen an Bord. Feinmechanik liegt ihnen dagegen gar nicht.",
-    "names": ["Tz'ka", "Krr'ith", "Sha'ket", "Vrix", "Ka'thul"]
+    "names_w": ["Sha'ket", "Tz'ka", "Ix'ra"], "names_m": ["Krr'ith", "Vrix", "Ka'thul"],
+    "names": ["Sha'ket", "Tz'ka", "Ix'ra", "Krr'ith", "Vrix", "Ka'thul"]
   },
   "androide": {
     "name": "Androide", "hp": 100, "speed": 1.0, "repair": 1.6, "learn": 1.0, "console": 1.0, "bonus": ["schilde"],
     "fire": 1.0, "breathes": false, "medbay": 0.5, "tint": "#d3e6f8", "face": [20, 21], "weight": 1,
     "traits": ["Repariert 60 % schneller", "Braucht keine Luft", "+15 % an den Schilden", "Medbay heilt nur halb so schnell"],
     "lore": "Gebaut für Wartung und Bergbau, inzwischen freie Bürger mit eigenem Kopf. Sie brauchen keine Luft, reparieren schneller als jede Werkstattcrew und haben ein Händchen für Schildmatrizen. Biologische Heilung wirkt bei ihnen nur halb.",
-    "names": ["K-7", "Unit 12", "Osric", "Tal-9", "Merrit"]
+    "names_w": ["Tal-9", "Merrit", "Ada-3"], "names_m": ["K-7", "Unit 12", "Osric"],
+    "names": ["Tal-9", "Merrit", "Ada-3", "K-7", "Unit 12", "Osric"]
   },
   "veyari": {
     "name": "Veyari", "hp": 70, "speed": 1.0, "repair": 1.0, "learn": 1.0, "console": 1.0, "bonus": ["waffen", "sensoren"],
     "fire": 1.0, "breathes": true, "medbay": 1.0, "tint": "#c7b5f0", "face": [20, 25], "weight": 1,
     "traits": ["+15 % an Waffen und Sensoren", "Nur 70 Lebenspunkte"],
     "lore": "Schlanke, feinfühlige Wesen von einem Gasriesenmond. Ihre Sinne reagieren auf kleinste Energiemuster, darum treffen sie an Waffen und Sensoren genauer. Ihr Körper ist allerdings zerbrechlich.",
-    "names": ["Ylen", "Saevi", "Orun", "Thessa", "Ilvar"]
+    "names_w": ["Saevi", "Thessa", "Ylen"], "names_m": ["Orun", "Ilvar", "Caelo"],
+    "names": ["Saevi", "Thessa", "Ylen", "Orun", "Ilvar", "Caelo"]
   },
   "ormok": {
     "name": "Ormok", "hp": 160, "speed": 0.8, "repair": 0.5, "learn": 1.0, "console": 0.8, "bonus": [],
     "fire": 1.0, "breathes": true, "medbay": 1.0, "tint": "#e0a878", "face": [20, 28], "weight": 1,
     "traits": ["160 Lebenspunkte", "Langsamer (80 %)", "Repariert schlecht (50 %)", "Schwächer an Konsolen"],
     "lore": "Massige Kolonisten von einer Schwerkraftwelt. Ein Ormok steckt Treffer weg, die andere umwerfen würden, und versperrt im Enterkampf ganze Gänge. Für Werkzeug und Konsolen sind ihre Pranken zu grob.",
-    "names": ["Brakka", "Gorrum", "Uldo", "Hrask", "Mubba"]
+    "names_w": ["Mubba", "Hrask", "Tulga"], "names_m": ["Brakka", "Gorrum", "Uldo"],
+    "names": ["Mubba", "Hrask", "Tulga", "Brakka", "Gorrum", "Uldo"]
   },
   "petrani": {
     "name": "Petrani", "hp": 140, "speed": 0.5, "repair": 1.0, "learn": 1.0, "console": 1.0, "bonus": [],
-    "fire": 0.0, "breathes": false, "medbay": 0.0, "tint": "#a9b0bb", "face": [20, 22], "weight": 1,
-    "traits": ["Feuerfest", "Braucht keine Luft", "Sehr langsam (50 %)", "Heilt nicht in der Medbay"],
-    "lore": "Lebendes Gestein aus der Kruste eines toten Planeten. Petrani atmen nicht und brennen nicht, Feuer und Vakuum sind ihnen gleich. Sie bewegen sich träge, und die Medbay kann ihren Mineralkörper nicht heilen.",
-    "names": ["Petr", "Quarz-Aun", "Sedim", "Basalto", "Kiru"]
+    "fire": 0.0, "breathes": false, "medbay": 0.0, "regen": 0.5, "tint": "#a9b0bb", "face": [20, 22], "weight": 1,
+    "traits": ["Feuerfest", "Braucht keine Luft", "Sehr langsam (50 %)", "Medbay wirkt nicht, wächst langsam von selbst nach"],
+    "lore": "Lebendes Gestein aus der Kruste eines toten Planeten. Petrani atmen nicht und brennen nicht, Feuer und Vakuum sind ihnen gleich. Sie bewegen sich träge, und die Medbay kann ihren Mineralkörper nicht heilen. Stattdessen wächst ihr Gestein langsam von selbst nach.",
+    "names_w": ["Quarz-Aun", "Kiru", "Opalia"], "names_m": ["Petr", "Sedim", "Basalto"],
+    "names": ["Quarz-Aun", "Kiru", "Opalia", "Petr", "Sedim", "Basalto"]
   }
 }

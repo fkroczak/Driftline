@@ -101,7 +101,7 @@ func _draw() -> void:
 		var member := state.crew[i]
 		var rect := Rect2(Vector2(0, entry_y(i)), s)
 		HudStyle.box(self, rect, COLOR_SELECTED if member == selected else HudStyle.COLOR_EDGE)
-		var portrait := CrewArt.portrait(member.species)
+		var portrait := CrewArt.portrait_of(member.species, member.gender, member.look)
 		var ratio := member.hp / member.max_hp
 		var hp_color := HudStyle.COLOR_OK if ratio > 0.6 else (HudStyle.COLOR_WARN if ratio > 0.3 else HudStyle.COLOR_BAD)
 		if compact:
@@ -137,7 +137,7 @@ func _draw_info(rect: Rect2) -> void:
 	var hp_color := HudStyle.COLOR_OK if ratio > 0.6 else (HudStyle.COLOR_WARN if ratio > 0.3 else HudStyle.COLOR_BAD)
 	var hp := str(roundi(m.hp))
 	var hp_w := HudStyle.text_width(hp)
-	HudStyle.text(self, Vector2(3, y), Species.display_name(m.species), Species.tint(m.species).lerp(HudStyle.COLOR_TEXT, 0.3), rect.size.x - hp_w - 8)
+	HudStyle.text(self, Vector2(3, y), Species.display_name(m.species) + " · " + Species.gender_label(m.gender), Species.tint(m.species).lerp(HudStyle.COLOR_TEXT, 0.3), rect.size.x - hp_w - 8)
 	HudStyle.text(self, Vector2(rect.size.x - hp_w - 3, y), hp, hp_color)
 	y += 2.0
 	draw_line(Vector2(3, y), Vector2(rect.size.x - 3, y), Color(HudStyle.COLOR_EDGE, 0.6))

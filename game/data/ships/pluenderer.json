@@ -1,0 +1,32 @@
+{
+  "id": "pluenderer",
+  "name": "Plünderer",
+  "role": "Gegner",
+  "description": "Schlanke Raubschiffe mit übergroßem Antrieb. Sie weichen vielen Schüssen aus und schlagen mit einer Salve zu, halten aber wenig aus. Wer Antrieb oder Cockpit trifft, holt sie vom Himmel.",
+  "sprite": "res://assets/ships/gegner_pluenderer.png",
+  "tile_size": 14,
+  "grid_origin": [18, 14],
+  "grid_size": [6, 3],
+  "hull": 14,
+  "reactor": 8,
+  "oxygen_regen": 0.04,
+  "systems": {"schilde": 2, "waffen": 3, "antrieb": 3, "cockpit": 1},
+  "power": {"schilde": 2, "antrieb": 3},
+  "weapons": ["salvenlaser", "bordkanone"],
+  "weapons_powered": 2,
+  "weapon_mount": [6, 43],
+  "engines": [[114, 21], [114, 35], [114, 49]],
+  "engine_dir": 1,
+  "shield_ellipse": [58, 37, 60, 37],
+  "rooms": [
+    {"id": "cockpit", "name": "Cockpit", "system": "cockpit", "pos": [0, 1], "size": [1, 2], "console": [0, 1]},
+    {"id": "waffen", "name": "Waffen", "system": "waffen", "pos": [1, 0], "size": [2, 1], "console": [1, 0]},
+    {"id": "schilde", "name": "Schilde", "system": "schilde", "pos": [1, 1], "console": [2, 2]},
+    {"id": "reaktor", "name": "Reaktor", "system": "reaktor", "pos": [3, 0], "size": [1, 3]},
+    {"id": "antrieb", "name": "Antrieb", "system": "antrieb", "pos": [4, 0], "size": [2, 3], "console": [5, 1]}
+  ],
+  "airlocks": [[[5, 2], [0, 1]]],
+  "doors": [
+    [[0, 1], [1, 1]], [[1, 0], [1, 1]], [[2, 0], [3, 0]], [[2, 1], [3, 1]], [[3, 1], [4, 1]], [[3, 2], [4, 2]]
+  ]
+}
