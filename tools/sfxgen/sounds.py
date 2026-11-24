@@ -613,4 +613,4 @@ SOUNDS = {
 }
 
 # Welche Variante ins Spiel kommt (Index in der Variantenliste). Nicht genannt = erste.
-CHOICE = {}
+CHOICE = {"warp_out": 1, "warp_in": 1, "victory": 2, "defeat": 2}
