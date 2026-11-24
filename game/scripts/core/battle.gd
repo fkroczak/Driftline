@@ -241,14 +241,25 @@ func _enemy_trouble_room() -> int:
 	return -1
 
 
+## Raum von Antrieb oder Cockpit, falls beschädigt; sonst -1.
+func _enemy_jump_damage_room() -> int:
+	for id in ["antrieb", "cockpit"]:
+		var sys: ShipSystem = enemy.systems.get(id)
+		if sys and sys.damage > 0:
+			return enemy.layout.room_of_system(id)
+	return -1
+
+
 func _enemy_crew() -> void:
 	var damaged := _enemy_trouble_room()
 	# Die Person an der unwichtigsten Konsole (letzte im Crew-Array) repariert.
 	if enemy.crew.is_empty():
 		return
 	# Auf der Flucht muss jemand ins Cockpit. Ist nur noch eine Person übrig, repariert
-	# sie zuerst und steuert danach; sonst würden sich beide Befehle jeden Tick
-	# gegenseitig überschreiben und sie pendelt im Cockpit hin und her.
+	# sie nur Antrieb und Cockpit (was den Sprung bremst) und steuert sonst; beide Befehle
+	# gleichzeitig würden sich jeden Tick überschreiben und sie pendelt im Cockpit.
+	if enemy_fleeing and enemy.crew.size() == 1:
+		damaged = _enemy_jump_damage_room()
 	if enemy_fleeing and (enemy.crew.size() > 1 or damaged < 0):
 		_enemy_pilot()
 	var engineer: CrewMember = enemy.crew.back()
