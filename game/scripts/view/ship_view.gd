@@ -598,6 +598,7 @@ func _toggle_hatch(local_pos: Vector2, airlocks := true) -> bool:
 
 
 func _finish_order(room: int) -> void:
+	Sfx.play("crew_order")
 	last_order = selected
 	_set_selection(null, room)
 

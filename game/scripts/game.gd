@@ -71,6 +71,7 @@ func record_score(r: RunState) -> void:
 
 
 func to_title() -> void:
+	Sfx.stop_loops()
 	get_tree().change_scene_to_file(TITLE_SCENE)
 
 

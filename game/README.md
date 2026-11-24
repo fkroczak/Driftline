@@ -122,6 +122,20 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 
 Warpblase, Lichtstreifen und Blitz beim Sprung (Abflug und Ankunft, auch bei Gegnern), flackernde Flammen mit Rauch, entweichende Luft an Lecks und offenen Schleusen, Dampf beim Löschen, Geschosse mit Mündungsfeuer, Schildblase mit Welle beim Abfangen, Explosion mit Funken und Rauch, Raumblitz, Bildschirmwackeln und roter Blitz bei eigenen Treffern, schwebende Texte (Schaden, „SCHILD“, „AUSGEWICHEN“, „REPARIERT“), Triebwerksflammen je nach Antriebsenergie, Explosionskette beim Zerstören. Alles ist in `scripts/view/` gezeichnet, ohne zusätzliche Grafikdateien.
 
+### Sound
+
+48 Soundeffekte für alle Situationen, prozedural erzeugt (`tools/sfxgen`, siehe unten), abgespielt vom Autoload `Sfx` (`scripts/sfx.gd`):
+
+- **Waffen:** eigener Klang je Waffe (Pulslaser, Schwerlaser, Bordkanone); Gegnerschüsse tiefer und leiser. Ziel erfasst, Waffe geladen, Waffe angewählt.
+- **Einschläge:** Explosion auf der Hülle (lauter je Schaden), Funken bei Systemschaden, Schild, Vorbeiflug, Schiff zerstört. Am Gegnerschiff alles etwas leiser.
+- **An Bord:** Feuer bricht aus, Prasseln als Schleife (lauter je mehr Brände), Löschen, Hüllenbruch, Flicken, Reparatur, Crew gefallen, Türen und Schleusen, Schiffsbrummen als Dauerklang.
+- **Warnungen:** Alarm, wenn der Gegner fliehen will oder die Jäger kommen; Warnton bei kritischer Hülle (≤ 30 %, höchstens alle 6 s).
+- **Sprung und Karte:** Abflug, Ankunft (auch Gegner), Antrieb geladen, Karte öffnen/schließen, Ziel wählen, Flug auf der Karte, Notsignal (SOS).
+- **Bedienung:** Knopf, „geht nicht“, Energie ±1, Crew wählen und schicken, Pause/Weiter, Funkspruch bei Ereignissen, Antwort gewählt.
+- **Ergebnisse:** Sieg, Beute, Sektor geschafft, Niederlage, alle Sektoren geschafft.
+
+Ton aus/an: Knopf unten links im Hauptmenü (`user://settings.json`). Derselbe Effekt spielt höchstens alle 45 ms, damit Salven nicht übersteuern.
+
 ## Öffnen und starten
 
 1. [Godot 4.7](https://godotengine.org/download) installieren (Standard-Version, nicht .NET)
@@ -143,6 +157,8 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `Species`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte eines Sektors), `RunState` (Run: Modus, Sektor, Jägerfront, Karte, Position, Schiff, Ressourcen, Dialoge, Händler, Gegnerwahl), `EventBook` (Ereignisse laden, ziehen, prüfen) |
 | `scripts/view/` | Darstellung und Eingabe: `ShipView` (eigenes und Gegnerschiff), `Effects` (auch Warpblase), `Starfield` (mit Lichtstreifen), `HudStyle` und `HudButton` (Kasten-Look), `StatusBar`, `ResourceBar`, `JumpButton`, `PowerPanel`, `WeaponPanel`, `DoorPanel`, `CrewPanel`, `CrewCard`, `MapView` (Sternenkarte als Überlagerung), `EventDialog` (Ereignis-, Händler- und Werftdialog) |
 | `scripts/core/save_game.gd` | `SaveGame`: Spielstand speichern und laden, Formatversion und Migration |
+| `scripts/sfx.gd` | Autoload `Sfx`: Effekte abspielen (16 Stimmen, Tonhöhe leicht variiert), Schleifen mit Pegel, Ton aus/an |
+| `assets/sfx/` | Soundeffekte (WAV, erzeugt mit `tools/sfxgen`) |
 | `scripts/game.gd` | Autoload `Game`: hält den Run, wechselt zwischen Hauptmenü und Schiff, speichert je Modus, führt die Rekorde |
 | `scenes/title.tscn` | Startszene: Hauptmenü mit den zwei Modi (`scripts/title_screen.gd`) |
 | `scenes/ship.tscn` | Schiff: Ruhe, Kampf, Ereignisse, Karte und Sprung (`scripts/ship_screen.gd`) |
@@ -150,6 +166,8 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `tests/run_tests.gd` | Logiktests |
 
 **Grafik aktualisieren:** Nach `python3 tools/artgen/build.py` die benötigten PNGs aus `art/export/1x/` nach `game/assets/` kopieren.
+
+**Sounds aktualisieren:** `python3 tools/sfxgen/build.py` schreibt alle Effekte nach `game/assets/sfx/` (nur numpy nötig). Einzelne Effekte: Namen anhängen, z. B. `… build.py laser_pulse`. Mit `--preview ORDNER` landen zusätzlich alle Varianten (A, B, C) zum Vergleichen dort. Welche Variante ins Spiel kommt, steht in `CHOICE` in `tools/sfxgen/sounds.py`.
 
 ## Tests
 

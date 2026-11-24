@@ -50,6 +50,13 @@ var _phase := "ruhe"
 ## Selbst pausiert (bleibt, bis man fortsetzt) oder automatisch pausiert (endet mit dem Befehl).
 var _manual_pause := false
 var _auto_paused := false
+## Für Sounds: Waffen bereit, Antrieb bereit, letzte Hüllenwarnung.
+var _weapons_ready: Array[bool] = []
+var _jump_was_ready := false
+var _hull_alarm_at := -100.0
+## Sound je Waffe (Spieler: so wie es ist, Gegner: tiefer und leiser).
+const WEAPON_SOUNDS := {"pulslaser": "laser_pulse", "schwerer_laser": "laser_heavy", "bordkanone": "cannon"}
+const HULL_ALARM := 0.3
 
 @onready var starfield: Starfield = $Starfield
 @onready var world: Node2D = $World
@@ -104,6 +111,7 @@ func _ready() -> void:
 	power_panel.system_tapped.connect(_on_system_tapped)
 	door_panel.changed.connect(_show_hint)
 	help_button.pressed.connect(func() -> void: legend.visible = true)
+	Sfx.loop("ship_hum", 1.0)
 	jump_button.jump_requested.connect(_on_jump_requested)
 	map_button.pressed.connect(func() -> void: _open_map())
 	pause_button.toggled_pause.connect(_toggle_pause)
@@ -116,7 +124,9 @@ func _ready() -> void:
 		map_view.selected = -1
 		map_view.hint = _map_hint())
 	map_view.distress_pressed.connect(_on_distress)
-	map_view.closed.connect(_close_map)
+	map_view.closed.connect(func() -> void:
+		Sfx.play("map_close")
+		_close_map())
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_on_selection_changed(null, -1)
@@ -141,11 +151,13 @@ func _enter_node() -> void:
 		if run.last_reward != "":
 			text += "\nBeute: " + run.last_reward
 		_show_banner_text(text + "\nSprung ins nächste Universum …", SECTOR_DELAY)
+		Sfx.play("sector_clear")
 		get_tree().create_timer(SECTOR_DELAY).timeout.connect(_sector_jump)
 		return
 	if not run.dialog.is_empty():
 		_phase = "ruhe"
 		dialog.show_dialog(run.dialog)
+		Sfx.play("dialog_open")
 		return
 	if run.needs_battle():
 		_start_battle()
@@ -169,7 +181,10 @@ func _start_battle() -> void:
 	enemy_view.visible = true
 	_layout()
 	var who := enemy.layout.display_name
+	_weapons_ready.clear()
+	Sfx.play("warp_in", -3.0, 0.85)
 	if run.hunter_battle:
+		Sfx.play("alarm")
 		_show_hint("Die Jäger haben euch eingeholt: %s!" % who, 3.0)
 	else:
 		_show_hint("Feindkontakt: %s" % who, 3.0)
@@ -200,6 +215,7 @@ func _on_jump_requested() -> void:
 	var why := jump_button.reason()
 	if why != "" and why != "kein Treibstoff":
 		jump_button.deny()
+		Sfx.play("ui_deny")
 		match why:
 			"Pilot?":
 				_show_hint("Sprung: Jemand muss ins Cockpit")
@@ -214,6 +230,7 @@ func _on_jump_requested() -> void:
 func _open_map() -> void:
 	if _phase in ["warp", "ende"]:
 		return
+	Sfx.play("map_open")
 	map_view.refresh()
 	map_view.can_jump = state.jump_ready()
 	map_view.hint = _map_hint()
@@ -247,6 +264,7 @@ func _map_hint() -> String:
 func _on_map_node(id: int) -> void:
 	var can := map_view.reachable(id)
 	if not can:
+		Sfx.play("ui_deny" if id != run.current else "ui_click")
 		map_view.selected = id if run.node().links.has(id) else -1
 		if id == run.current:
 			map_view.hint = "Hier ist das Schiff gerade"
@@ -266,6 +284,7 @@ func _on_map_node(id: int) -> void:
 	if map_view.selected != id:
 		map_view.selected = id
 		map_view.hint = "Nochmal antippen: springen" + (" · Achtung, Jäger!" if run.is_overrun(id) else "")
+		Sfx.play("map_select")
 		return
 	_jump(id)
 
@@ -294,6 +313,7 @@ func _jump(id: int) -> void:
 	map_view.ship_from = from
 	map_view.ship_to = id
 	map_view.hint = "Sprung …"
+	Sfx.play("map_travel")
 	var tween := create_tween()
 	tween.tween_method(map_view.set_ship_t, 0.0, 1.0, MAP_JUMP_TIME)
 	tween.tween_callback(func() -> void:
@@ -322,6 +342,7 @@ func _sector_jump() -> void:
 
 ## Abflug: Blase baut sich auf, Schiff leuchtet, schießt nach rechts davon, Sterne werden zu Streifen.
 func _warp_out(done: Callable) -> void:
+	Sfx.play("warp_out", 0.0, 1.0, 0.0)
 	ship_view.select(null)
 	var e := ship_view.shield_ellipse()
 	effects.warp_bubble(ship_view, e[0], e[1], WARP_OUT * 0.6, true)
@@ -340,6 +361,7 @@ func _warp_in(done: Callable) -> void:
 	ship_view.position = _ship_base - Vector2(get_viewport_rect().size.x * 0.8, 0)
 	ship_view.modulate = Color(1.6, 1.7, 2.0, 1.0)
 	starfield.warp = 1.0
+	Sfx.play("warp_in", 0.0, 1.0, 0.0)
 	var e := ship_view.shield_ellipse()
 	var tween := create_tween()
 	tween.tween_property(warp_flash, "color", Color(0.85, 0.9, 1.0, 0.0), 0.3)
@@ -354,6 +376,7 @@ func _warp_in(done: Callable) -> void:
 
 
 func _on_choice(index: int) -> void:
+	Sfx.play("dialog_choice")
 	run.choose(index)
 	Game.save()
 	if not run.dialog.is_empty():
@@ -368,6 +391,7 @@ func _on_choice(index: int) -> void:
 
 func _on_distress() -> void:
 	if run.send_distress():
+		Sfx.play("distress")
 		Game.save()
 		_close_map()
 		dialog.show_dialog(run.dialog)
@@ -384,13 +408,16 @@ func _toggle_pause() -> void:
 	if is_paused():
 		_manual_pause = false
 		_auto_paused = false
+		Sfx.play("resume")
 	else:
 		_manual_pause = true
+		Sfx.play("pause")
 	_apply_pause()
 
 
 func _toggle_auto_pause() -> void:
 	pause_button.auto_pause = not pause_button.auto_pause
+	Sfx.play("ui_click")
 	if not pause_button.auto_pause and _auto_paused:
 		_auto_paused = false
 		_apply_pause()
@@ -503,6 +530,7 @@ func _process(delta: float) -> void:
 	_update_info()
 	_place_crew_card()
 	enemy_view.show_jump = battle != null and battle.enemy_fleeing
+	_update_sound_loops()
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende":
 		return  # Spiel steht, Befehle gehen trotzdem
 	if battle:
@@ -512,6 +540,7 @@ func _process(delta: float) -> void:
 	elif _phase != "warp":
 		_update_peace(delta)
 	_update_explosions(delta)
+	_ready_sounds()
 	_ambient_effects(ship_view, delta)
 	if enemy_view.visible:
 		_ambient_effects(enemy_view, delta)
@@ -540,23 +569,29 @@ func _on_battle_event(e: Dictionary) -> void:
 	match e.type:
 		"target":
 			enemy_view.on_target_changed(e.weapon)
+			Sfx.play("target_lock" if e.room >= 0 else "power_down")
 		"fire_started":
 			var pos := _tile_pos(e)
+			Sfx.play("fire_start", _side_db(e.own_ship))
 			effects.explosion(pos, 0.3)
 			if e.own_ship:
 				effects.float_text(pos + Vector2(0, -6), "FEUER", Color("#EF9F27"))
 		"breach":
 			var pos := _tile_pos(e)
+			Sfx.play("breach", _side_db(e.own_ship))
 			if e.own_ship:
 				effects.float_text(pos + Vector2(0, -10), "HÜLLENBRUCH", Color("#85B7EB"))
 		"extinguished":
 			var pos := _tile_pos(e)
+			Sfx.play("extinguish", _side_db(e.own_ship) - 2.0)
 			for i in 5:
 				effects.puff(pos + Vector2(randf_range(-4, 4), randf_range(-3, 3)), Vector2(randf_range(-4, 4), randf_range(-14, -6)), Color("#A9B0BB"), 0.8, 3.0)
 		"breach_fixed":
+			Sfx.play("breach_fixed", _side_db(e.own_ship) - 2.0)
 			effects.sparkle(_tile_pos(e), Color("#85B7EB"))
 		"crew_died":
 			var pos := _tile_pos(e)
+			Sfx.play("crew_died", _side_db(e.own_ship))
 			effects.sparkle(pos, Color("#E24B4A"))
 			effects.float_text(pos + Vector2(0, -8), "%s gefallen" % e.name, Color("#F7C1C1"))
 			if e.own_ship:
@@ -566,6 +601,7 @@ func _on_battle_event(e: Dictionary) -> void:
 		"shield":
 			var b := effects.take_bolt(e.projectile)
 			var view := _defender(e)
+			Sfx.play("shield", _side_db(not e.from_player))
 			view.flash_shield()
 			if not b.is_empty():
 				effects.shield_ripple(b.edge, COLOR_SHIELD)
@@ -578,31 +614,74 @@ func _on_battle_event(e: Dictionary) -> void:
 			var pos: Vector2 = b.get("to", view.position + view.room_center(e.room))
 			effects.explosion(pos, e.damage)
 			effects.float_text(pos + Vector2(0, -8), "-%d" % e.damage, Color("#F7C1C1"))
+			Sfx.play("hit_hull", _side_db(not e.from_player) + (e.damage - 2) * 1.5)
 			if int(e.get("system_damage", 0)) > 0:
+				Sfx.play("hit_system", _side_db(not e.from_player) - 2.0)
 				view.flash_room(e.room)
 				effects.float_text(pos + Vector2(0, 2), "SYSTEM", Color("#FAC775"))
 			if not e.from_player:
 				_shake = maxf(_shake, 2.5 + e.damage * 1.5)
 				_red_flash = 0.12 + 0.05 * e.damage
+				_hull_warning()
 		"miss":
 			var b := effects.take_bolt(e.projectile)
 			if not b.is_empty():
 				var dir: Vector2 = (b.edge - b.from).normalized()
 				effects.stray(b.edge, dir, b.color, b.width)
+				Sfx.play("miss", _side_db(not e.from_player))
 				effects.float_text(b.edge + Vector2(0, -6), "AUSGEWICHEN", Color("#C4CAD3"))
 		"repaired":
 			var view := ship_view if e.own_ship else enemy_view
 			if e.room >= 0:
 				var pos := view.position + view.room_center(e.room)
 				effects.sparkle(pos, Color("#5DCAA5"))
+				Sfx.play("repaired", _side_db(e.own_ship) - (0.0 if e.own_ship else 4.0))
 				if e.own_ship:
 					effects.float_text(pos, "REPARIERT", Color("#5DCAA5"))
 		"destroyed":
 			_on_destroyed(e.own_ship, e.reason)
 		"enemy_flee":
+			Sfx.play("alarm")
 			_show_hint("Gegner lädt den Sprungantrieb! Antrieb oder Cockpit treffen", 4.0)
 		"enemy_jumped":
 			_on_enemy_jumped()
+
+
+## Ereignisse am Gegnerschiff etwas leiser als am eigenen.
+func _side_db(own_ship: bool) -> float:
+	return 0.0 if own_ship else -3.0
+
+
+## Warnton, wenn die eigene Hülle kritisch wird (höchstens alle paar Sekunden).
+func _hull_warning() -> void:
+	if state.max_hull <= 0 or state.hull <= 0:
+		return
+	if float(state.hull) / state.max_hull <= HULL_ALARM and _time - _hull_alarm_at > 6.0:
+		_hull_alarm_at = _time
+		Sfx.play("hull_low", 0.0, 1.0, 0.0)
+
+
+## Kurze Signale: Waffe geladen (im Kampf), Sprungantrieb bereit.
+func _ready_sounds() -> void:
+	if battle and battle.outcome == "":
+		_weapons_ready.resize(state.weapons.size())
+		for i in state.weapons.size():
+			var charged := state.weapons[i].is_ready()
+			if charged and not _weapons_ready[i]:
+				Sfx.play("weapon_ready")
+			_weapons_ready[i] = charged
+	var jump := state.jump_ready()
+	if jump and not _jump_was_ready and _phase in ["ruhe", "kampf"]:
+		Sfx.play("jump_ready")
+	_jump_was_ready = jump
+
+
+## Dauerklänge: Brummen des Schiffs, Prasseln je nach Zahl der Brände (eigene lauter).
+func _update_sound_loops() -> void:
+	var fires := float(state.fires.size())
+	if enemy and enemy_view.visible:
+		fires += enemy.fires.size() * 0.4
+	Sfx.loop("fire_loop", 0.0 if _phase == "ende" else minf(fires / 3.0, 1.0) * 0.9)
 
 
 ## Weltposition einer Kachel aus einem Schiffs-Ereignis (tile, own_ship).
@@ -666,6 +745,10 @@ func _on_enemy_room(room: int) -> void:
 
 func _on_hatch_toggled(kind: String, open: bool) -> void:
 	if kind == "airlock":
+		Sfx.play("airlock_open" if open else "airlock_close")
+	else:
+		Sfx.play("door_open" if open else "door_close")
+	if kind == "airlock":
 		_show_hint("Luftschleuse " + ("offen – Raum verliert Luft" if open else "geschlossen"))
 	else:
 		_show_hint("Tür " + ("offen" if open else "geschlossen"))
@@ -707,6 +790,11 @@ func _on_fire(e: Dictionary) -> void:
 	var width := 1.0 + float(weapon.damage - 1)
 	effects.add_bolt(e.projectile, from, edge, to, color, width)
 	effects.muzzle(from, (edge - from).normalized(), color)
+	var sound: String = WEAPON_SOUNDS.get(weapon.id, "laser_pulse")
+	if e.from_player:
+		Sfx.play(sound)
+	else:
+		Sfx.play(sound, -4.0, 0.88)
 	if e.from_player:
 		weapon_panel.flash_fired(e.weapon)
 
@@ -739,6 +827,7 @@ func _on_destroyed(own_ship: bool, reason: String) -> void:
 		tween.tween_callback(_battle_over.bind(outcome, reason))
 		return
 	var view := ship_view if own_ship else enemy_view
+	Sfx.play("ship_explode", 0.0 if own_ship else -1.0, 1.0, 0.0)
 	var rooms := view.state.layout.rooms.size()
 	for i in 10:
 		var pos := view.position + view.room_center(randi() % rooms) + Vector2(randf_range(-8, 8), randf_range(-8, 8))
@@ -758,6 +847,7 @@ func _on_enemy_jumped() -> void:
 	ship_view.select(null)
 	weapon_panel.select(-1)
 	var e := enemy_view.shield_ellipse()
+	Sfx.play("warp_out", -4.0, 1.12, 0.0)
 	effects.warp_bubble(enemy_view, e[0], e[1], WARP_OUT * 0.6, true)
 	var tween := create_tween()
 	tween.tween_property(enemy_view, "modulate", Color(1.6, 1.7, 2.0, 1.0), WARP_OUT * 0.5)
@@ -801,6 +891,10 @@ func _battle_over(outcome: String, reason: String) -> void:
 	_phase = "ruhe"
 	text += "\nCrew repariert · dann SPRUNG"
 	_show_banner_text(text, VICTORY_BANNER)
+	if outcome == "sieg":
+		Sfx.play("victory", 0.0, 1.0, 0.0)
+	if run.last_reward != "":
+		get_tree().create_timer(0.9).timeout.connect(func() -> void: Sfx.play("reward"))
 
 
 ## Banner, das von selbst wieder ausblendet (Antippen schließt es früher).
@@ -823,6 +917,8 @@ func _show_run_over() -> void:
 	_phase = "ende"
 	_end_battle()
 	var text := ""
+	Sfx.loop("fire_loop", 0.0)
+	Sfx.play("run_complete" if run.result == "geschafft" else "defeat", 0.0, 1.0, 0.0)
 	if run.result == "geschafft":
 		text = "Alle %d Sektoren geschafft!\nDie Jäger haben das Nachsehen." % RunState.HUNT_SECTORS
 	else:
@@ -840,6 +936,7 @@ func _on_banner_input(event: InputEvent) -> void:
 		return
 	if _phase == "ende":
 		if _can_leave_at >= 0.0 and _time >= _can_leave_at:
+			Sfx.play("ui_click")
 			Game.run = null
 			Game.to_title()
 		return
@@ -859,6 +956,8 @@ func _on_crew_selected(member: CrewMember) -> void:
 
 ## Die Crew-Infos erscheinen nur bei Auswahl über die Crew-Liste, nicht beim Antippen im Schiff.
 func _on_selection_changed(member: CrewMember, _room_idx: int) -> void:
+	if member and member != crew_panel.selected:
+		Sfx.play("crew_select")
 	crew_panel.selected = member
 	if member != _card_member:
 		_card_member = null
