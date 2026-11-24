@@ -4,7 +4,7 @@ extends Node
 
 const TITLE_SCENE := "res://scenes/title.tscn"
 const SHIP_SCENE := "res://scenes/ship.tscn"
-const HIGHSCORE_PATH := "user://highscore.json"
+const HIGHSCORE_PATH := Loadout.HIGHSCORE_PATH
 
 var run: RunState
 ## Modus, den das Hauptmenü zuletzt gestartet oder fortgesetzt hat.
@@ -31,11 +31,12 @@ func ensure_run() -> RunState:
 	return run
 
 
-func new_run(p_mode := mode, seed_value := 0) -> RunState:
+## Neuer Run mit der Startausrüstung `loadout` (siehe Loadout; leer = Standardstart).
+func new_run(p_mode := mode, seed_value := 0, loadout := {}) -> RunState:
 	mode = p_mode
 	tutorial = false
 	SaveGame.clear(mode)
-	run = RunState.new(seed_value, mode)
+	run = RunState.new(seed_value, mode, loadout)
 	save()
 	return run
 
@@ -66,12 +67,13 @@ func end_tutorial() -> void:
 	to_title()
 
 
-## Speichert den Run; ein beendeter Run wird gelöscht und als Bestwert vermerkt.
+## Speichert den Run; ein beendeter Run wird gelöscht. Der erreichte Sektor zählt schon während
+## des Runs als Bestwert (damit schaltet er neue Schiffe frei, siehe Loadout).
 func save() -> void:
 	if run == null or tutorial:
 		return
+	record_score(run)
 	if run.result != "":
-		record_score(run)
 		SaveGame.clear(run.mode)
 	else:
 		SaveGame.save(run)

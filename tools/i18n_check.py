@@ -6,7 +6,7 @@ Schlüssel sind die deutschen Texte. Gesammelt werden:
 - `label = "…"` von HudButtons in game/scenes,
 - Texte in Konstanten, deren Zeilen mit `# i18n` markiert sind (ohne IDs: erstes Element
   einer Liste `["id", …]`, Farben und Dictionary-Schlüssel `"key": …`),
-- Texte aus den Spieldaten (Schiffe, Räume, Spezies, Waffen, Gegner, Ereignisse).
+- Texte aus den Spieldaten (Schiffe, Räume, Spezies, Waffen, Gegner, Ereignisse, Startauswahl).
 
 Aufruf:  python3 tools/i18n_check.py [sprache]          (Standard: en)
          python3 tools/i18n_check.py en --missing-json  (fehlende Schlüssel als JSON-Vorlage)
@@ -80,6 +80,11 @@ def keys_from_data() -> dict:
     for pid, d in json.loads((data / "upgrades.json").read_text(encoding="utf-8")).get("perks", {}).items():
         add(d.get("name"), "data/upgrades.json")
         add(d.get("text"), "data/upgrades.json")
+    loadout = json.loads((data / "loadout.json").read_text(encoding="utf-8"))
+    for section in ("ships", "difficulties"):
+        for d in loadout.get(section, {}).values():
+            add(d.get("name"), "data/loadout.json")
+            add(d.get("text"), "data/loadout.json")
     enemies = json.loads((data / "enemies.json").read_text(encoding="utf-8"))
     for key in ("hunter", "boss"):
         add(enemies.get(key, {}).get("name"), "data/enemies.json")

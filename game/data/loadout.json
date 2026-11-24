@@ -1,0 +1,43 @@
+{
+  "_doc": "Startausrüstung für einen neuen Run (Bildschirm NEUER RUN). Alles kostet Startpunkte; das Budget hängt am Schwierigkeitsgrad. So lässt sich nicht einfach das Beste wählen: Ein starkes Schiff oder viele Waffen lassen weniger Punkte für Crew und Perks. Übrige Punkte werden zu Rohstoffen (leftover_scrap je Punkt). ships: Varianten des eigenen Schiffs; base = Datei in data/ships, stats überschreibt dort Werte (systems und power werden zusammengeführt), weapons = Startwaffen (vorausgewählt, kosten Punkte), cost = Punkte für das Schiff selbst, start_scrap = Rohstoffe extra, unlock = {sector: n} (in einem Run Sektor n erreicht) oder {species: n} (n Spezies im Lexikon). difficulties: points = Budget, enemy_hull = Hülle aller Gegner +/-, enemy_depth = Gegnerstufe +/- (siehe enemies.json), scrap_gain = Faktor auf Rohstoffe, start_fuel = Treibstoff +/-. crew_max = Crew ohne Captain, crew_extra = Aufschlag je Person ab der dritten (ohne Captain), perks_max = Perks beim Start. Preise in Punkten: weapons, crew (je Spezies), perks.",
+  "leftover_scrap": 5,
+  "crew_max": 4,
+  "crew_extra": 1,
+  "perks_max": 2,
+  "difficulties": {
+    "leicht": {"name": "Leicht", "text": "Schwächere Gegner und mehr Beute. Dafür weniger Startpunkte.", "points": 12, "enemy_hull": -3, "enemy_depth": -2, "scrap_gain": 1.2, "start_fuel": 2},
+    "normal": {"name": "Normal", "text": "Das Spiel, wie es gedacht ist.", "points": 14},
+    "schwer": {"name": "Schwer", "text": "Stärkere Gegner, weniger Beute und Treibstoff. Als Ausgleich mehr Startpunkte.", "points": 17, "enemy_hull": 3, "enemy_depth": 2, "scrap_gain": 0.85, "start_fuel": -1}
+  },
+  "ships": {
+    "frachter": {
+      "name": "Mensch-Frachter", "base": "mensch_frachter", "cost": 0,
+      "text": "Der bewährte Allrounder: solide Hülle, kleiner Reaktor, Pulslaser und Schwerlaser.",
+      "weapons": ["pulslaser", "schwerer_laser"]
+    },
+    "bergung": {
+      "name": "Bergungsfrachter", "base": "mensch_frachter", "cost": 1, "start_scrap": 10, "tint": "#e8d8b0",
+      "text": "Dicke Panzerung, große Medbay und 10 Rohstoffe extra. Aber nur 7 Reaktor, 2 Waffenbalken und ein schwacher Antrieb.",
+      "unlock": {"sector": 2},
+      "stats": {"hull": 34, "reactor": 7, "systems": {"waffen": 2, "antrieb": 1, "medbay": 2}, "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 1}},
+      "weapons": ["bordkanone", "brandkanone"]
+    },
+    "kurier": {
+      "name": "Kurierfrachter", "base": "mensch_frachter", "cost": 2, "tint": "#b8d8f0",
+      "text": "Schneller Antrieb (3) und flinke Schilde, dafür dünne Hülle und leichte Bewaffnung.",
+      "unlock": {"species": 3},
+      "stats": {"hull": 24, "shield_recharge": 2.3, "systems": {"antrieb": 3}, "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 2}},
+      "weapons": ["pulslaser", "bordkanone"]
+    },
+    "kanone": {
+      "name": "Kanonenfrachter", "base": "mensch_frachter", "cost": 3, "tint": "#f0b8a8",
+      "text": "Reaktor 9 und vier Waffenbalken mit Salvenlaser. Die Hülle ist dafür dünn.",
+      "unlock": {"sector": 3},
+      "stats": {"hull": 24, "reactor": 9, "systems": {"waffen": 4}, "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 1}},
+      "weapons": ["salvenlaser", "bordkanone"]
+    }
+  },
+  "weapons": {"pulslaser": 3, "schwerer_laser": 4, "bordkanone": 2, "salvenlaser": 5, "brandkanone": 3, "schwere_kanone": 6, "durchschlaglaser": 6, "torpedo": 7},
+  "crew": {"mensch": 2, "kithra": 2, "androide": 3, "veyari": 2, "ormok": 2, "petrani": 3},
+  "perks": {"panzerung": 3, "zielcomputer": 3, "ausweichduesen": 3, "reparaturdrohne": 4, "brandschutz": 2, "bergungsgreifer": 3, "treibstoffrecycler": 3}
+}
