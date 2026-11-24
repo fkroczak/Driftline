@@ -154,7 +154,7 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `scripts/game.gd` | Autoload `Game`: hält den Run, wechselt zwischen Hauptmenü und Schiff, speichert je Modus, führt die Rekorde |
 | `scenes/title.tscn` | Startszene: Hauptmenü, Moduswahl, Lexikon und Einstellungen (`scripts/title_screen.gd`) |
 | `scenes/ship.tscn` | Schiff: Ruhe, Kampf, Ereignisse, Karte und Sprung (`scripts/ship_screen.gd`) |
-| `assets/` | Kopien aus `art/export/1x`; `assets/fonts/`: Schrift Pixelify Sans (SIL Open Font License, `OFL.txt`) und `hud_font.tres` (etwas breitere Leerzeichen) |
+| `assets/` | Kopien aus `art/export/1x`; `assets/fonts/`: Schrift „Hullbound VT“ = VT323 (SIL Open Font License, `OFL.txt`), um 25 % vergrößert (unitsPerEm 1000 → 800, damit sie bei den bisherigen Schriftgrößen gleich groß wirkt), und `hud_font.tres` |
 | `tests/run_tests.gd` | Logiktests |
 
 **Grafik aktualisieren:** Nach `python3 tools/artgen/build.py` die benötigten PNGs aus `art/export/1x/` nach `game/assets/` kopieren.
@@ -170,7 +170,7 @@ godot --headless --path game --script res://tests/run_tests.gd
 
 Basisauflösung 384 × 216, ganzzahlig hochskaliert (1080p: 5×), Breite passt sich dem Seitenverhältnis an, Querformat, Pixel-Art ohne Filter. Typische Handys (20:9) zeigen 480 × 216; das Desktop-Fenster ist deshalb 1920 × 864 groß. Bei 16:9 (384 px) rücken die Schiffe eng zusammen. Renderer „Compatibility“ für ältere Android-Geräte.
 
-**Schrift:** Pixel-Schrift Pixelify Sans als Projektschrift (`gui/theme/custom_font`), Streckmodus `canvas_items`: Spielkoordinaten bleiben 384 × 216, die Schrift wird aber in voller Bildschirmauflösung gezeichnet, ein Schrift-Pixel ist also feiner als ein Spiel-Pixel und gut lesbar. Die Pixel-Art bleibt ganzzahlig skaliert und ungefiltert. In den Einstellungen schaltet „Retro“ zurück auf den Modus `viewport` (alles im groben 384er-Raster).
+**Schrift:** Pixel-Schrift VT323 (als „Hullbound VT“, klare Buchstabenformen, „la“ und „b“ sind gut zu unterscheiden) als Projektschrift (`gui/theme/custom_font`), Streckmodus `canvas_items`: Spielkoordinaten bleiben 384 × 216, die Schrift wird aber in voller Bildschirmauflösung gezeichnet, ein Schrift-Pixel ist also feiner als ein Spiel-Pixel und gut lesbar. Die Pixel-Art bleibt ganzzahlig skaliert und ungefiltert. In den Einstellungen schaltet „Retro“ zurück auf den Modus `viewport` (alles im groben 384er-Raster).
 
 Ein Raum ist bei 5× auf einem 1080p-Handy 140 px groß (ca. 56 dp, GDD: mindestens 48 dp), eine Kachel 70 px. Hintergrund: Sternenfeld in drei Ebenen (`scripts/view/starfield.gd`).
 

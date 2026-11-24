@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://croi0xbj5etiy"
-path="res://.godot/imported/PixelifySans.ttf-4613dc276f227b5d31d032a4586e3281.fontdata"
+uid="uid://bfanbj8sg2ojr"
+path="res://.godot/imported/HullboundVT.ttf-e801e2381da11316654e29722206e2ab.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/PixelifySans.ttf"
-dest_files=["res://.godot/imported/PixelifySans.ttf-4613dc276f227b5d31d032a4586e3281.fontdata"]
+source_file="res://assets/fonts/HullboundVT.ttf"
+dest_files=["res://.godot/imported/HullboundVT.ttf-e801e2381da11316654e29722206e2ab.fontdata"]
 
 [params]
 
