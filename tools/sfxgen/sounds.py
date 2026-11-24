@@ -553,6 +553,11 @@ def run_complete():
     return space(fade(mix(p1, (p2, 1.2), (p3, 2.4), (p4, 3.6), sub, hits)), 3.0, 0.4)
 
 
+def loud(fn):
+    """Lauter im Mix: sanft verdichten, damit der Klang auch zwischen Kampfgeräuschen trägt."""
+    return lambda: drive(fn() / (np.max(np.abs(fn())) + 1e-9), 2.2)
+
+
 # Name → (Varianten, Beschreibung, Situation, Spitzenpegel dB, Schleife)
 SOUNDS = {
     # Waffen
@@ -585,8 +590,8 @@ SOUNDS = {
     "alarm": ([alarm], "Alarm: Gegner flieht / Jäger kommen", "Warnungen", -9, False),
     "hull_low": ([hull_low], "Hülle kritisch", "Warnungen", -8, False),
     # Sprung
-    "warp_out": ([warp_out_a, warp_out_b, warp_out_c], "Sprung: Abflug", "Sprung", -2, False),
-    "warp_in": ([warp_in_a, warp_in_b, warp_in_c], "Sprung: Ankunft", "Sprung", -3, False),
+    "warp_out": ([loud(warp_out_a), loud(warp_out_b), loud(warp_out_c)], "Sprung: Abflug", "Sprung", -0.5, False),
+    "warp_in": ([loud(warp_in_a), loud(warp_in_b), loud(warp_in_c)], "Sprung: Ankunft", "Sprung", -0.5, False),
     "jump_ready": ([jump_ready], "Sprungantrieb geladen", "Sprung", -10, False),
     "distress": ([distress], "Notsignal senden", "Sprung", -8, False),
     # Bedienung
@@ -613,4 +618,4 @@ SOUNDS = {
 }
 
 # Welche Variante ins Spiel kommt (Index in der Variantenliste). Nicht genannt = erste.
-CHOICE = {"warp_out": 1, "warp_in": 1, "victory": 2, "defeat": 2}
+CHOICE = {"warp_out": 0, "warp_in": 1, "victory": 2, "defeat": 2}
