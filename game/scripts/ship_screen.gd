@@ -56,7 +56,8 @@ var _hull_alarm_at := -100.0
 ## Banner „Sektor geschafft“ nur einmal je Ausgang (nicht nach jedem Dialog dort).
 var _cleared_announced := false
 ## Sound je Waffe (Spieler: so wie es ist, Gegner: tiefer und leiser).
-const WEAPON_SOUNDS := {"pulslaser": "laser_pulse", "schwerer_laser": "laser_heavy", "bordkanone": "cannon"}
+const WEAPON_SOUNDS := {"pulslaser": "laser_pulse", "schwerer_laser": "laser_heavy", "bordkanone": "cannon",
+	"salvenlaser": "laser_pulse", "brandkanone": "cannon", "schwere_kanone": "laser_heavy"}
 const HULL_ALARM := 0.3
 
 @onready var starfield: Starfield = $Starfield
@@ -88,6 +89,9 @@ var _card_member: CrewMember
 @onready var map_view: MapView = $HUD/MapView
 ## Im Code angelegt: Menüknopf (oben rechts), Einstellungen und Tutorial-Hinweise.
 var menu_button: HudButton
+## Schiffsausbau: Knopf SCHIFF oben und die Überlagerung mit Systemen, Waffen und Perks.
+var ship_button: HudButton
+var ship_panel: ShipPanel
 var settings_panel: SettingsPanel
 var coach: TutorialCoach
 ## Tutorial: Energie wurde verteilt, Tür oder Schleuse geschaltet, Kampf gewonnen.
@@ -155,11 +159,20 @@ func _setup_menu() -> void:
 	menu_button.bars = true
 	hud.add_child(menu_button)
 	menu_button.pressed.connect(_open_settings)
+	ship_button = HudButton.new()
+	ship_button.label = "SCHIFF"
+	hud.add_child(ship_button)
+	hud.move_child(ship_button, map_button.get_index() + 1)  # unter Dialogen und Karte
+	ship_button.pressed.connect(_open_ship_panel)
 	coach = TutorialCoach.new()
 	coach.visible = Game.tutorial
 	coach.check = _tutorial_done
 	coach.focus = _tutorial_focus
 	hud.add_child(coach)
+	ship_panel = ShipPanel.new()
+	hud.add_child(ship_panel)
+	ship_panel.changed.connect(_on_refit)
+	ship_panel.closed.connect(func() -> void: Game.save())
 	settings_panel = SettingsPanel.new()
 	settings_panel.in_game = true
 	settings_panel.tutorial = Game.tutorial
@@ -175,6 +188,27 @@ func _open_settings() -> void:
 	ship_view.select(null)
 	weapon_panel.select(-1)
 	settings_panel.open()
+
+
+## Schiffsausbau öffnen: nur außerhalb des Kampfs, ohne Sprung und ohne offenen Dialog.
+func _open_ship_panel() -> void:
+	if _phase != "ruhe" or not run.can_refit():
+		ship_button.deny()
+		Sfx.play("ui_deny")
+		_show_hint(Loc.t("Ausbauen geht nur außerhalb des Kampfs"))
+		return
+	Sfx.play("ui_click")
+	ship_view.select(null)
+	weapon_panel.select(-1)
+	ship_panel.open(run)
+
+
+## Nach einem Kauf oder Umbau: Waffenleiste neu aufbauen, Lexikon und Spielstand aktualisieren.
+func _on_refit() -> void:
+	weapon_panel.setup(state, null)
+	_layout()
+	_discover()
+	Game.save()
 
 
 func _on_settings_closed() -> void:
@@ -601,13 +635,16 @@ func _layout() -> void:
 	map_button.size = Vector2(34, 24)
 	jump_button.size = Vector2(56, 24)
 	menu_button.size = Vector2(18, 24)
+	ship_button.size = Vector2(HudStyle.text_width(Loc.t(ship_button.label)) + 10.0, 24)
+	ship_button.enabled = _phase == "ruhe" and run.can_refit()
 	menu_button.position = Vector2(view_size.x - menu_button.size.x - 2, 2)
 	help_button.position = menu_button.position - Vector2(help_button.size.x + 2, 0)
 	pause_button.position = help_button.position - Vector2(pause_button.size.x + 2, 0)
 	map_button.position = pause_button.position - Vector2(map_button.size.x + 2, 0)
 	jump_button.position = map_button.position - Vector2(jump_button.size.x + 2, 0)
+	ship_button.position = jump_button.position - Vector2(ship_button.size.x + 2, 0)
 	var res_left := status_bar.position.x + status_bar.size.x + 3
-	resource_bar.size.x = clampf(jump_button.position.x - res_left - 3, 60.0, 130.0)
+	resource_bar.size.x = clampf(ship_button.position.x - res_left - 3, 56.0, 130.0)
 	resource_bar.position = Vector2(res_left, 2)
 	crew_panel.position = Vector2(2, TOP + 2.0)
 	crew_panel.max_height = BOTTOM_PANEL_Y - 3.0 - crew_panel.position.y
@@ -628,13 +665,14 @@ func _layout() -> void:
 	power_panel.position = Vector2(2, BOTTOM_PANEL_Y)
 	door_panel.position = Vector2(view_size.x - door_panel.size.x - 2, BOTTOM_PANEL_Y)
 	var weapons_x := power_panel.position.x + power_panel.size.x + 3.0
+	weapon_panel.fit_width(door_panel.position.x - 3.0 - weapons_x)
 	weapon_panel.position = Vector2(weapons_x, BOTTOM_PANEL_Y)
 	info.position = Vector2(left, INFO_Y)
 	info.size.x = view_size.x - left - 4
 	_place_crew_card()
 	coach.left_x = crew_panel.position.x + crew_panel.slot().x + 4.0
 	coach.top_y = TOP + 2.0
-	for c: Control in [damage_flash, warp_flash, banner, legend, pause_overlay, dialog, map_view, coach, settings_panel]:
+	for c: Control in [damage_flash, warp_flash, banner, legend, pause_overlay, dialog, map_view, coach, settings_panel, ship_panel]:
 		c.position = Vector2.ZERO
 		c.size = view_size
 	pause_label.size.x = view_size.x
@@ -661,12 +699,13 @@ func _place_crew_card() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
+	ship_button.enabled = _phase == "ruhe" and run.can_refit()
 	_update_info()
 	_place_crew_card()
 	enemy_view.show_jump = battle != null and battle.enemy_fleeing
 	_update_sound_loops()
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende" \
-			or settings_panel.visible or coach.wants_pause():
+			or settings_panel.visible or ship_panel.visible or coach.wants_pause():
 		return  # Spiel steht, Befehle gehen trotzdem
 	delta *= Settings.speed()
 	if battle:

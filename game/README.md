@@ -52,19 +52,49 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 - **Beute:** Nach jedem Sieg Rohstoffe und manchmal Treibstoff, je nach Stufe (`reward` in `data/enemies.json`). Der Boss bringt 20–30 Rohstoffe und 3–4 Treibstoff für den nächsten Sektor.
 - **Ereignisse** (`data/events.json`, Format im Feld `_doc`): Wrack, Rettungskapsel, Eismond-Station, Kolonie in Not, havarierter Gildenfrachter, Asteroidenfeld, Piratenzoll, Schmuggler, Ionensturm, stillgelegte Mine, abgestürzte Fähre, Geleitschutz. Dialog links mit kleiner Szene, rechts Text, darunter die Optionen. Optionen kosten eventuell Rohstoffe oder Treibstoff (grau, wenn es nicht reicht), Außeneinsätze brauchen mindestens 2 Crew. Ausgänge sind gewichtet: Rohstoffe, Treibstoff, Hülle (+/−), verletzte, gefallene oder neue Crew (zufällige Spezies), Ansehen, ein Kampf (mit Extrabeute nach dem Sieg) oder ein Folgeereignis.
 - **Ansehen:** „Gildenbrief“ (`gilde_freund`) macht Händler 25 % billiger und öffnet bei der Gildenpatrouille eine eigene (blaue) Option. „Dank der Kolonie“ (`kolonie_dank`) bringt einmal eine Gratis-Komplettreparatur in der Reparaturstation. Manche Ereignisse reparieren aus Dankbarkeit auch sofort die Hülle.
-- **Händler:** 1 Treibstoff für 3 Rohstoffe, Hülle +5 für 8 Rohstoffe, Hülle +3 für 1 Treibstoff. **Reparaturstation:** Komplettreparatur (Hülle und Systeme) für 1 Rohstoff je Hüllenpunkt plus 2 je Schaden, nur Systeme und Lecks für 2 je Schaden, Hülle +5 für 5, Hülle +4 für 1 Treibstoff.
+- **Händler:** 1 Treibstoff für 3 Rohstoffe, Hülle +5 für 8 Rohstoffe, Hülle +3 für 1 Treibstoff. Dazu zwei Unterseiten: **Waffen kaufen und verkaufen** (2 Waffen im Angebot; neue Waffen kommen in einen freien Waffenplatz, sonst ins Lager; Verkauf zum halben Preis, die letzte Waffe an Bord bleibt) und **Crew anheuern** (2 Leute mit Spezies und Stärken, 20–30 Rohstoffe je Spezies, höchstens 8 an Bord). Die Waren stehen je Händler fest (aus dem Seed), Gekauftes ist weg. Der Gildenbrief macht auch Waffen und Crew billiger. Bei vielen Optionen werden die Knöpfe im Dialog etwas flacher, damit alles passt. **Reparaturstation:** Komplettreparatur (Hülle und Systeme) für 1 Rohstoff je Hüllenpunkt plus 2 je Schaden, nur Systeme und Lecks für 2 je Schaden, Hülle +5 für 5, Hülle +4 für 1 Treibstoff.
 - **Bleibender Schaden, kein Automatismus:** Ein einziges Schiff geht durch den ganzen Run, und nichts wird von selbst repariert. Was die Crew nicht behebt, kommt mit: Systemschäden, Lecks, Brände, wenig Luft, verletzte Crew, entladene Schilde. Auch ein Sprung dauert an Bord 8 Sekunden, in denen Brände wachsen und sich ausbreiten.
 - **Reparieren:** Systeme repariert die Crew im Raum (immer, auch zwischen den Kämpfen). Die Hülle nur Händler, Reparaturstation oder Ereignisse. Die Reparaturstation setzt auch Systeme, Lecks und Brände instand (2 Rohstoffe je Schaden).
 - **Gegnerstufen** (`data/enemies.json`): Die Stufe hängt an der Lage auf der Karte (0 links bis 10 rechts) plus 3 je Sektor. Vorne nur der Piratenkutter, ab Stufe 4 zu 35 % der Schwere Kutter, ab Stufe 7 zu 65 % und alle mit +2 Hülle. Boss: das Piraten-Flaggschiff (Schwerer Kutter, 24 Hülle, je Sektor +4). Der Gegner pro System steht fest (aus Seed, Sektor und Knoten).
 - **Ende:** Niederlage (auch Hülle oder Crew durch ein Ereignis verloren) oder Sieg über den letzten Boss beendet den Run; Antippen führt ins Hauptmenü.
 - **Balance:** Die Simulationen mit dem einfachen Bot (keine Crew-Steuerung) sind seit dem bleibenden Schaden nicht mehr aussagekräftig; die Werte müssen im echten Spiel getestet werden. Stellschrauben sind die Preise in `data/run.json`, die Beute und Sektor-Zuschläge in `data/enemies.json`, die Trefferchancen in `data/weapons.json`, `TYPE_WEIGHTS` in `scripts/core/star_map.gd`, `FRONT_START`/`FRONT_STEP` und `JUMP_SHIP_TIME` in `scripts/core/run_state.gd` sowie `PEACE_JUMP_TIME` in `scripts/core/ship_state.gd`.
 
+### Schiffsausbau (Knopf SCHIFF)
+
+- **Jederzeit außerhalb des Kampfs:** Knopf **SCHIFF** oben (links neben SPRUNG). Im Kampf, während eines Sprungs oder bei offenem Dialog ist er grau („Ausbauen geht nur außerhalb des Kampfs“). Solange der Bildschirm offen ist, steht das Spiel; beim Schließen wird gespeichert.
+- **Seite SYSTEME:** Reaktor, Schilde, Waffen, Antrieb, Medbay und Lebenserhaltung je um einen Balken ausbauen. Grüne Balken = ausgebaut, dunkle = noch möglich, rot = beschädigt. Der Knopf zeigt „+1“ und den Preis (grün = bezahlbar). Den Namen antippen erklärt das System. Sensoren sind nicht ausbaubar, solange sie nichts tun. Preis des nächsten Balkens = `base` + `step` × bisher gekaufte Balken:
+
+  | System | Start | Max | Preise |
+  | --- | --- | --- | --- |
+  | Reaktor | 7 | 12 | 12, 16, 20 … |
+  | Schilde | 2 | 8 | 25, 35, 45 … (2 Balken = 1 Schicht) |
+  | Waffen | 3 | 6 | 20, 28, 36 |
+  | Antrieb | 2 | 5 | 15, 23, 31 |
+  | Medbay, Lebenserhaltung | 1 | 3 | 15, 25 |
+
+  Neue Reaktorleistung ist sofort frei, Energie verteilt man selbst. Mehr als 5 Balken (Reaktor: 8) zeigt die Energieleiste enger.
+- **Seite WAFFEN & PERKS**, links: die **Waffenplätze** (Frachter: 3, `weapon_slots` in `data/ships/*.json`) und das **Lager** (2 Plätze). LAGER baut eine Waffe aus, EINBAUEN wieder ein (ausgeschaltet; Energie über die Waffenkarte). Kaufen und verkaufen nur beim Händler. Bei drei Waffen werden die Karten unten schmaler.
+- **Rechts die Perks**, je einmal kaufbar:
+
+  | Perk | Wirkung | Preis |
+  | --- | --- | --- |
+  | Verstärkte Panzerung | Hülle +6 (Maximum und sofort) | 30 |
+  | Zielcomputer | Waffen laden 15 % schneller | 35 |
+  | Ausweichdüsen | +5 % Ausweichen (mit Pilot und Antrieb) | 30 |
+  | Reparaturdrohne | Repariert Systeme ohne Crew (¼ Person) | 40 |
+  | Brandschutzanlage | Feuer wächst und breitet sich halb so schnell aus | 25 |
+  | Bergungsgreifer | +25 % Rohstoffe nach jedem Sieg | 30 |
+  | Treibstoffrecycler | Sprung kostet mit 25 % Chance keinen Treibstoff | 35 |
+
+- **Neue Waffen** (`data/weapons.json`, mit `price`): Salvenlaser (3 Schüsse à 1, 2 Energie, 12 s, 55), Brandkanone (1 Schuss, 60 % Feuer, 1 Energie, 12 s, 35), Schwere Kanone (1 Schuss à 3, 3 Energie, 16 s, 70). Pulslaser 30, Schwerlaser 45, Bordkanone 25.
+- **Alles in Daten:** Preise, Grenzen, Perks, Lagerplätze, Verkaufsanteil und Crew-Preise in `data/upgrades.json`; Logik in `RunState` (Abschnitt Schiffsausbau) und `ShipState` (Perks, Waffenplätze), Darstellung in `scripts/view/ship_panel.gd`.
+
 ### Spielstand
 
 - **Je Modus ein Slot:** `user://savegame.json` (Jagd) und `user://savegame_endlos.json` (Endlos). Das Hauptmenü zeigt „WEITER · Sektor n, Sprung m“; „NEUER RUN“ überschreibt einen gespeicherten Run erst nach einem zweiten Antippen.
 - **Automatisch:** gespeichert nach jedem Sprung, jeder Entscheidung, jedem Kampfende, jedem Sektorwechsel und wenn die App in den Hintergrund geht (außer mitten im Kampf oder Sprung). Wird die App mitten im Kampf beendet, beginnt dieser Kampf neu, mit dem Schiff, wie es vorher war.
 - **Run vorbei** (Niederlage oder letzter Boss): Der Spielstand des Modus wird gelöscht, der Rekord bleibt.
-- **Updates überschreiben nichts:** Android behält die Daten der App bei einem Update (gleicher Schlüssel, siehe unten). Die Datei trägt eine Formatversion (jetzt 2). Ältere Stände werden angehoben: Ein Stand der Version 1 (alte Spaltenkarte) wird zum Jagd-Run in Sektor 1, die Sprünge kommen aus der Spalte, die Front wird daraus berechnet, Verbindungen gelten danach in beide Richtungen, Mara Voss wird Captain. Fehlende Felder bekommen Standardwerte, und was es nicht mehr gibt (Waffe, System, Ereignis), wird übersprungen. Die Karte des laufenden Sektors ist mitgespeichert. Eine unlesbare Datei oder ein Stand aus einem neueren Build wird nie überschrieben, sondern als `savegame-<Zeit>.json` beiseitegelegt. Die vorige Fassung bleibt als `.bak.json` zum Rückfall.
+- **Updates überschreiben nichts:** Android behält die Daten der App bei einem Update (gleicher Schlüssel, siehe unten). Die Datei trägt eine Formatversion (jetzt 3; Version 3 bringt Perks, Waffenlager und Händlerwaren, ältere Stände starten damit leer). Ältere Stände werden angehoben: Ein Stand der Version 1 (alte Spaltenkarte) wird zum Jagd-Run in Sektor 1, die Sprünge kommen aus der Spalte, die Front wird daraus berechnet, Verbindungen gelten danach in beide Richtungen, Mara Voss wird Captain. Fehlende Felder bekommen Standardwerte, und was es nicht mehr gibt (Waffe, System, Ereignis), wird übersprungen. Die Karte des laufenden Sektors ist mitgespeichert. Eine unlesbare Datei oder ein Stand aus einem neueren Build wird nie überschrieben, sondern als `savegame-<Zeit>.json` beiseitegelegt. Die vorige Fassung bleibt als `.bak.json` zum Rückfall.
 - **Beim Entwickeln:** Wer das Format ändert, erhöht `SaveGame.VERSION` und ergänzt in `_migrate` (`scripts/core/save_game.gd`) einen Schritt. Tests dazu stehen am Ende von `tests/run_tests.gd`.
 
 ### Crew
@@ -168,10 +198,11 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `data/enemies.json` | Gegnerstufen nach Fortschritt (gewichtete Schiffe, Hüllenbonus, Beute), Zuschläge je Sektor, Jäger und Boss |
 | `data/species.json` | Spezies: Lebenspunkte, Tempo, Reparatur, Konsolenboni, Feuer, Luft, Medbay, Texte, Namen |
 | `data/run.json` | Run-Regeln: Startressourcen, Sprungkosten, Preise bei Händler und Reparaturstation, Gildenrabatt |
+| `data/upgrades.json` | Schiffsausbau: Systemstufen und Preise, Perks, Waffenlager, Verkaufsanteil, Waffen- und Crew-Angebot beim Händler |
 | `data/events.json` | Ereignisse mit Optionen, Kosten, Bedingungen und gewichteten Ausgängen (Format im Feld `_doc`) |
-| `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `Species`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte eines Sektors), `RunState` (Run: Modus, Sektor, Jägerfront, Karte, Position, Schiff, Ressourcen, Dialoge, Händler, Gegnerwahl), `EventBook` (Ereignisse laden, ziehen, prüfen) |
+| `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `Species`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte eines Sektors), `RunState` (Run: Modus, Sektor, Jägerfront, Karte, Position, Schiff, Ressourcen, Dialoge, Händler, Gegnerwahl), `EventBook` (Ereignisse laden, ziehen, prüfen), `Upgrades` (Regeln aus `data/upgrades.json`) |
 | `scripts/core/settings.gd`, `scripts/core/codex.gd` | `Settings` (Einstellungen laden, speichern, anwenden) und `Codex` (entdeckte Schiffe und Spezies) |
-| `scripts/view/` | Darstellung und Eingabe: `SettingsPanel`, `CodexView` (Lexikon), `TutorialCoach`, `ShipView` (eigenes und Gegnerschiff), `Effects` (auch Warpblase), `Starfield` (mit Lichtstreifen), `HudStyle` und `HudButton` (Kasten-Look), `StatusBar`, `ResourceBar`, `JumpButton`, `PowerPanel`, `WeaponPanel`, `DoorPanel`, `CrewPanel`, `CrewCard`, `MapView` (Sternenkarte als Überlagerung), `EventDialog` (Ereignis-, Händler- und Werftdialog) |
+| `scripts/view/` | Darstellung und Eingabe: `SettingsPanel`, `CodexView` (Lexikon), `TutorialCoach`, `ShipView` (eigenes und Gegnerschiff), `Effects` (auch Warpblase), `Starfield` (mit Lichtstreifen), `HudStyle` und `HudButton` (Kasten-Look), `StatusBar`, `ResourceBar`, `JumpButton`, `PowerPanel`, `WeaponPanel`, `DoorPanel`, `CrewPanel`, `CrewCard`, `MapView` (Sternenkarte als Überlagerung), `EventDialog` (Ereignis-, Händler- und Werftdialog), `ShipPanel` (Schiffsausbau) |
 | `scripts/core/save_game.gd` | `SaveGame`: Spielstand speichern und laden, Formatversion und Migration |
 | `scripts/sfx.gd` | Autoload `Sfx`: Effekte abspielen (16 Stimmen, Tonhöhe leicht variiert), Schleifen mit Pegel, Ton aus/an |
 | `assets/sfx/` | Soundeffekte (WAV, erzeugt mit `tools/sfxgen`) |

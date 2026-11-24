@@ -6,7 +6,7 @@ Raumschiff-Roguelike für Android und iOS in Draufsicht, inspiriert von FTL, mit
 
 | Pfad | Inhalt |
 | --- | --- |
-| [game/](game/README.md) | Godot-4-Projekt: Prototyp Phase 2 (Hauptmenü mit Jagd- und Endlos-Modus, Tutorial, Lexikon und Einstellungen, Jägerfront, freie Sternenkarte, Sprung mit Warpeffekt, Ereignisse, Händler, Reparaturstation, Spezies, bleibender Schaden, Raumkampf mit Crew und Energie) |
+| [game/](game/README.md) | Godot-4-Projekt: Prototyp Phase 2 (Hauptmenü mit Jagd- und Endlos-Modus, Tutorial, Lexikon und Einstellungen, Jägerfront, freie Sternenkarte, Sprung mit Warpeffekt, Ereignisse, Händler mit Waffen und Crew, Reparaturstation, Schiffsausbau mit Systemen, Waffen und Perks, Spezies, bleibender Schaden, Raumkampf mit Crew und Energie) |
 | [docs/GDD.md](docs/GDD.md) | Game-Design-Dokument: Kernschleife, Kampf, Energie, Spezies, Schiffe, Module, Spielmodi, Roadmap |
 | [docs/fable-prompt.md](docs/fable-prompt.md) | Prompt für die Grafik-Erstellung (Crew-Sprites und 12 Schiffe) |
 | [art/](art/README.md) | Konzeptgrafiken, Pixel-Art-Proben und deren Quelldateien |

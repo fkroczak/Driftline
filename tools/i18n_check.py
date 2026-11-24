@@ -76,6 +76,9 @@ def keys_from_data() -> dict:
     for wid, d in json.loads((data / "weapons.json").read_text(encoding="utf-8")).items():
         if not wid.startswith("_"):
             add(d.get("name"), "data/weapons.json")
+    for pid, d in json.loads((data / "upgrades.json").read_text(encoding="utf-8")).get("perks", {}).items():
+        add(d.get("name"), "data/upgrades.json")
+        add(d.get("text"), "data/upgrades.json")
     enemies = json.loads((data / "enemies.json").read_text(encoding="utf-8"))
     for key in ("hunter", "boss"):
         add(enemies.get(key, {}).get("name"), "data/enemies.json")

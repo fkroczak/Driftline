@@ -24,7 +24,12 @@ func setup(p_state: ShipState) -> void:
 
 
 func _box_width() -> float:
-	return HULL_X + state.max_hull * SEG + 26.0
+	return HULL_X + state.max_hull * _seg() + 26.0
+
+
+## Breite eines Hüllensegments: 3 px, ab mehr als 30 Hülle (Panzerung) 2 px, damit die Leiste passt.
+func _seg() -> int:
+	return SEG if state.max_hull <= 30 else 2
 
 
 func _process(delta: float) -> void:
@@ -50,14 +55,14 @@ func _draw() -> void:
 	HudStyle.icon(self, Vector2(3, 3), "hull", HudStyle.COLOR_TEXT)
 	var x0 := HULL_X
 	for i in state.max_hull:
-		var rect := Rect2(Vector2(x0 + i * SEG, 3), Vector2(SEG - 1, 7))
+		var rect := Rect2(Vector2(x0 + i * _seg(), 3), Vector2(_seg() - 1, 7))
 		if i < state.hull:
 			draw_rect(rect, color)
 		elif i < ceili(_ghost):
 			draw_rect(rect, Color(HudStyle.COLOR_BAD, 0.5 + 0.5 * sin(_time * 20.0)))
 		else:
 			draw_rect(rect, HudStyle.COLOR_OFF)
-	HudStyle.text(self, Vector2(x0 + state.max_hull * SEG + 3, 10), "%d" % state.hull, color)
+	HudStyle.text(self, Vector2(x0 + state.max_hull * _seg() + 3, 10), "%d" % state.hull, color)
 	# Schildschichten als Kreise, die gerade ladende füllt sich
 	HudStyle.icon(self, Vector2(3, 14), "shield", HudStyle.COLOR_SHIELD)
 	for i in maxi(state.max_shield_layers(), 1):

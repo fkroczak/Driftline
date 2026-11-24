@@ -12,6 +12,7 @@ const PAD := 6.0
 const ART := 52.0
 const CHOICE_H := 18.0
 const CHOICE_GAP := 3.0
+const MIN_CHOICE_H := 13.0
 ## Nach einem Wechsel kurz keine Eingabe, damit ein Doppeltipp nicht gleich die nächste Option wählt.
 const INPUT_LOCK := 0.3
 
@@ -30,6 +31,8 @@ var data: Dictionary = {}
 var _lock := 0.0
 var _time := 0.0
 var _choice_rects: Array[Rect2] = []
+## Höhe einer Option; bei vielen Optionen (Händler) kleiner, damit alles auf den Bildschirm passt.
+var _choice_h := CHOICE_H
 
 
 func _ready() -> void:
@@ -71,7 +74,9 @@ func _panel_rect() -> Rect2:
 	var text_h := font.get_multiline_string_size(data.get("text", ""), HORIZONTAL_ALIGNMENT_LEFT, text_w, FONT_SIZE).y
 	var top_h := maxf(ART, LINE + 4.0 + text_h)
 	var count: int = data.get("choices", []).size()
-	var height := PAD + top_h + PAD + count * (CHOICE_H + CHOICE_GAP) - CHOICE_GAP + PAD
+	var room := size.y - 20.0 - (PAD + top_h + PAD + PAD) + CHOICE_GAP
+	_choice_h = clampf(floorf(room / maxf(count, 1)) - CHOICE_GAP, MIN_CHOICE_H, CHOICE_H)
+	var height := PAD + top_h + PAD + count * (_choice_h + CHOICE_GAP) - CHOICE_GAP + PAD
 	height = minf(height, size.y - 20.0)
 	var pos := Vector2((size.x - width) / 2.0, maxf(16.0, (size.y - height) / 2.0 + 4.0))
 	return Rect2(pos.floor(), Vector2(width, height).floor())
@@ -95,10 +100,10 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, text_w, FONT_SIZE, -1, COLOR_TEXT)
 	_choice_rects.clear()
 	var choices: Array = data.get("choices", [])
-	var y := panel.end.y - PAD - choices.size() * (CHOICE_H + CHOICE_GAP) + CHOICE_GAP
+	var y := panel.end.y - PAD - choices.size() * (_choice_h + CHOICE_GAP) + CHOICE_GAP
 	for i in choices.size():
 		var c: Dictionary = choices[i]
-		var rect := Rect2(panel.position.x + PAD, y, panel.size.x - PAD * 2.0, CHOICE_H)
+		var rect := Rect2(panel.position.x + PAD, y, panel.size.x - PAD * 2.0, _choice_h)
 		_choice_rects.append(rect)
 		var edge := COLOR_SPECIAL if c.special else COLOR_CHOICE_EDGE
 		var color := COLOR_SPECIAL if c.special else COLOR_TEXT
@@ -107,8 +112,8 @@ func _draw() -> void:
 			color = COLOR_OFF
 		draw_rect(rect, Color(COLOR_SPECIAL, 0.12) if c.special and c.enabled else COLOR_CHOICE)
 		draw_rect(rect.grow(-0.5), edge, false, 1.0)
-		draw_string(font, rect.position + Vector2(6, 12), "%d. %s" % [i + 1, Loc.t(c.text)], HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 10.0, FONT_SIZE, color)
-		y += CHOICE_H + CHOICE_GAP
+		draw_string(font, rect.position + Vector2(6, roundf(_choice_h / 2.0 + 3.0)), "%d. %s" % [i + 1, Loc.t(c.text)], HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 10.0, FONT_SIZE, color)
+		y += _choice_h + CHOICE_GAP
 
 
 ## Kleine gezeichnete Szene je Ereignistyp, ohne Grafikdateien.
