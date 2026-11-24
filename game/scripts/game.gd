@@ -11,6 +11,15 @@ var run: RunState
 var mode := RunState.MODE_HUNT
 ## Darf gerade gespeichert werden? Im Kampf und während eines Sprungs nicht (der Stand davor gilt).
 var can_save := true
+## Der laufende Run ist das Tutorial: wird nie gespeichert und zählt nicht für Bestwerte.
+var tutorial := false
+
+## Feste Karte fürs Tutorial; alle Nachbarn des Startsystems werden zu Kämpfen.
+const TUTORIAL_SEED := 20261124
+
+
+func _ready() -> void:
+	Settings.apply()
 
 
 ## Liefert den laufenden Run: erst aus dem Spielstand des Modus, sonst neu.
@@ -24,6 +33,7 @@ func ensure_run() -> RunState:
 
 func new_run(p_mode := mode, seed_value := 0) -> RunState:
 	mode = p_mode
+	tutorial = false
 	SaveGame.clear(mode)
 	run = RunState.new(seed_value, mode)
 	save()
@@ -33,13 +43,32 @@ func new_run(p_mode := mode, seed_value := 0) -> RunState:
 ## Setzt den gespeicherten Run eines Modus fort (oder beginnt einen neuen, falls keiner da ist).
 func continue_run(p_mode: String) -> RunState:
 	mode = p_mode
+	tutorial = false
 	run = null
 	return ensure_run()
 
 
+## Tutorial: ein Jagd-Run auf fester Karte, der keinen Spielstand berührt. Der erste Sprung
+## führt sicher in einen Kampf gegen einen einfachen Piratenkutter.
+func start_tutorial() -> RunState:
+	tutorial = true
+	run = RunState.new(TUTORIAL_SEED, RunState.MODE_HUNT)
+	for id: int in run.node().links:
+		run.map.node(id).type = "kampf"
+		run.node_events.erase(id)
+	return run
+
+
+## Tutorial verlassen: zurück ins Hauptmenü, nichts wird gespeichert.
+func end_tutorial() -> void:
+	tutorial = false
+	run = null
+	to_title()
+
+
 ## Speichert den Run; ein beendeter Run wird gelöscht und als Bestwert vermerkt.
 func save() -> void:
-	if run == null:
+	if run == null or tutorial:
 		return
 	if run.result != "":
 		record_score(run)

@@ -1211,3 +1211,21 @@ func test_each_mode_has_its_own_slot() -> void:
 	SaveGame.clear(RunState.MODE_ENDLESS)
 	check(not SaveGame.exists(RunState.MODE_ENDLESS) and SaveGame.exists(RunState.MODE_HUNT), "Löschen trifft den falschen Slot")
 	SaveGame.clear()
+
+
+func test_codex_lists_all_ships_and_species() -> void:
+	var ships := Codex.ship_ids()
+	check(ships.size() >= 4 and ships[0] == "mensch_frachter", "Lexikon: eigenes Schiff nicht zuerst oder Schiffe fehlen")
+	check(Codex.species_ids()[0] == Species.DEFAULT and Codex.species_ids().size() == Species.ids().size(), "Lexikon: Spezies fehlen")
+	check(Codex.is_known(Codex.KIND_SHIP, "mensch_frachter") and Codex.is_known(Codex.KIND_SPECIES, "mensch"), "Startereinträge nicht bekannt")
+	check(not Codex.discover(Codex.KIND_SPECIES, "mensch"), "Bekannter Eintrag als neu gemeldet")
+	for id in ships:
+		check(str(Codex.ship(id).get("description", "")) != "", "Schiff ohne Beschreibung: %s" % id)
+	for id in Codex.species_ids():
+		check(str(Species.value(id, "lore", "")) != "", "Spezies ohne Beschreibung: %s" % id)
+
+
+func test_settings_have_defaults() -> void:
+	for key: String in Settings.DEFAULTS:
+		check(typeof(Settings.get_value(key)) == typeof(Settings.DEFAULTS[key]), "Einstellung %s hat falschen Typ" % key)
+	check(Settings.speed() > 0.0, "Spieltempo muss positiv sein")

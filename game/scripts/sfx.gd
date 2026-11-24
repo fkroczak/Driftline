@@ -4,10 +4,9 @@ extends Node
 ## - play(name): kurzer Effekt. Mehrere Stimmen gleichzeitig; derselbe Effekt kurz hintereinander
 ##   wird ausgedünnt, damit Salven und Explosionsketten nicht übersteuern.
 ## - loop(name, level): Dauerklang (Brummen, Feuer) mit Pegel 0..1, weich ein- und ausgeblendet.
-## - muted: Ton aus/an, gespeichert in user://settings.json.
+## - muted: Ton aus/an, gespeichert über Settings (user://settings.json, Schlüssel "muted").
 
 const DIR := "res://assets/sfx/"
-const SETTINGS_PATH := "user://settings.json"
 const VOICES := 16
 ## Derselbe Effekt frühestens nach so vielen Millisekunden erneut.
 const MIN_GAP_MS := 45
@@ -131,14 +130,9 @@ func _free_player() -> AudioStreamPlayer:
 
 
 func _load_settings() -> void:
-	if not FileAccess.file_exists(SETTINGS_PATH):
-		return
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(SETTINGS_PATH))
-	if data is Dictionary:
-		muted = bool((data as Dictionary).get("muted", false))
+	muted = bool(Settings.get_value("muted"))
 
 
 func _save_settings() -> void:
-	var f := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify({"muted": muted}))
+	if bool(Settings.get_value("muted")) != muted:
+		Settings.set_value("muted", muted)

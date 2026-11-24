@@ -1,6 +1,8 @@
 {
   "id": "piraten_kutter_schwer",
   "name": "Schwerer Kutter",
+  "role": "Gegner · Boss",
+  "description": "Ein Kutter mit verstärktem Reaktor und zusätzlicher Kanone. Erfahrene Banden fliegen ihn tiefer im Sektor, ihre Anführer nutzen ihn als Flaggschiff am Sektorausgang.",
   "tint": "#ffb8a8",
   "sprite": "res://assets/ships/piraten_kutter.png",
   "tile_size": 14,

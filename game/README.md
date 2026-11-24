@@ -2,7 +2,14 @@
 
 Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs in zwei Spielmodi. Phase 1 (macht der Kampf per Touch Spaß?) ist abgeschlossen.
 
-**Stand:** Das Spiel startet im Hauptmenü mit zwei Modi, **Die Jagd** und **Endloses Universum**, je mit eigenem Spielstand. Danach ist immer das eigene Schiff zu sehen: in Ruhe, im Kampf, bei Ereignissen und beim Sprung. Die Sternenkarte liegt als Überlagerung darüber.
+**Stand:** Das Spiel startet im Hauptmenü mit **Spielen** (zwei Modi, **Die Jagd** und **Endloses Universum**, je mit eigenem Spielstand), **Tutorial**, **Lexikon** und **Einstellungen**. Danach ist immer das eigene Schiff zu sehen: in Ruhe, im Kampf, bei Ereignissen und beim Sprung. Die Sternenkarte liegt als Überlagerung darüber.
+
+### Hauptmenü, Tutorial, Lexikon, Einstellungen
+
+- **Hauptmenü:** SPIELEN führt zur Moduswahl (Weiter / Neuer Run, ZURÜCK), dazu TUTORIAL, LEXIKON und EINSTELLUNGEN. Hinter dem Menü zieht der eigene Frachter vorbei.
+- **Tutorial:** ein Jagd-Run auf fester Karte, der nie gespeichert wird und keinen Spielstand berührt. Alle Nachbarn des Startsystems sind Kämpfe, der erste Sprung führt also sicher zu einem Piratenkutter. 13 Schritte (Crew wählen und bewegen, Energie, Türen, Pause, Sprung, Karte, Ziel wählen, Kampf gewinnen) in einem Kasten oben; ein blinkender Rahmen zeigt auf das Bedienelement. Aufgaben gehen von selbst weiter, sobald sie erledigt sind, Info-Schritte mit WEITER (das Spiel steht so lange). Jeder Schritt lässt sich überspringen, BEENDEN führt ins Hauptmenü (`scripts/view/tutorial_coach.gd`).
+- **Lexikon:** Reiter SCHIFFE und SPEZIES mit Bild, Werten und Beschreibung (`description`/`role` in `data/ships/*.json`, `lore` in `data/species.json`). Freigeschaltet wird über alle Runs hinweg (`user://codex.json`): ein Schiff, sobald man gegen es kämpft, eine Spezies, sobald sie in der eigenen Crew ist. Frachter und Menschen sind von Anfang an bekannt; neue Einträge meldet die Infozeile („Neu im Lexikon: …“). Unbekannte Einträge zeigen nur einen Schatten und einen Hinweis.
+- **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Ton, Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
 
 ### Ablauf: Schiff, Sprung, Ankunft
 
@@ -134,7 +141,7 @@ Warpblase, Lichtstreifen und Blitz beim Sprung (Abflug und Ankunft, auch bei Geg
 - **Bedienung:** Knopf, „geht nicht“, Energie ±1, Crew wählen und schicken, Pause/Weiter, Funkspruch bei Ereignissen, Antwort gewählt.
 - **Ergebnisse:** Sieg, Beute, Sektor geschafft, Niederlage, alle Sektoren geschafft.
 
-Ton aus/an: Knopf unten links im Hauptmenü (`user://settings.json`). Derselbe Effekt spielt höchstens alle 45 ms, damit Salven nicht übersteuern.
+Ton aus/an: Zeile „Ton“ in den Einstellungen (`user://settings.json`, Schlüssel `muted`, über `Settings`). Derselbe Effekt spielt höchstens alle 45 ms, damit Salven nicht übersteuern.
 
 ## Öffnen und starten
 
@@ -155,14 +162,15 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `data/run.json` | Run-Regeln: Startressourcen, Sprungkosten, Preise bei Händler und Reparaturstation, Gildenrabatt |
 | `data/events.json` | Ereignisse mit Optionen, Kosten, Bedingungen und gewichteten Ausgängen (Format im Feld `_doc`) |
 | `scripts/core/` | Reine Spiellogik ohne Nodes: `ShipLayout` (Raster, Wegfindung), `CrewMember`, `Species`, `ShipSystem`, `Weapon`, `ShipState` (Energie, Schaden, Reparatur, Schilde), `Battle` (Schüsse, Einschläge, Gegner-KI, Ereignisse), `StarMap` (Sternenkarte eines Sektors), `RunState` (Run: Modus, Sektor, Jägerfront, Karte, Position, Schiff, Ressourcen, Dialoge, Händler, Gegnerwahl), `EventBook` (Ereignisse laden, ziehen, prüfen) |
-| `scripts/view/` | Darstellung und Eingabe: `ShipView` (eigenes und Gegnerschiff), `Effects` (auch Warpblase), `Starfield` (mit Lichtstreifen), `HudStyle` und `HudButton` (Kasten-Look), `StatusBar`, `ResourceBar`, `JumpButton`, `PowerPanel`, `WeaponPanel`, `DoorPanel`, `CrewPanel`, `CrewCard`, `MapView` (Sternenkarte als Überlagerung), `EventDialog` (Ereignis-, Händler- und Werftdialog) |
+| `scripts/core/settings.gd`, `scripts/core/codex.gd` | `Settings` (Einstellungen laden, speichern, anwenden) und `Codex` (entdeckte Schiffe und Spezies) |
+| `scripts/view/` | Darstellung und Eingabe: `SettingsPanel`, `CodexView` (Lexikon), `TutorialCoach`, `ShipView` (eigenes und Gegnerschiff), `Effects` (auch Warpblase), `Starfield` (mit Lichtstreifen), `HudStyle` und `HudButton` (Kasten-Look), `StatusBar`, `ResourceBar`, `JumpButton`, `PowerPanel`, `WeaponPanel`, `DoorPanel`, `CrewPanel`, `CrewCard`, `MapView` (Sternenkarte als Überlagerung), `EventDialog` (Ereignis-, Händler- und Werftdialog) |
 | `scripts/core/save_game.gd` | `SaveGame`: Spielstand speichern und laden, Formatversion und Migration |
 | `scripts/sfx.gd` | Autoload `Sfx`: Effekte abspielen (16 Stimmen, Tonhöhe leicht variiert), Schleifen mit Pegel, Ton aus/an |
 | `assets/sfx/` | Soundeffekte (WAV, erzeugt mit `tools/sfxgen`) |
 | `scripts/game.gd` | Autoload `Game`: hält den Run, wechselt zwischen Hauptmenü und Schiff, speichert je Modus, führt die Rekorde |
-| `scenes/title.tscn` | Startszene: Hauptmenü mit den zwei Modi (`scripts/title_screen.gd`) |
+| `scenes/title.tscn` | Startszene: Hauptmenü, Moduswahl, Lexikon und Einstellungen (`scripts/title_screen.gd`) |
 | `scenes/ship.tscn` | Schiff: Ruhe, Kampf, Ereignisse, Karte und Sprung (`scripts/ship_screen.gd`) |
-| `assets/` | Kopien aus `art/export/1x` |
+| `assets/` | Kopien aus `art/export/1x`; `assets/fonts/`: Schrift „Hullbound VT“ = VT323 (SIL Open Font License, `OFL.txt`), um 25 % vergrößert (unitsPerEm 1000 → 800, damit sie bei den bisherigen Schriftgrößen gleich groß wirkt), und `hud_font.tres` |
 | `tests/run_tests.gd` | Logiktests |
 
 **Grafik aktualisieren:** Nach `python3 tools/artgen/build.py` die benötigten PNGs aus `art/export/1x/` nach `game/assets/` kopieren.
@@ -179,6 +187,8 @@ godot --headless --path game --script res://tests/run_tests.gd
 ## Darstellung
 
 Basisauflösung 384 × 216, ganzzahlig hochskaliert (1080p: 5×), Breite passt sich dem Seitenverhältnis an, Querformat, Pixel-Art ohne Filter. Typische Handys (20:9) zeigen 480 × 216; das Desktop-Fenster ist deshalb 1920 × 864 groß. Bei 16:9 (384 px) rücken die Schiffe eng zusammen. Renderer „Compatibility“ für ältere Android-Geräte.
+
+**Schrift:** Pixel-Schrift VT323 (als „Hullbound VT“, klare Buchstabenformen, „la“ und „b“ sind gut zu unterscheiden) als Projektschrift (`gui/theme/custom_font`), Streckmodus `canvas_items`: Spielkoordinaten bleiben 384 × 216, die Schrift wird aber in voller Bildschirmauflösung gezeichnet, ein Schrift-Pixel ist also feiner als ein Spiel-Pixel und gut lesbar. Die Pixel-Art bleibt ganzzahlig skaliert und ungefiltert. In den Einstellungen schaltet „Retro“ zurück auf den Modus `viewport` (alles im groben 384er-Raster).
 
 Ein Raum ist bei 5× auf einem 1080p-Handy 140 px groß (ca. 56 dp, GDD: mindestens 48 dp), eine Kachel 70 px. Hintergrund: Sternenfeld in drei Ebenen (`scripts/view/starfield.gd`).
 
