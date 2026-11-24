@@ -408,6 +408,42 @@ func test_enemy_crew_repairs() -> void:
 	check(battle.enemy.get_system("antrieb").damage == 0, "Gegner-Crew repariert nicht")
 
 
+func _lone_flee_battle() -> Battle:
+	var battle := _flee_battle()
+	battle.enemy_fleeing = true
+	battle._flee_decided = true
+	while battle.enemy.crew.size() > 1:
+		battle.enemy.crew.pop_back()
+	for w in battle.player.weapons:
+		w.powered = false
+	return battle
+
+
+func test_lone_fleeing_enemy_repairs_engine() -> void:
+	# Nur noch ein Crewmitglied auf der Flucht: Antrieb reparieren, nicht im Cockpit pendeln.
+	var battle := _lone_flee_battle()
+	battle.enemy.take_hit(battle.enemy.layout.room_index_by_id("antrieb"), 1)
+	battle.enemy.hull = 1
+	for i in 300:
+		battle.update(0.1)
+		if battle.outcome != "":
+			break
+	check(battle.enemy.get_system("antrieb").damage == 0, "Einzelner Gegner repariert den Antrieb auf der Flucht nicht")
+
+
+func test_lone_fleeing_enemy_ignores_weapons() -> void:
+	# Waffenschaden hält die Flucht nicht auf: Die Person bleibt im Cockpit und springt.
+	var battle := _lone_flee_battle()
+	battle.enemy.take_hit(battle.enemy.layout.room_index_by_id("waffen"), 1)
+	battle.enemy.hull = 1
+	for i in 900:
+		battle.update(0.1)
+		if battle.outcome != "":
+			break
+	check(battle.outcome == "gegner_entkommen", "Einzelner Gegner flieht nicht trotz Waffenschaden ('%s')" % battle.outcome)
+	check(battle.enemy.get_system("waffen").damage > 0, "Einzelner Gegner repariert auf der Flucht die Waffen")
+
+
 # --- Waffenziele, Sauerstoff, Feuer, Crew-Gesundheit, Türen ---
 
 func _quiet_state() -> ShipState:
