@@ -1632,3 +1632,105 @@ func test_bad_reputation_raises_prices() -> void:
 	check(run._price(8) == 9, "Schlechter Ruf macht Hülle +5 nicht teurer: %d" % run._price(8))
 	run.flags["gilde_freund"] = true
 	check(run._price(8) == 7, "Gildenbrief und schlechter Ruf verrechnen sich nicht: %d" % run._price(8))
+
+
+# --- Startausrüstung (Loadout) ---
+
+
+func test_loadout_empty_is_classic_start() -> void:
+	var run := RunState.new(3)
+	check(run.ship.max_hull == 30 and run.ship.get_system("reaktor").capacity == 7, "Standardstart: Hülle oder Reaktor falsch")
+	check(run.ship.weapons.map(func(w: Weapon) -> String: return w.id) == ["pulslaser", "schwerer_laser"], "Standardstart: Waffen falsch")
+	check(run.ship.weapons.all(func(w: Weapon) -> bool: return w.powered), "Standardstart: Waffen ohne Energie")
+	var names := run.ship.crew.map(func(m: CrewMember) -> String: return m.display_name)
+	check(names == ["Mara Voss", "Jonas Reil", "Ilka Brandt"], "Standardstart: Crew falsch: %s" % [names])
+	check(run.scrap == 10 and run.fuel == 6, "Standardstart: Rohstoffe oder Treibstoff falsch")
+	check(run.loadout.ship == "frachter" and run.loadout.difficulty == "normal", "Standardstart: Auswahl falsch")
+
+
+func test_loadout_points_rules() -> void:
+	var cfg := Loadout.default_config()
+	check(Loadout.cost(cfg) == 11 and Loadout.budget(cfg) == 14, "Standardauswahl kostet nicht 11 von 14: %d" % Loadout.cost(cfg))
+	check(Loadout.is_valid(cfg, false), "Standardauswahl ungültig: %s" % [Loadout.problems(cfg, false)])
+	cfg.perks = ["panzerung", "brandschutz"]
+	check(Loadout.remaining(cfg) == -2 and not Loadout.is_valid(cfg, false), "Überzogenes Budget wird nicht erkannt")
+	cfg.difficulty = "schwer"
+	check(Loadout.is_valid(cfg, false), "Schwer: 17 Punkte reichen nicht")
+	cfg.perks = ["panzerung", "brandschutz", "zielcomputer"]
+	check(not Loadout.is_valid(cfg, false), "Mehr als 2 Perks erlaubt")
+	cfg.perks = []
+	cfg.weapons = ["pulslaser", "bordkanone", "bordkanone", "bordkanone"]
+	check(not Loadout.is_valid(cfg, false), "Mehr Waffen als Plätze erlaubt")
+	cfg.weapons = []
+	check(not Loadout.is_valid(cfg, false), "Ohne Waffe erlaubt")
+	cfg = Loadout.default_config()
+	cfg.crew = ["mensch", "mensch", "mensch"]
+	check(Loadout.cost(cfg) == 11 + 2 + 1, "Dritte Person ohne Aufschlag")
+	cfg.crew = ["mensch", "mensch", "mensch", "mensch", "mensch"]
+	check(not Loadout.is_valid(cfg, false), "Mehr als 4 Crew neben dem Captain erlaubt")
+
+
+## Fair: Jedes Schiff ist mit seinen Startwaffen und zwei Leuten auf Normal startklar, aber kein
+## stärkeres Schiff lässt mehr Punkte übrig als der Frachter (außer dem schwächeren Bergungsfrachter).
+func test_loadout_every_ship_fits_normal_budget() -> void:
+	var base := Loadout.remaining(Loadout.default_config("frachter"))
+	for id in Loadout.ship_ids():
+		var cfg := Loadout.default_config(id)
+		check(Loadout.is_valid(cfg, false), "%s: Standardauswahl ungültig: %s" % [id, Loadout.problems(cfg, false)])
+		var ship := RunState.create_player_ship(cfg)
+		check(ship.layout.validate().is_empty(), "%s: Layout ungültig" % id)
+		check(ship.reactor_output() >= ship.power_used(), "%s: Startenergie größer als Reaktor" % id)
+		check(ship.weapons.all(func(w: Weapon) -> bool: return w.powered), "%s: Startwaffen ohne Energie" % id)
+	check(Loadout.remaining(Loadout.default_config("kanone")) < base, "Kanonenfrachter lässt zu viele Punkte übrig")
+
+
+func test_loadout_variant_crew_and_perks() -> void:
+	var cfg := Loadout.default_config("kanone", "schwer")
+	cfg.crew = ["mensch", "ormok", "androide"]
+	cfg.perks = ["panzerung"]
+	var run := RunState.new(5, RunState.MODE_HUNT, cfg)
+	var s := run.ship
+	check(s.max_hull == 24 + 6 and s.hull == s.max_hull, "Kanonenfrachter mit Panzerung: Hülle falsch: %d" % s.max_hull)
+	check(s.get_system("reaktor").capacity == 8 and s.get_system("waffen").capacity == 4, "Kanonenfrachter: Systeme falsch")
+	check(s.layout.stats.get("tint", "") == "#f0b8a8", "Kanonenfrachter: Farbe fehlt")
+	check(s.crew.size() == 4 and s.crew[0].role == CrewMember.ROLE_CAPTAIN, "Crew-Anzahl oder Captain falsch")
+	check(s.crew[2].species == "ormok" and s.crew[3].species == "androide", "Spezies der Crew falsch")
+	var names := {}
+	for m in s.crew:
+		names[m.display_name] = true
+	check(names.size() == 4, "Crew-Namen doppelt")
+	check(s.has_perk("panzerung"), "Perk aus der Startauswahl fehlt")
+	check(run.fuel == 5, "Schwer: Treibstoff nicht 6 - 1")
+	check(run.scrap == 10 + Loadout.leftover_scrap(cfg), "Übrige Punkte werden nicht zu Rohstoffen")
+	check(run.system_upgrade_price("reaktor") == 12, "Ausbaupreis zählt nicht ab dem Start der Variante")
+
+
+func test_difficulty_changes_enemies_and_loot() -> void:
+	var normal := RunState.new(77, RunState.MODE_HUNT, Loadout.default_config())
+	var hard := RunState.new(77, RunState.MODE_HUNT, Loadout.default_config("frachter", "schwer"))
+	var easy := RunState.new(77, RunState.MODE_HUNT, Loadout.default_config("frachter", "leicht"))
+	for n: Dictionary in normal.map.nodes:
+		if n.type == "kampf" or n.type == "boss":
+			var a: int = normal.enemy_spec(n.id).hull_bonus
+			# Die Gegnerstufe verschiebt sich mit, darum mindestens ±3 (spätere Stufen bringen mehr Hülle)
+			check(hard.enemy_spec(n.id).hull_bonus >= a + 3 and easy.enemy_spec(n.id).hull_bonus <= a - 3, "Gegnerhülle folgt nicht der Schwierigkeit")
+	check(hard._depth(5) == normal._depth(5) + 2 and easy._depth(1) == 0, "Gegnerstufe folgt nicht der Schwierigkeit")
+	check(is_equal_approx(easy.scrap_gain(), 1.25 * 1.2) and is_equal_approx(hard.scrap_gain(), 1.25 * 0.85), "Beute-Faktor falsch")
+	check(easy.fuel == 8, "Leicht: Treibstoff nicht 6 + 2")
+
+
+func test_loadout_survives_save_and_load() -> void:
+	SaveGame.path = "user://test_savegame.json"
+	SaveGame.backup = "user://test_savegame.bak.json"
+	var cfg := Loadout.default_config("bergung", "schwer")
+	var run := RunState.new(9, RunState.MODE_HUNT, cfg)
+	check(run.ship.get_system("reaktor").capacity == 6 and run.ship.max_hull == 34, "Bergungsfrachter: Werte falsch")
+	check(SaveGame.save(run), "Speichern scheitert")
+	var loaded := SaveGame.load_run(RunState.MODE_HUNT)
+	check(loaded != null, "Laden scheitert")
+	if loaded:
+		check(loaded.loadout.ship == "bergung" and loaded.loadout.difficulty == "schwer", "Auswahl nicht gespeichert")
+		check(loaded.ship.get_system("reaktor").capacity == 6, "Reaktor der Variante nach dem Laden falsch")
+		check(loaded.ship.layout.stats.get("tint", "") == "#e8d8b0", "Farbe der Variante nach dem Laden weg")
+		check(loaded.scrap == run.scrap, "Rohstoffe nach dem Laden falsch")
+	SaveGame.clear(RunState.MODE_HUNT)

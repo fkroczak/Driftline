@@ -23,8 +23,10 @@ extends RefCounted
 ## Version 2: Modus, Sektor, Sprungzähler, Jägerfront, freie Karte mit Verbindungen in beide Richtungen.
 ## Version 3: Schiffsausbau (Perks, Waffenlager) und Händlerwaren; ältere Stände bekommen leere Listen.
 ## Version 4: Aufträge (`quests`, Ziel-Knoten -> Abschlussereignis); ältere Stände starten ohne Auftrag.
+## Version 5: Startausrüstung (`loadout`: Schiffsvariante, Schwierigkeit …); ältere Stände sind
+## der Standardstart (Frachter, Normal).
 
-const VERSION := 4
+const VERSION := 5
 const PATH := "user://savegame.json"
 const BACKUP := "user://savegame.bak.json"
 const TEMP := "user://savegame.tmp"
@@ -135,6 +137,7 @@ static func _migrate(data: Dictionary) -> Dictionary:
 				c["role"] = CrewMember.ROLE_CAPTAIN
 	# v2 -> v3: nichts umzurechnen; perks, stored_weapons und shop_stock fehlen und starten leer.
 	# v3 -> v4: nichts umzurechnen; quests fehlt und startet leer.
+	# v4 -> v5: nichts umzurechnen; loadout fehlt und gilt als Standardstart.
 	data.version = VERSION
 	data["run"] = r
 	return data
@@ -174,6 +177,7 @@ static func to_dict(run: RunState) -> Dictionary:
 			"shop_stock": run.shop_stock,
 			"quests": run.quests,
 			"quest_note": run.quest_note,
+			"loadout": run.loadout,
 			"rng": run._rng.state,
 		},
 		"ship": _ship_to_dict(run.ship),
@@ -185,7 +189,8 @@ static func from_dict(data: Dictionary, mode := RunState.MODE_HUNT) -> RunState:
 	var m: Dictionary = r.get("map", {})
 	if m.get("nodes", []).is_empty() or not data.has("ship"):
 		return null
-	var run := RunState.new(int(r.get("seed", 1)), r.get("mode", mode))
+	var cfg: Dictionary = r.get("loadout", {}) if r.get("loadout") is Dictionary else {}
+	var run := RunState.new(int(r.get("seed", 1)), r.get("mode", mode), cfg)
 	run.sector = maxi(int(r.get("sector", 1)), 1)
 	run.jumps = int(r.get("jumps", 0))
 	run.total_jumps = int(r.get("total_jumps", run.jumps))

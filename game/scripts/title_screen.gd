@@ -2,7 +2,8 @@ extends Control
 ## Hauptmenü. Startseite mit SPIELEN, TUTORIAL, LEXIKON und EINSTELLUNGEN.
 ## SPIELEN zeigt die zwei Spielmodi nebeneinander, je mit „Weiter“ (falls ein Run gespeichert ist)
 ## und „Neuer Run“. Ein neuer Run überschreibt einen gespeicherten erst nach einem zweiten Antippen.
-## Lexikon und Einstellungen liegen als Überlagerung darüber.
+## NEUER RUN öffnet die Startauswahl (Schiff, Crew, Waffen, Perks, Schwierigkeit; LoadoutView).
+## Lexikon, Startauswahl und Einstellungen liegen als Überlagerung darüber.
 
 const CARD := Vector2(172, 118)
 const MENU_W := 132.0
@@ -28,6 +29,7 @@ var _confirm := ""  # Modus, für den „Neuer Run“ einmal angetippt wurde
 var _time := 0.0
 var _settings: SettingsPanel
 var _codex: CodexView
+var _loadout: LoadoutView
 var _logo_y := 12.0
 var _sparks: Array[Dictionary] = []  # {pos, vel, age, life}
 var _smoke: Array[Dictionary] = []
@@ -40,7 +42,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_settings = SettingsPanel.new()
 	_codex = CodexView.new()
-	for overlay: Control in [_codex, _settings]:
+	_loadout = LoadoutView.new()
+	_loadout.started.connect(_on_loadout_started)
+	for overlay: Control in [_codex, _loadout, _settings]:
 		add_child(overlay)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
@@ -49,7 +53,7 @@ func _ready() -> void:
 func _layout() -> void:
 	position = Vector2.ZERO
 	size = get_viewport_rect().size
-	for overlay: Control in [_codex, _settings]:
+	for overlay: Control in [_codex, _loadout, _settings]:
 		overlay.position = Vector2.ZERO
 		overlay.size = size
 
@@ -216,10 +220,22 @@ func _gui_input(event: InputEvent) -> void:
 				if SaveGame.exists(b.mode) and _confirm != b.mode:
 					_confirm = b.mode
 				else:
-					Game.new_run(b.mode)
-					Game.to_ship()
+					_confirm = ""
+					_loadout.open(b.mode, Loc.t(_mode_def(b.mode).name))
 		return
 	_confirm = ""
+
+
+func _mode_def(id: String) -> Dictionary:
+	for m: Dictionary in MODES:
+		if m.id == id:
+			return m
+	return MODES[0]
+
+
+func _on_loadout_started(mode: String, cfg: Dictionary) -> void:
+	Game.new_run(mode, 0, cfg)
+	Game.to_ship()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:

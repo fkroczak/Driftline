@@ -37,11 +37,14 @@ extends RefCounted
 ##
 ## Rohstoffe aus Beute und Ereignissen werden mit `scrap_gain` aus data/run.json multipliziert.
 ##
+## Startausrüstung (`loadout`, siehe Loadout und data/loadout.json): Schiffsvariante, Schwierigkeit,
+## Crew, Waffen und Perks werden beim Start gewählt. Die Schwierigkeit verändert Gegnerhülle und
+## Gegnerstufe, die Rohstoffe aus Beute und Ereignissen und den Start-Treibstoff.
+##
 ## Dialoge: `dialog` ist leer oder {title, text, scene, choices: [{text, enabled, special}]}.
 ## Die Darstellung zeigt ihn an und ruft `choose(index)` auf. Solange ein Dialog offen ist,
 ## kann nicht gesprungen werden.
 
-const PLAYER_SHIP := "res://data/ships/mensch_frachter.json"
 const ENEMIES_PATH := "res://data/enemies.json"
 const RUN_PATH := "res://data/run.json"
 const SHIPS_DIR := "res://data/ships/%s.json"
@@ -105,6 +108,8 @@ var last_jump_free := false
 var quests: Dictionary = {}
 ## Meldung für die Darstellung, wenn ein Auftrag verfallen ist ("" = keine); wer sie zeigt, leert sie.
 var quest_note := ""
+## Startausrüstung (vollständig, siehe Loadout.normalized); wird mitgespeichert.
+var loadout: Dictionary = {}
 
 var rules: Dictionary = {}
 var _enemy_table: Dictionary = {}
@@ -114,17 +119,30 @@ var _ctx: Dictionary = {}
 var _shop_note := ""
 
 
-func _init(p_seed := 0, p_mode := MODE_HUNT) -> void:
+func _init(p_seed := 0, p_mode := MODE_HUNT, p_loadout := {}) -> void:
 	seed_value = p_seed if p_seed != 0 else randi()
 	mode = p_mode if p_mode in [MODE_HUNT, MODE_ENDLESS] else MODE_HUNT
 	_rng.seed = seed_value
-	ship = create_player_ship()
+	loadout = Loadout.normalized(p_loadout)
+	ship = create_player_ship(loadout, seed_value)
 	events = EventBook.load_default()
 	_enemy_table = _load_json(ENEMIES_PATH)
 	rules = _load_json(RUN_PATH)
-	fuel = int(rules.get("start_fuel", 6))
-	scrap = int(rules.get("start_scrap", 10))
+	fuel = maxi(int(rules.get("start_fuel", 6)) + int(difficulty().get("start_fuel", 0)), 1)
+	scrap = int(rules.get("start_scrap", 10)) + int(Loadout.ship(loadout.ship).get("start_scrap", 0))
+	if not p_loadout.is_empty():
+		scrap += Loadout.leftover_scrap(loadout)  # nicht ausgegebene Startpunkte
 	_setup_sector()
+
+
+## Werte des gewählten Schwierigkeitsgrads (data/loadout.json: difficulties).
+func difficulty() -> Dictionary:
+	return Loadout.difficulty(str(loadout.get("difficulty", Loadout.DEFAULT_DIFFICULTY)))
+
+
+## Faktor auf Rohstoffe aus Beute und Ereignissen (Run-Regel mal Schwierigkeit).
+func scrap_gain() -> float:
+	return float(rules.get("scrap_gain", 1.0)) * float(difficulty().get("scrap_gain", 1.0))
 
 
 ## Neue Karte für den aktuellen Sektor; Schiff, Crew und Ressourcen bleiben.
@@ -178,17 +196,69 @@ static func _load_json(path: String) -> Dictionary:
 	return data if typeof(data) == TYPE_DICTIONARY else {}
 
 
-static func create_player_ship() -> ShipState:
-	var layout := ShipLayout.load_json(PLAYER_SHIP)
+## Eigenes Schiff nach der Startausrüstung (leer = Standardstart: Frachter, Mara Voss, Jonas Reil
+## und Ilka Brandt, Pulslaser und Schwerlaser). Die Waffen bekommen der Reihe nach Energie, solange
+## das Waffensystem reicht. `name_seed` bestimmt die Namen weiterer Crew.
+static func create_player_ship(cfg := {}, name_seed := 1) -> ShipState:
+	var c := Loadout.normalized(cfg)
+	var stats := Loadout.ship_stats(c.ship)
+	stats["weapons"] = c.weapons.duplicate()
+	var capacity := int((stats.get("systems", {}) as Dictionary).get("waffen", 0))
+	var powered := 0
+	var used := 0
+	for id: String in c.weapons:
+		var need := Weapon.create(id).cost if Weapon.known(id) else 99
+		if used + need > capacity:
+			break
+		used += need
+		powered += 1
+	stats["weapons_powered"] = powered
+	stats["power"] = (stats.get("power", {}) as Dictionary).duplicate()
+	var layout := ShipLayout.from_dict(stats)
 	for error in layout.validate():
-		push_error("%s: %s" % [PLAYER_SHIP, error])
+		push_error("%s: %s" % [c.ship, error])
 	var s := ShipState.new(layout)
 	var captain := s.add_crew("Mara Voss", "mensch", Vector2i(9, 3), {"cockpit": 3.0, "waffen": 1.0})
 	captain.role = CrewMember.ROLE_CAPTAIN
-	s.add_crew("Jonas Reil", "mensch", Vector2i(6, 6), {"waffen": 3.0, "schilde": 1.0})
-	s.add_crew("Ilka Brandt", "mensch", Vector2i(6, 0), {"schilde": 2.0, "antrieb": 2.0})
+	var starters := [
+		["Jonas Reil", Vector2i(6, 6), {"waffen": 3.0, "schilde": 1.0}],
+		["Ilka Brandt", Vector2i(6, 0), {"schilde": 2.0, "antrieb": 2.0}],
+	]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([name_seed, "crew"])
+	var used_names := {"Mara Voss": true}
+	for i in mini(c.crew.size(), Loadout.crew_max()):
+		var species: String = c.crew[i] if Species.known(c.crew[i]) else Species.DEFAULT
+		var member_name := ""
+		if i < starters.size() and species == Species.DEFAULT:
+			member_name = starters[i][0]
+		else:
+			var names: Array = (Species.value(species, "names", []) as Array).filter(func(n: String) -> bool: return not used_names.has(n))
+			member_name = names[rng.randi_range(0, names.size() - 1)] if not names.is_empty() else Species.display_name(species)
+		used_names[member_name] = true
+		var xp: Dictionary = starters[i][2] if i < starters.size() else {}
+		if i < starters.size() and layout.is_walkable(starters[i][1]) and s.crew_at_tile(starters[i][1]) == null:
+			s.add_crew(member_name, species, starters[i][1], xp)
+		else:
+			var m := s.add_crew_anywhere(member_name, species)
+			if m:
+				m.experience = xp.duplicate()
+	for id: String in c.perks:
+		grant_perk(s, id)
 	s.in_combat = false
 	return s
+
+
+## Perk einbauen (Kauf oder Startausrüstung); Panzerung erhöht Hülle und Maximum sofort.
+static func grant_perk(s: ShipState, id: String) -> bool:
+	if Upgrades.perk(id).is_empty() or s.has_perk(id):
+		return false
+	s.perks.append(id)
+	var hull := int(Upgrades.perk(id).get("hull", 0))
+	if hull != 0:
+		s.max_hull += hull
+		s.hull += hull
+	return true
 
 
 func node() -> Dictionary:
@@ -818,7 +888,7 @@ func _apply(effects: Dictionary) -> Array[String]:
 	var parts: Array[String] = []
 	var s := int(effects.get("scrap", 0))
 	if s > 0:
-		s = roundi(s * float(rules.get("scrap_gain", 1.0)))
+		s = roundi(s * scrap_gain())
 	if s != 0:
 		scrap = maxi(scrap + s, 0)
 		parts.append(Loc.t("%+d Rohstoffe") % s)
@@ -887,7 +957,7 @@ static func _flag_text(flag: String) -> String:
 
 ## Fortschritt für die Gegnerstufe: Lage auf der Karte plus Sektor.
 func _depth(column: int) -> int:
-	return column + (sector - 1) * int(_enemy_table.get("depth_per_sector", 3))
+	return maxi(column + (sector - 1) * int(_enemy_table.get("depth_per_sector", 3)) + int(difficulty().get("enemy_depth", 0)), 0)
 
 
 func _stage_for(depth: int) -> Dictionary:
@@ -904,7 +974,7 @@ func enemy_spec(id := -1) -> Dictionary:
 	if id < 0:
 		id = current
 	var n := map.node(id)
-	var per_sector := (sector - 1) * int(_enemy_table.get("hull_per_sector", 0))
+	var per_sector := (sector - 1) * int(_enemy_table.get("hull_per_sector", 0)) + int(difficulty().get("enemy_hull", 0))
 	if id == current and hunter_battle:
 		var hunter: Dictionary = _enemy_table.get("hunter", {})
 		var extra := maxi(jumps - HUNT_JUMPS, 0) * int(hunter.get("hull_per_late_jump", 0))
@@ -918,7 +988,7 @@ func enemy_spec(id := -1) -> Dictionary:
 		return {
 			"ship": SHIPS_DIR % boss.get("ship", "piraten_kutter_schwer"),
 			"name": boss.get("name", ""),
-			"hull_bonus": int(boss.get("hull_bonus", 0)) + (sector - 1) * int(boss.get("hull_per_sector", 0)),
+			"hull_bonus": int(boss.get("hull_bonus", 0)) + (sector - 1) * int(boss.get("hull_per_sector", 0)) + int(difficulty().get("enemy_hull", 0)),
 		}
 	var stage := _stage_for(_depth(n.column))
 	var pool: Array = stage.get("pool", [["piraten_kutter", 1.0]])
@@ -1000,9 +1070,4 @@ func buy_perk(id: String) -> bool:
 	if not can_buy_perk(id):
 		return false
 	scrap -= perk_price(id)
-	ship.perks.append(id)
-	var hull := int(Upgrades.perk(id).get("hull", 0))
-	if hull != 0:
-		ship.max_hull += hull
-		ship.hull += hull
-	return true
+	return grant_perk(ship, id)
