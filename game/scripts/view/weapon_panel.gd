@@ -117,7 +117,7 @@ func _draw() -> void:
 			line = "Ziel wählen"
 			line_color = COLOR_READY
 		elif w.target >= 0 and enemy:
-			line = "→ " + enemy.layout.rooms[w.target].name
+			line = "» " + enemy.layout.rooms[w.target].name
 			line_color = COLOR_TEXT
 		draw_string(font, rect.position + Vector2(3, 18), line, HORIZONTAL_ALIGNMENT_LEFT, CARD.x - 6, FONT_SIZE, line_color)
 		# Ladebalken

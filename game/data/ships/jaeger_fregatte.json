@@ -1,6 +1,8 @@
 {
   "id": "jaeger_fregatte",
   "name": "Jäger-Fregatte",
+  "role": "Die Jäger",
+  "description": "Die Fregatten der Jägerfront verfolgen dich durch jeden Sektor. Dicke Hülle, großer Reaktor und drei Waffen: Wer sich einholen lässt, kämpft gegen ein Schiff, das für genau diese Jagd gebaut wurde.",
   "tint": "#ff8080",
   "sprite": "res://assets/ships/piraten_kutter.png",
   "tile_size": 14,

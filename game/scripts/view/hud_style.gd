@@ -66,3 +66,34 @@ static func icon(ci: CanvasItem, pos: Vector2, kind: String, color: Color) -> vo
 		for x in row.length():
 			if row[x] == "X":
 				ci.draw_rect(Rect2(pos + Vector2(x, y), Vector2.ONE), color)
+
+
+## Bricht Text an Wortgrenzen um, damit er in `width` passt (Zeilenumbrüche im Text bleiben).
+static func wrap_text(value: String, width: float, size := FONT_SIZE) -> PackedStringArray:
+	var lines := PackedStringArray()
+	for para in value.split("\n"):
+		var line := ""
+		for word in para.split(" ", false):
+			var candidate := word if line == "" else line + " " + word
+			if line != "" and text_width(candidate, size) > width:
+				lines.append(line)
+				line = word
+			else:
+				line = candidate
+		lines.append(line)
+	return lines
+
+
+## Schreibt umgebrochenen Text ab `pos` (Grundlinie der ersten Zeile) und liefert die Höhe.
+static func paragraph(ci: CanvasItem, pos: Vector2, value: String, width: float, color := COLOR_TEXT, line_h := 10.0, size := FONT_SIZE) -> float:
+	var lines := wrap_text(value, width, size)
+	for i in lines.size():
+		text(ci, pos + Vector2(0, i * line_h), lines[i], color, -1, size)
+	return lines.size() * line_h
+
+
+## Knopf im HUD-Stil mit zentrierter Beschriftung; `active` füllt ihn leicht.
+static func button(ci: CanvasItem, rect: Rect2, label: String, color := COLOR_TEXT, active := false) -> void:
+	box(ci, rect, color, Color(color, 0.22) if active else Color("#161B2B"))
+	var w := text_width(label)
+	text(ci, Vector2(rect.position.x + roundf((rect.size.x - w) / 2.0), rect.position.y + roundf(rect.size.y / 2.0 + 3.0)), label, color)

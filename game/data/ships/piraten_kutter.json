@@ -1,6 +1,8 @@
 {
   "id": "piraten_kutter",
   "name": "Piratenkutter",
+  "role": "Gegner",
+  "description": "Schnelle Kutter der Randbanden, zusammengeschweißt aus Schrott. Dünne Hülle und wenig Platz, doch mit Pulslaser und Bordkanone gefährlich für jeden, der die Schilde vernachlässigt.",
   "sprite": "res://assets/ships/piraten_kutter.png",
   "tile_size": 14,
   "grid_origin": [18, 12],

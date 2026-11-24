@@ -1,6 +1,8 @@
 {
   "id": "mensch_frachter",
   "name": "Mensch-Frachter",
+  "role": "Dein Schiff",
+  "description": "Ein umgebauter Massengutfrachter der Kernwelten. Viel Platz für Crew und spätere Module, solide Hülle, aber nur ein kleiner Reaktor: Wer alles gleichzeitig betreiben will, muss Energie klug verteilen.",
   "sprite": "res://assets/ships/mensch_frachter.png",
   "tile_size": 14,
   "grid_origin": [70, 14],

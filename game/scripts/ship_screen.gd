@@ -78,6 +78,13 @@ var _card_member: CrewMember
 @onready var pause_label: Label = $HUD/PauseLabel
 @onready var dialog: EventDialog = $HUD/EventDialog
 @onready var map_view: MapView = $HUD/MapView
+## Im Code angelegt: Menüknopf (oben rechts), Einstellungen und Tutorial-Hinweise.
+var menu_button: HudButton
+var settings_panel: SettingsPanel
+var coach: TutorialCoach
+## Tutorial: Energie wurde verteilt, Tür oder Schleuse geschaltet, Kampf gewonnen.
+var _tut_power := false
+var _tut_won := false
 
 
 func _ready() -> void:
@@ -117,13 +124,123 @@ func _ready() -> void:
 		map_view.hint = _map_hint())
 	map_view.distress_pressed.connect(_on_distress)
 	map_view.closed.connect(_close_map)
+	_setup_menu()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_on_selection_changed(null, -1)
+	_discover()
 	starfield.reseed(hash([run.seed_value, run.sector, run.current]))
 	# Ankunft: Schiff fliegt herein, dann gilt, was am Knoten wartet
 	_phase = "warp"
 	_warp_in(_enter_node)
+
+
+# --- Menü, Einstellungen, Tutorial, Lexikon ---
+
+
+func _setup_menu() -> void:
+	var hud := $HUD
+	menu_button = HudButton.new()
+	menu_button.bars = true
+	hud.add_child(menu_button)
+	menu_button.pressed.connect(_open_settings)
+	coach = TutorialCoach.new()
+	coach.visible = Game.tutorial
+	coach.check = _tutorial_done
+	coach.focus = _tutorial_focus
+	hud.add_child(coach)
+	settings_panel = SettingsPanel.new()
+	settings_panel.in_game = true
+	settings_panel.tutorial = Game.tutorial
+	hud.add_child(settings_panel)
+	settings_panel.closed.connect(_on_settings_closed)
+	settings_panel.quit_requested.connect(_quit_to_title)
+	pause_button.auto_pause = Settings.get_value("auto_pause")
+	power_panel.system_tapped.connect(func(_system: String, changed: bool) -> void:
+		_tut_power = _tut_power or changed)
+
+
+func _open_settings() -> void:
+	ship_view.select(null)
+	weapon_panel.select(-1)
+	settings_panel.open()
+
+
+func _on_settings_closed() -> void:
+	pause_button.auto_pause = Settings.get_value("auto_pause")
+	if not pause_button.auto_pause and _auto_paused:
+		_auto_paused = false
+		_apply_pause()
+
+
+## Zurück ins Hauptmenü. Gespeichert wird nur außerhalb von Kampf und Sprung; sonst gilt der Stand davor.
+func _quit_to_title() -> void:
+	if Game.tutorial:
+		Game.end_tutorial()
+		return
+	if Game.can_save:
+		Game.save()
+	Game.run = null
+	Game.to_title()
+
+
+## Lexikon: eigene Crew-Spezies und das gegnerische Schiff als entdeckt vermerken.
+func _discover() -> void:
+	var fresh: Array[String] = []
+	if Codex.discover(Codex.KIND_SHIP, state.layout.id):
+		fresh.append(state.layout.display_name)
+	for member in state.crew:
+		if Codex.discover(Codex.KIND_SPECIES, member.species):
+			fresh.append(Species.display_name(member.species))
+	if enemy and Codex.discover(Codex.KIND_SHIP, enemy.layout.id):
+		fresh.append(enemy.layout.display_name)
+	if not fresh.is_empty():
+		_show_hint("Neu im Lexikon: " + ", ".join(fresh), 3.0)
+
+
+func _tutorial_done(id: String) -> bool:
+	match id:
+		"select":
+			return ship_view.selected != null
+		"move":
+			return ship_view.last_order != null
+		"power":
+			return _tut_power
+		"pause":
+			return is_paused()
+		"unpause":
+			return not is_paused()
+		"jump":
+			return map_view.visible or _phase != "ruhe"
+		"map":
+			return _phase == "kampf"
+		"target":
+			return battle != null and battle.player_has_target()
+		"win":
+			return _tut_won or (battle == null and _phase == "ruhe" and run.total_jumps > 0)
+	return false
+
+
+func _tutorial_focus(id: String) -> Rect2:
+	match id:
+		"select":
+			return Rect2(crew_panel.position, crew_panel.size)
+		"power":
+			return Rect2(power_panel.position, power_panel.size)
+		"doors":
+			return Rect2(door_panel.position, door_panel.size)
+		"pause", "unpause":
+			return Rect2(pause_button.position, pause_button.size)
+		"jump":
+			return Rect2(jump_button.position, jump_button.size)
+		"battle":
+			return Rect2(weapon_panel.position, weapon_panel.size)
+		"target":
+			if enemy_view.visible:
+				return Rect2(enemy_view.position, enemy_view.get_size())
+		"intro":
+			return Rect2(status_bar.position, Vector2(resource_bar.position.x + resource_bar.size.x - status_bar.position.x, 24))
+	return Rect2()
 
 
 # --- Ablauf ---
@@ -168,6 +285,7 @@ func _start_battle() -> void:
 	weapon_panel.setup(state, enemy)
 	enemy_view.visible = true
 	_layout()
+	_discover()
 	var who := enemy.layout.display_name
 	if run.hunter_battle:
 		_show_hint("Die Jäger haben euch eingeholt: %s!" % who, 3.0)
@@ -354,6 +472,7 @@ func _warp_in(done: Callable) -> void:
 
 
 func _on_choice(index: int) -> void:
+	call_deferred("_discover")
 	run.choose(index)
 	Game.save()
 	if not run.dialog.is_empty():
@@ -391,6 +510,7 @@ func _toggle_pause() -> void:
 
 func _toggle_auto_pause() -> void:
 	pause_button.auto_pause = not pause_button.auto_pause
+	Settings.set_value("auto_pause", pause_button.auto_pause)
 	if not pause_button.auto_pause and _auto_paused:
 		_auto_paused = false
 		_apply_pause()
@@ -427,6 +547,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
 		_toggle_pause()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel") and not settings_panel.visible:
+		_open_settings()
+		get_viewport().set_input_as_handled()
 
 
 # --- Layout ---
@@ -443,7 +566,9 @@ func _layout() -> void:
 	pause_button.size = Vector2(20, 24)
 	map_button.size = Vector2(34, 24)
 	jump_button.size = Vector2(56, 24)
-	help_button.position = Vector2(view_size.x - help_button.size.x - 2, 2)
+	menu_button.size = Vector2(18, 24)
+	menu_button.position = Vector2(view_size.x - menu_button.size.x - 2, 2)
+	help_button.position = menu_button.position - Vector2(help_button.size.x + 2, 0)
 	pause_button.position = help_button.position - Vector2(pause_button.size.x + 2, 0)
 	map_button.position = pause_button.position - Vector2(map_button.size.x + 2, 0)
 	jump_button.position = map_button.position - Vector2(jump_button.size.x + 2, 0)
@@ -473,7 +598,9 @@ func _layout() -> void:
 	info.position = Vector2(left, INFO_Y)
 	info.size.x = view_size.x - left - 4
 	_place_crew_card()
-	for c: Control in [damage_flash, warp_flash, banner, legend, pause_overlay, dialog, map_view]:
+	coach.left_x = crew_panel.position.x + crew_panel.slot().x + 4.0
+	coach.top_y = TOP + 2.0
+	for c: Control in [damage_flash, warp_flash, banner, legend, pause_overlay, dialog, map_view, coach, settings_panel]:
 		c.position = Vector2.ZERO
 		c.size = view_size
 	pause_label.size.x = view_size.x
@@ -503,8 +630,10 @@ func _process(delta: float) -> void:
 	_update_info()
 	_place_crew_card()
 	enemy_view.show_jump = battle != null and battle.enemy_fleeing
-	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende":
+	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende" \
+			or settings_panel.visible or coach.wants_pause():
 		return  # Spiel steht, Befehle gehen trotzdem
+	delta *= Settings.speed()
 	if battle:
 		battle.update(delta)
 		for e in battle.take_events():
@@ -518,7 +647,8 @@ func _process(delta: float) -> void:
 	if enemy and not enemy.is_destroyed() and _phase == "kampf":
 		enemy_view.position.y = _enemy_base.y + roundf(sin(_time * 1.3))
 	_shake = move_toward(_shake, 0.0, delta * 14.0)
-	world.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)).round() * _shake if _shake > 0.3 else Vector2.ZERO
+	var shaking: bool = _shake > 0.3 and Settings.get_value("shake")
+	world.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)).round() * _shake if shaking else Vector2.ZERO
 	_red_flash = move_toward(_red_flash, 0.0, delta * 1.5)
 	damage_flash.color = Color(0.89, 0.29, 0.29, _red_flash)
 
@@ -781,6 +911,7 @@ func _update_explosions(delta: float) -> void:
 ## Nach einem Sieg muss nichts bestätigt werden: Das Banner blendet von selbst aus.
 func _battle_over(outcome: String, reason: String) -> void:
 	var name := enemy.layout.display_name if enemy else ""
+	_tut_won = _tut_won or outcome == "sieg"
 	run.finish_battle(outcome)
 	_end_battle()
 	Game.save()
@@ -821,6 +952,7 @@ func _show_banner_text(text: String, seconds: float) -> void:
 ## Run vorbei: Banner bleibt, Antippen führt ins Hauptmenü.
 func _show_run_over() -> void:
 	_phase = "ende"
+	coach.visible = false
 	_end_battle()
 	var text := ""
 	if run.result == "geschafft":
@@ -840,6 +972,9 @@ func _on_banner_input(event: InputEvent) -> void:
 		return
 	if _phase == "ende":
 		if _can_leave_at >= 0.0 and _time >= _can_leave_at:
+			if Game.tutorial:
+				Game.end_tutorial()
+				return
 			Game.run = null
 			Game.to_title()
 		return
@@ -878,7 +1013,7 @@ func _update_info() -> void:
 		info.text = _hint
 		return
 	if is_paused() and ship_view.selected == null and weapon_panel.selected < 0:
-		info.text = "Pause: Befehle geben, dann ▶ oder Leertaste"
+		info.text = "Pause: Befehle geben, dann Pause-Knopf oder Leertaste"
 		return
 	if weapon_panel.selected >= 0:
 		info.text = "Waffe %d: Gegnerraum antippen (gleicher Raum = Ziel aufheben)" % (weapon_panel.selected + 1)
@@ -888,7 +1023,7 @@ func _update_info() -> void:
 		var ordered := ship_view.last_order
 		var room := ship_view.focused_room
 		if ordered and ordered.is_moving():
-			info.text = "%s → %s" % [ordered.display_name, state.layout.rooms[state.layout.room_index_at(ordered.destination())].name]
+			info.text = "%s » %s" % [ordered.display_name, state.layout.rooms[state.layout.room_index_at(ordered.destination())].name]
 		elif room >= 0:
 			var system: String = state.layout.rooms[room].system
 			info.text = state.layout.rooms[room].name
@@ -918,7 +1053,7 @@ func _update_info() -> void:
 		return
 	var target_room := state.layout.room_index_at(member.destination())
 	var room_data: Dictionary = state.layout.rooms[target_room]
-	var text := "%s → %s" % [member.display_name, room_data.name] if member.is_moving() else "%s · %s" % [member.display_name, room_data.name]
+	var text := "%s » %s" % [member.display_name, room_data.name] if member.is_moving() else "%s · %s" % [member.display_name, room_data.name]
 	if member.activity != "":
 		text += " · " + ActivityIcons.NAMES.get(member.activity, "")
 	text += " · freie Kachel antippen = hinschicken"
