@@ -838,7 +838,11 @@ func test_endless_mode_has_exit_and_no_front() -> void:
 	run.map.node(run.current).type = "leer"
 	run.fuel = 5
 	check(run.jump_to(exit_id), "Sprung zum Ausgang nicht möglich")
-	check(run.sector == 2 and run.current == run.map.start_id() and run.score() == 2, "Ausgang führt nicht in Sektor 2")
+	# Erst ankommen, dann mit eigenem Sprung in den nächsten Sektor
+	check(run.sector == 1 and run.current == exit_id and run.sector_cleared, "Am Ausgang nicht angekommen oder Sektor nicht geschafft")
+	check(not run.can_jump_to(run.node().links[0]), "Am geschafften Ausgang noch Sprünge auf der alten Karte möglich")
+	run.next_sector()
+	check(run.sector == 2 and run.current == run.map.start_id() and run.score() == 2 and not run.sector_cleared, "Sprung führt nicht in Sektor 2")
 
 
 func test_hits_damage_systems_only_by_chance() -> void:

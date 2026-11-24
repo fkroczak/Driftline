@@ -206,7 +206,8 @@ func can_jump_to(id: int) -> bool:
 
 ## Springt zum Knoten (auch zurück zu besuchten). Die Front rückt vor. Am Ziel öffnet sich je nach
 ## Typ ein Dialog (Ereignis beim ersten Besuch, Händler, Reparaturstation), hinter der Front greifen
-## die Jäger an, und am Ausgang im Endlos-Modus geht es in den nächsten Sektor.
+## die Jäger an. Am Ausgang im Endlos-Modus ist der Sektor geschafft (`sector_cleared`); in den
+## nächsten Sektor geht es erst mit einem eigenen Sprung (`next_sector`).
 func jump_to(id: int) -> bool:
 	if not can_jump_to(id):
 		return false
@@ -228,7 +229,7 @@ func jump_to(id: int) -> bool:
 		hunter_battle = true
 		return true
 	if mode == MODE_ENDLESS and node().type == "ausgang":
-		next_sector()
+		sector_cleared = true
 		return true
 	if first_visit or node().type in ["haendler", "reparatur"]:
 		_open_node_dialog()

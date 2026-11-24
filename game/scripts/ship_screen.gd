@@ -28,8 +28,6 @@ const WIDE_SCREEN := 440.0
 const WARP_OUT := 0.9
 const WARP_IN := 1.0
 const VICTORY_BANNER := 2.6
-## Nach dem Boss-Sieg: so lange explodiert das Flaggschiff, bevor der neue Sektor erscheint.
-const SECTOR_SWITCH_DELAY := 1.2
 const MAP_JUMP_TIME := 0.6
 
 var run: RunState
@@ -264,7 +262,15 @@ func _enter_node() -> void:
 		_show_run_over()
 		return
 	if run.sector_cleared:
-		_enter_next_sector()
+		# Sektor geschafft (Boss besiegt bzw. Ausgang erreicht): Man bleibt hier, bis man selbst
+		# mit SPRUNG in den nächsten Sektor springt. Erst dann kommt die neue Karte.
+		_phase = "ruhe"
+		var text := Loc.t("Flaggschiff vernichtet – Sektor %d geschafft") % run.sector if run.is_hunt() \
+			else Loc.t("Ausgang erreicht – Sektor %d geschafft") % run.sector
+		if run.last_reward != "" and run.is_hunt():
+			text += "\n" + Loc.t("Beute: ") + run.last_reward
+		_show_banner_text(text + "\n" + Loc.t("SPRUNG führt in den nächsten Sektor"), VICTORY_BANNER)
+		Sfx.play("sector_clear")
 		return
 	if not run.dialog.is_empty():
 		_phase = "ruhe"
@@ -326,6 +332,9 @@ func _on_jump_requested() -> void:
 	if _phase in ["warp", "ende"]:
 		return
 	var why := jump_button.reason()
+	if why == "" and run.sector_cleared:
+		_sector_jump()
+		return
 	if why != "" and why != "kein Treibstoff":
 		jump_button.deny()
 		Sfx.play("ui_deny")
@@ -358,6 +367,8 @@ func _close_map() -> void:
 
 
 func _map_hint() -> String:
+	if run.sector_cleared:
+		return Loc.t("Sektor geschafft: SPRUNG führt in den nächsten Sektor · ZURÜCK zum Schiff")
 	if run.can_send_distress():
 		return Loc.t("Kein Treibstoff mehr: Notsignal senden und hoffen, dass Freunde antworten")
 	if not state.jump_ready():
@@ -379,7 +390,9 @@ func _on_map_node(id: int) -> void:
 	if not can:
 		Sfx.play("ui_deny" if id != run.current else "ui_click")
 		map_view.selected = id if run.node().links.has(id) else -1
-		if id == run.current:
+		if run.sector_cleared:
+			map_view.hint = _map_hint()
+		elif id == run.current:
 			map_view.hint = Loc.t("Hier ist das Schiff gerade")
 		elif not run.node().links.has(id):
 			map_view.hint = Loc.t("Zu weit weg: nur direkt verbundene Ziele")
@@ -414,15 +427,8 @@ func _jump(id: int) -> void:
 		battle.player_jump()
 		battle.take_events()
 		run.finish_battle("entkommen")
-	var sector := run.sector
 	run.jump_to(id)
 	Game.save()
-	if run.sector != sector:
-		# Ausgang (Endlos): Die neue Karte gilt schon, direkt in den nächsten Sektor springen
-		_close_map()
-		_warp_out(_arrive)
-		_show_hint(Loc.t("Ausgang erreicht · Sektor %d") % run.sector, 4.0)
-		return
 	map_view.ship_from = from
 	map_view.ship_to = id
 	map_view.hint = Loc.t("Sprung …")
@@ -441,26 +447,16 @@ func _arrive() -> void:
 	_warp_in(_enter_node)
 
 
-## Nach dem Boss (Jagd): kein eigener Sprung, man ist direkt im nächsten Sektor. Erst darf das
-## Flaggschiff noch explodieren, dann wechseln Karte und Sterne unter einem kurzen Lichtblitz.
-## Bis dahin gilt `sector_cleared` (kein Sprung möglich); wird die App jetzt beendet, geht es beim
-## Laden genau hier weiter.
-func _enter_next_sector() -> void:
-	_phase = "ruhe"
-	var text := Loc.t("Flaggschiff vernichtet – Sektor %d geschafft") % run.sector
-	if run.last_reward != "":
-		text += "\n" + Loc.t("Beute: ") + run.last_reward
-	Sfx.play("sector_clear")
-	get_tree().create_timer(SECTOR_SWITCH_DELAY).timeout.connect(func() -> void:
-		if not run.sector_cleared or run.result != "":
-			return
+func _sector_jump() -> void:
+	if not run.sector_cleared:
+		return
+	_phase = "warp"
+	Game.can_save = false
+	_warp_out(func() -> void:
 		run.next_sector()
 		Game.save()
-		map_view.refresh()
-		starfield.reseed(hash([run.seed_value, run.sector, run.current, run.total_jumps]))
-		warp_flash.color = Color(0.85, 0.9, 1.0, 0.8)
-		create_tween().tween_property(warp_flash, "color", Color(0.85, 0.9, 1.0, 0.0), 0.6)
-		_show_banner_text(text + "\n" + Loc.t("Willkommen in Sektor %d · die Jäger beginnen von vorn") % run.sector, VICTORY_BANNER + 1.0))
+		_arrive()
+		_show_hint(Loc.t("Sektor %d · neue Karte, die Jäger beginnen von vorn") % run.sector if run.is_hunt() else Loc.t("Sektor %d") % run.sector, 4.0))
 
 
 ## Abflug: Blase baut sich auf, Schiff leuchtet, schießt nach rechts davon, Sterne werden zu Streifen.
@@ -1139,7 +1135,9 @@ func _update_info() -> void:
 			info.text = Loc.t("Gegnerraum: alle Waffen zielen · Waffenkarte: einzeln") if not battle.player_has_target() else Loc.t("Energie: antippen +1, halten −1 · ? = Symbole")
 		elif _phase == "ruhe":
 			var left := run.ship_damage_count()
-			if left > 0:
+			if run.sector_cleared and state.jump_ready():
+				info.text = Loc.t("Sektor geschafft · SPRUNG antippen: weiter in Sektor %d") % (run.sector + 1)
+			elif left > 0:
 				info.text = Loc.t("Noch %d %s · Crew in beschädigte Räume schicken") % [left, Loc.t("Schaden") if left == 1 else Loc.t("Schäden")]
 			elif state.jump_ready():
 				info.text = Loc.t("Antrieb bereit · SPRUNG antippen und Ziel wählen")

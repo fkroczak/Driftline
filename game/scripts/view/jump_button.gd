@@ -31,7 +31,7 @@ func reason() -> String:
 		return "Antrieb?"  # i18n
 	if not state.jump_ready():
 		return "%d %%" % floori(state.jump_charge * 100.0)
-	if run and run.fuel < run.jump_cost():
+	if run and run.fuel < run.jump_cost() and not run.sector_cleared:  # der Sprung in den nächsten Sektor ist frei
 		return "kein Treibstoff"  # i18n
 	return ""
 
@@ -62,7 +62,7 @@ func _draw() -> void:
 	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * state.jump_charge), bar.size.y)),
 		HudStyle.COLOR_WARN if state.jump_charge >= 1.0 else HudStyle.COLOR_FUEL.darkened(0.2))
 	draw_rect(bar.grow(0.5), Color(HudStyle.COLOR_WARN, 0.5), false, 1.0)
-	var line := Loc.t("Ziel wählen") if ready else Loc.t(why)
+	var line := (Loc.t("Neuer Sektor") if run and run.sector_cleared else Loc.t("Ziel wählen")) if ready else Loc.t(why)
 	var lw := HudStyle.text_width(line)
 	HudStyle.text(self, rect.position + Vector2(roundf((size.x - lw) / 2.0), 23), line,
 		HudStyle.COLOR_WARN if ready else HudStyle.COLOR_DIM, size.x - 2)
