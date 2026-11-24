@@ -46,7 +46,7 @@ const XP_PER_SECOND := 1.0 / 120.0
 ## Erfahrung beim Löschen, Flicken und Reparieren (Fertigkeit "reparatur"): 1 Stufe je Minute Arbeit.
 const REPAIR_XP_PER_SECOND := 1.0 / 60.0
 const POWER_PRIORITY := ["lebenserhaltung", "schilde", "waffen", "antrieb", "sensoren", "medbay"]
-## Sekunden je Schildschicht ohne Besatzung an der Konsole.
+## Sekunden je Schildschicht ohne Besatzung an der Konsole (je Schiff änderbar: shield_recharge im JSON).
 const SHIELD_RECHARGE := 3.0
 ## Bonus für eine besetzte Konsole und je Erfahrungsstufe (Ladezeit, Ausweichen).
 const OPERATOR_BONUS := 0.1
@@ -90,6 +90,8 @@ var stored_weapons: Array[String] = []
 var perks: Array[String] = []
 var shield_layers := 0
 var shield_progress := 0.0
+## Sekunden je Schildschicht (aus `shield_recharge` im Schiffs-JSON, sonst SHIELD_RECHARGE).
+var shield_recharge := SHIELD_RECHARGE
 var oxygen: Array[float] = []  # je Raum
 var fires: Dictionary = {}  # Kachel -> Stärke (0..1)
 var breaches: Dictionary = {}  # Kachel -> Reparaturfortschritt (0..1)
@@ -114,6 +116,7 @@ func _init(p_layout: ShipLayout) -> void:
 	var st := layout.stats
 	max_hull = int(st.get("hull", 0))
 	hull = max_hull
+	shield_recharge = float(st.get("shield_recharge", SHIELD_RECHARGE))
 	if st.has("reactor"):
 		systems["reaktor"] = ShipSystem.new("reaktor", int(st["reactor"]))
 	var caps: Dictionary = st.get("systems", {})
@@ -557,7 +560,7 @@ func _update_combat(delta: float) -> void:
 	_update_crew_health(delta)
 	_rebalance()
 	if shield_layers < max_shield_layers():
-		shield_progress += delta * skill_factor("schilde") / SHIELD_RECHARGE
+		shield_progress += delta * skill_factor("schilde") / shield_recharge
 		if shield_progress >= 1.0:
 			shield_progress = 0.0
 			shield_layers += 1

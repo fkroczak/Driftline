@@ -22,8 +22,9 @@ extends RefCounted
 ## Bei Formatänderungen: VERSION erhöhen und in `_migrate` einen Schritt ergänzen.
 ## Version 2: Modus, Sektor, Sprungzähler, Jägerfront, freie Karte mit Verbindungen in beide Richtungen.
 ## Version 3: Schiffsausbau (Perks, Waffenlager) und Händlerwaren; ältere Stände bekommen leere Listen.
+## Version 4: Aufträge (`quests`, Ziel-Knoten -> Abschlussereignis); ältere Stände starten ohne Auftrag.
 
-const VERSION := 3
+const VERSION := 4
 const PATH := "user://savegame.json"
 const BACKUP := "user://savegame.bak.json"
 const TEMP := "user://savegame.tmp"
@@ -133,6 +134,7 @@ static func _migrate(data: Dictionary) -> Dictionary:
 			if c.get("name", "") == "Mara Voss":
 				c["role"] = CrewMember.ROLE_CAPTAIN
 	# v2 -> v3: nichts umzurechnen; perks, stored_weapons und shop_stock fehlen und starten leer.
+	# v3 -> v4: nichts umzurechnen; quests fehlt und startet leer.
 	data.version = VERSION
 	data["run"] = r
 	return data
@@ -170,6 +172,8 @@ static func to_dict(run: RunState) -> Dictionary:
 			"shop_note": run._shop_note,
 			"last_reward": run.last_reward,
 			"shop_stock": run.shop_stock,
+			"quests": run.quests,
+			"quest_note": run.quest_note,
 			"rng": run._rng.state,
 		},
 		"ship": _ship_to_dict(run.ship),
@@ -215,6 +219,13 @@ static func from_dict(data: Dictionary, mode := RunState.MODE_HUNT) -> RunState:
 		var entry: Dictionary = stock[key]
 		var weapons: Array = (entry.get("weapons", []) as Array).filter(func(id: Variant) -> bool: return Weapon.known(str(id)))
 		run.shop_stock[int(key)] = {"weapons": weapons, "crew": entry.get("crew", [])}
+	run.quests = {}
+	var quests: Dictionary = r.get("quests", {})
+	for key: Variant in quests:
+		var q: Dictionary = quests[key]
+		if not run.events.get_event(str(q.get("event", ""))).is_empty():
+			run.quests[int(key)] = {"event": str(q.event), "title": str(q.get("title", "")), "deadline": int(q.get("deadline", 0))}
+	run.quest_note = r.get("quest_note", "")
 	if r.has("rng"):
 		run._rng.state = int(r.rng)
 	if run.dialog.is_empty() != run._ctx.is_empty():

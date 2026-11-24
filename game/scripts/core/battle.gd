@@ -28,8 +28,8 @@ const SALVO_GAP := 0.18
 ## Gegner wählt nach so vielen Sekunden frühestens ein neues Ziel.
 const ENEMY_RETARGET := 6.0
 ## Anteil der Hülle, ab dem der Gegner an Flucht denkt, und die Chance, dass er es tut.
-const FLEE_HULL := 0.4
-const FLEE_CHANCE := 0.6
+const FLEE_HULL := 0.25
+const FLEE_CHANCE := 0.35
 
 var player: ShipState
 var enemy: ShipState

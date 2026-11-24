@@ -1,9 +1,11 @@
 {
-  "_doc": "Run-Regeln. Preise in Rohstoffen (scrap) bzw. Treibstoff (fuel). gilde_freund senkt Händlerpreise um guild_discount; kolonie_dank macht eine Komplettreparatur in der Reparaturstation gratis (einmal).",
+  "_doc": "Run-Regeln. Preise in Rohstoffen (scrap) bzw. Treibstoff (fuel). gilde_freund senkt Händlerpreise um guild_discount; kolonie_dank macht eine Komplettreparatur in der Reparaturstation gratis (einmal). ruf_schlecht (schlechter Ruf aus harten Entscheidungen) macht Händler um bad_reputation_markup teurer. scrap_gain: Faktor auf alle Rohstoffe aus Beute und Ereignissen (1.25 = +25 %).",
   "start_fuel": 6,
   "start_scrap": 10,
+  "scrap_gain": 1.25,
   "jump_cost": 1,
   "shop": {"fuel_price": 3, "hull_amount": 5, "hull_price": 8, "hull_for_fuel": 3},
   "repair_station": {"price_per_hull": 1, "price_per_system": 2, "patch_amount": 5, "patch_price": 5, "hull_per_fuel": 4},
-  "guild_discount": 0.25
+  "guild_discount": 0.25,
+  "bad_reputation_markup": 0.15
 }

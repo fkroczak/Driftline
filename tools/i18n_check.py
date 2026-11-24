@@ -86,6 +86,7 @@ def keys_from_data() -> dict:
         where = f"data/events.json#{e['id']}"
         add(e.get("title"), where)
         add(e.get("text"), where)
+        add(e.get("quest"), where)
         for c in e.get("choices", []):
             add(c.get("text"), where)
             for o in c.get("outcomes", []):
