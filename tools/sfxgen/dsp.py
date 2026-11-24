@@ -266,3 +266,52 @@ def write_wav(path, x, loop=False):
             size = f.tell() - 8
             f.seek(4)
             f.write(struct.pack("<I", size))
+
+
+def reverse(x):
+    return x[::-1].copy()
+
+
+def flanger(x, d0=0.0005, d1=0.006, feedback=0.7, mix_=0.7):
+    """Kammfilter mit wanderndem Abstand (Düsen-/Phasing-Klang). d0→d1: Verzögerung über die Länge."""
+    n = len(x)
+    delay = np.linspace(d0, d1, n) * SR
+    buf = np.zeros(n)
+    for i in range(n):
+        j = i - delay[i]
+        k = int(j)
+        if k >= 1:
+            f = j - k
+            buf[i] = x[i] + feedback * (buf[k] * (1 - f) + buf[k + 1] * f if k + 1 < i else buf[k])
+        else:
+            buf[i] = x[i]
+    return x * (1 - mix_) + buf * mix_ * (1 - feedback * 0.5)
+
+
+def fm(freq, dur, ratio=1.0, index=1.0):
+    """Einfache FM: Träger freq, Modulator freq*ratio, Index als Zahl oder Verlauf."""
+    n = n_of(dur)
+    f = _as_arr(freq, n)
+    idx = _as_arr(index, n)
+    mod = np.sin(np.cumsum(2 * np.pi * f * ratio / SR))
+    return np.sin(np.cumsum(2 * np.pi * f / SR) + idx * mod)
+
+
+def chord_pad(freqs, dur, attack=0.4, release=0.8, cutoff=(600, 2500), detune=0.006, seed=5):
+    """Breite Synthfläche: je Ton drei verstimmte Sägezähne, Filter öffnet sich langsam."""
+    rng = np.random.default_rng(seed)
+    n = n_of(dur)
+    out = np.zeros(n)
+    for f in freqs:
+        for d in (-detune, 0.0, detune):
+            out += saw(f * (1 + d + rng.uniform(-0.001, 0.001)), dur)
+    out /= max(len(freqs) * 3, 1)
+    t = time(dur)
+    amp = np.minimum(t / attack, 1.0) * np.clip((dur - t) / release, 0, 1)
+    return lowpass(out, sweep(cutoff[0], cutoff[1], dur), q=0.9) * amp
+
+
+def radio(x, seed=9, static=0.12):
+    """Funkspruch-Klang: Bandpass, leichte Verzerrung, Rauschen."""
+    y = drive(bandpass(x, 1800, 0.9) * 2.0, 2.0)
+    return y + bandpass(noise(len(x) / SR, seed), 2500, 0.7) * static
