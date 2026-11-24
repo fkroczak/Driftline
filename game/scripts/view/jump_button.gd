@@ -23,16 +23,16 @@ func deny() -> void:
 	_deny = 0.25
 
 
-## Warum der Sprung (noch) nicht geht, "" = bereit.
+## Warum der Sprung (noch) nicht geht, "" = bereit. Deutsch als Code; angezeigt wird Loc.t(reason()).
 func reason() -> String:
 	if state.operator_of_system("cockpit") == null or state.level("cockpit") <= 0:
-		return "Pilot?"
+		return "Pilot?"  # i18n
 	if state.level("antrieb") <= 0:
-		return "Antrieb?"
+		return "Antrieb?"  # i18n
 	if not state.jump_ready():
 		return "%d %%" % floori(state.jump_charge * 100.0)
 	if run and run.fuel < run.jump_cost():
-		return "kein Treibstoff"
+		return "kein Treibstoff"  # i18n
 	return ""
 
 
@@ -53,7 +53,7 @@ func _draw() -> void:
 	HudStyle.box(self, rect, HudStyle.COLOR_WARN if ready else HudStyle.COLOR_EDGE)
 	if blink:
 		draw_rect(rect.grow(-1), Color(HudStyle.COLOR_WARN, 0.2))
-	var title := "SPRUNG"
+	var title := Loc.t("SPRUNG")
 	var tw := HudStyle.text_width(title)
 	HudStyle.text(self, rect.position + Vector2(roundf((size.x - tw) / 2.0), 9), title,
 		HudStyle.COLOR_WARN if ready else HudStyle.COLOR_TEXT)
@@ -62,7 +62,7 @@ func _draw() -> void:
 	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * state.jump_charge), bar.size.y)),
 		HudStyle.COLOR_WARN if state.jump_charge >= 1.0 else HudStyle.COLOR_FUEL.darkened(0.2))
 	draw_rect(bar.grow(0.5), Color(HudStyle.COLOR_WARN, 0.5), false, 1.0)
-	var line := "Ziel wählen" if ready else why
+	var line := Loc.t("Ziel wählen") if ready else Loc.t(why)
 	var lw := HudStyle.text_width(line)
 	HudStyle.text(self, rect.position + Vector2(roundf((size.x - lw) / 2.0), 23), line,
 		HudStyle.COLOR_WARN if ready else HudStyle.COLOR_DIM, size.x - 2)

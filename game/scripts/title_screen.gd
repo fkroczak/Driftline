@@ -9,10 +9,10 @@ const MENU_W := 132.0
 const MENU_H := 20.0
 const COLOR_TITLE := Color("#FDE6BF")
 const MODES := [
-	{"id": RunState.MODE_HUNT, "name": "DIE JAGD", "color": Color("#E24B4A"),
-		"text": "4 Sektoren, je ein Boss am Ausgang. Die Jägerfront rückt mit jedem Sprung vor: nach 10 Sprüngen holt sie dich ein."},
-	{"id": RunState.MODE_ENDLESS, "name": "ENDLOSES UNIVERSUM", "color": Color("#85B7EB"),
-		"text": "Sektor um Sektor, ohne Verfolger. Die Gegner werden immer stärker. Wie weit kommst du?"},
+	{"id": RunState.MODE_HUNT, "name": "DIE JAGD", "color": Color("#E24B4A"),  # i18n
+		"text": "4 Sektoren, je ein Boss am Ausgang. Die Jägerfront rückt mit jedem Sprung vor: nach 10 Sprüngen holt sie dich ein."},  # i18n
+	{"id": RunState.MODE_ENDLESS, "name": "ENDLOSES UNIVERSUM", "color": Color("#85B7EB"),  # i18n
+		"text": "Sektor um Sektor, ohne Verfolger. Die Gegner werden immer stärker. Wie weit kommst du?"},  # i18n
 ]
 const SHIP_TEXTURE := preload("res://assets/ships/mensch_frachter.png")
 const LOGO := preload("res://assets/ui/logo.png")
@@ -121,7 +121,7 @@ func _draw_title(y: float) -> void:
 	_logo_y = y - 34.0
 	draw_texture(LOGO, Vector2(roundf((size.x - LOGO.get_width()) / 2.0), _logo_y))
 	_draw_effects()
-	var sub := "Raumschiff-Roguelike"
+	var sub := Loc.t("Raumschiff-Roguelike")
 	HudStyle.text(self, Vector2(roundf((size.x - HudStyle.text_width(sub)) / 2.0), y), sub, HudStyle.COLOR_DIM)
 
 
@@ -134,18 +134,18 @@ func _draw_start() -> void:
 	draw_texture_rect(SHIP_TEXTURE, Rect2(Vector2(sx, sy).round(), SHIP_TEXTURE.get_size() * 0.5), false, Color(1, 1, 1, 0.55))
 	_draw_title(60)
 	var entries := [
-		["play", "SPIELEN", HudStyle.COLOR_OK],
-		["tutorial", "TUTORIAL", HudStyle.COLOR_WARN],
-		["codex", "LEXIKON", HudStyle.COLOR_SHIELD],
-		["settings", "EINSTELLUNGEN", HudStyle.COLOR_TEXT],
+		["play", "SPIELEN", HudStyle.COLOR_OK],  # i18n
+		["tutorial", "TUTORIAL", HudStyle.COLOR_WARN],  # i18n
+		["codex", "LEXIKON", HudStyle.COLOR_SHIELD],  # i18n
+		["settings", "EINSTELLUNGEN", HudStyle.COLOR_TEXT],  # i18n
 	]
 	var x := roundf((size.x - MENU_W) / 2.0)
 	var y := 70.0
 	for e: Array in entries:
-		_button(Rect2(x, y, MENU_W, MENU_H), e[1], e[2], e[0])
+		_button(Rect2(x, y, MENU_W, MENU_H), Loc.t(e[1]), e[2], e[0])
 		y += MENU_H + 5
 	var count := Codex.count_known()
-	var note := "Lexikon: %d / %d entdeckt" % [count.x, count.y]
+	var note := Loc.t("Lexikon: %d / %d entdeckt") % [count.x, count.y]
 	HudStyle.text(self, Vector2(roundf((size.x - HudStyle.text_width(note)) / 2.0), y + 8), note, HudStyle.COLOR_DIM)
 
 
@@ -156,30 +156,30 @@ func _draw_modes() -> void:
 	var x0 := roundf((size.x - total) / 2.0)
 	for i in MODES.size():
 		_draw_card(Rect2(Vector2(x0 + i * (CARD.x + gap), 58), CARD), MODES[i])
-	_button(Rect2(x0, 58 + CARD.y + 6, 70, 17), "ZURÜCK", HudStyle.COLOR_TEXT, "back")
+	_button(Rect2(x0, 58 + CARD.y + 6, 70, 17), Loc.t("ZURÜCK"), HudStyle.COLOR_TEXT, "back")
 
 
 func _draw_card(rect: Rect2, m: Dictionary) -> void:
 	var color: Color = m.color
 	HudStyle.box(self, rect, color)
-	HudStyle.text(self, rect.position + Vector2(6, 12), m.name, color)
+	HudStyle.text(self, rect.position + Vector2(6, 12), Loc.t(m.name), color)
 	var y := rect.position.y + 24
-	y += HudStyle.paragraph(self, Vector2(rect.position.x + 6, y), m.text, rect.size.x - 12, HudStyle.COLOR_TEXT)
+	y += HudStyle.paragraph(self, Vector2(rect.position.x + 6, y), Loc.t(m.text), rect.size.x - 12, HudStyle.COLOR_TEXT)
 	var best := Game.best_score(m.id)
 	if best > 0:
-		var record := ("Rekord: Sektor %d" % best) if not (m.id == RunState.MODE_HUNT and best > RunState.HUNT_SECTORS) else "Rekord: alle Sektoren geschafft"
+		var record := (Loc.t("Rekord: Sektor %d") % best) if not (m.id == RunState.MODE_HUNT and best > RunState.HUNT_SECTORS) else Loc.t("Rekord: alle Sektoren geschafft")
 		HudStyle.text(self, Vector2(rect.position.x + 6, y), record, HudStyle.COLOR_GOLD)
 	var saved := SaveGame.summary(m.id)
 	var bw := rect.size.x - 12
 	var by := rect.end.y - 22
 	if not saved.is_empty():
 		var cont := Rect2(rect.position.x + 6, by - 20, bw, 17)
-		var label := "WEITER · Sektor %d, Sprung %d" % [saved.sector, saved.jumps]
+		var label := Loc.t("WEITER · Sektor %d, Sprung %d") % [saved.sector, saved.jumps]
 		_button(cont, label, HudStyle.COLOR_OK, "continue", m.id)
 	var fresh := Rect2(rect.position.x + 6, by, bw, 17)
-	var new_label := "NEUER RUN"
+	var new_label := Loc.t("NEUER RUN")
 	if _confirm == m.id:
-		new_label = "Nochmal: alter Run geht verloren"
+		new_label = Loc.t("Nochmal: alter Run geht verloren")
 	_button(fresh, new_label, HudStyle.COLOR_WARN if _confirm == m.id else HudStyle.COLOR_TEXT, "new", m.id)
 
 

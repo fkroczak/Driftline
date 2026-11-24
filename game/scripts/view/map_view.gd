@@ -170,9 +170,9 @@ func _draw() -> void:
 	_draw_top_bar()
 	_draw_version()
 	_draw_hint()
-	_draw_button(back_rect(), "ZURÜCK", COLOR_TEXT, false)
+	_draw_button(back_rect(), Loc.t("ZURÜCK"), COLOR_TEXT, false)
 	if run.can_send_distress():
-		_draw_button(distress_rect(), "NOTSIGNAL", Color("#F7C1C1"), true)
+		_draw_button(distress_rect(), Loc.t("NOTSIGNAL"), Color("#F7C1C1"), true)
 
 
 ## Weiche Nebel aus mehreren übereinanderliegenden Ellipsen.
@@ -212,7 +212,7 @@ func _draw_front() -> void:
 	for i in range(0, next.size() - 1, 2):
 		draw_line(next[i], next[i + 1], Color(COLOR_FRONT_EDGE, 0.35 + 0.15 * sin(_time * 3.0)), 1.0)
 	var label_x := clampf(_map_x(run.front) - 60.0, 4.0, size.x - 70.0)
-	_draw_tag(Vector2(label_x, bottom - 14.0), "JÄGERFRONT", COLOR_FRONT_EDGE, false)
+	_draw_tag(Vector2(label_x, bottom - 14.0), Loc.t("JÄGERFRONT"), COLOR_FRONT_EDGE, false)
 
 
 func _draw_links() -> void:
@@ -295,20 +295,20 @@ func _draw_labels() -> void:
 	var exit_id := run.map.exit_id()
 	var exit_pos := node_screen_pos(exit_id)
 	if run.map.node(exit_id).type == "boss" and not run.cleared.has(exit_id):
-		_draw_tag(exit_pos + Vector2(0, -22), "BOSS", COLOR_BOSS, true)
-	_draw_tag(exit_pos + Vector2(0, 12), "AUSGANG", COLOR_EXIT, true)
+		_draw_tag(exit_pos + Vector2(0, -22), Loc.t("BOSS"), COLOR_BOSS, true)
+	_draw_tag(exit_pos + Vector2(0, 12), Loc.t("AUSGANG"), COLOR_EXIT, true)
 	if run.jumps_done() == 0 and run.current == run.map.start_id():
-		_draw_tag(node_screen_pos(run.current) + Vector2(0, 8), "START", COLOR_VISITED, true)
+		_draw_tag(node_screen_pos(run.current) + Vector2(0, 8), Loc.t("START"), COLOR_VISITED, true)
 	for n in run.map.nodes:
 		if run.is_overrun(n.id):
 			continue
 		var below := node_screen_pos(n.id) + Vector2(0, 6)
 		if n.type == "haendler" and not run.visited.has(n.id):
-			_draw_tag(below, "HÄNDLER", COLOR_SHOP, true)
+			_draw_tag(below, Loc.t("HÄNDLER"), COLOR_SHOP, true)
 		elif n.type == "reparatur" and not run.visited.has(n.id):
-			_draw_tag(below, "REPARATUR", COLOR_REPAIR, true)
+			_draw_tag(below, Loc.t("REPARATUR"), COLOR_REPAIR, true)
 		elif _beacon_visible(n.id):
-			_draw_tag(below, "NOTRUF", COLOR_BOSS, true)
+			_draw_tag(below, Loc.t("NOTRUF"), COLOR_BOSS, true)
 
 
 func _beacon_visible(id: int) -> bool:
@@ -343,33 +343,33 @@ func _draw_button(rect: Rect2, text: String, color: Color, pulse: bool) -> void:
 ## Infofeld neben dem ausgewählten Ziel (GDD: Antippen zeigt Infos, zweites Antippen springt).
 func _draw_info_box(id: int) -> void:
 	var n := run.map.node(id)
-	var title := "Unerforschtes System" if not run.visited.has(id) else "Besuchtes System"
+	var title := Loc.t("Unerforschtes System") if not run.visited.has(id) else Loc.t("Besuchtes System")
 	match n.type:
 		"boss":
-			title = "Flaggschiff der Piraten · Ausgang" if not run.cleared.has(id) else "Ausgang"
+			title = Loc.t("Flaggschiff der Piraten · Ausgang") if not run.cleared.has(id) else Loc.t("Ausgang")
 		"ausgang":
-			title = "Ausgang: nächster Sektor"
+			title = Loc.t("Ausgang: nächster Sektor")
 		"haendler":
-			title = "Händler: Treibstoff, Reparatur"
+			title = Loc.t("Händler: Treibstoff, Reparatur")
 		"reparatur":
-			title = "Reparaturstation"
+			title = Loc.t("Reparaturstation")
 	if _beacon_visible(id):
-		title = "Notruf empfangen"
-	var line := "%d Treibstoff · nochmal antippen" % run.jump_cost()
+		title = Loc.t("Notruf empfangen")
+	var line := Loc.t("%d Treibstoff · nochmal antippen") % run.jump_cost()
 	var line_color := COLOR_REACH
 	var soon := run.jumps_until_overrun(id)
 	if run.is_overrun(id):
-		title = "Von Jägern besetzt"
-		line = "Kampf gegen die Jäger! · nochmal antippen"
+		title = Loc.t("Von Jägern besetzt")
+		line = Loc.t("Kampf gegen die Jäger! · nochmal antippen")
 		line_color = COLOR_BOSS
 	elif not can_jump:
-		line = "Antrieb lädt noch · erst SPRUNG"
+		line = Loc.t("Antrieb lädt noch · erst SPRUNG")
 		line_color = COLOR_DIM
 	elif run.fuel < run.jump_cost():
-		line = "Kein Treibstoff: Notsignal senden"
+		line = Loc.t("Kein Treibstoff: Notsignal senden")
 		line_color = COLOR_BOSS
 	elif soon > 0 and soon <= 2:
-		line = "Jäger in %d Sprung%s hier · %d Treibstoff" % [soon, "" if soon == 1 else "en", run.jump_cost()]
+		line = (Loc.t("Jäger in 1 Sprung hier · %d Treibstoff") % run.jump_cost()) if soon == 1 else (Loc.t("Jäger in %d Sprüngen hier · %d Treibstoff") % [soon, run.jump_cost()])
 	var font := ThemeDB.fallback_font
 	var w := maxf(font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
 		font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x)
@@ -398,7 +398,7 @@ func _draw_top_bar() -> void:
 		["%d" % run.fuel, fuel_color, "fuel"],
 		["%d" % run.scrap, COLOR_SCRAP, "scrap"],
 		["%d/%d" % [ship.hull, ship.max_hull], hull_color, "hull"],
-		["SEKTOR %d" % run.sector if run.is_hunt() else "SEKTOR %d · ENDLOS" % run.sector, COLOR_REPAIR, ""],
+		[Loc.t("SEKTOR %d") % run.sector if run.is_hunt() else Loc.t("SEKTOR %d · ENDLOS") % run.sector, COLOR_REPAIR, ""],
 	]
 	var widths: Array[float] = []
 	var total := 0.0
@@ -429,4 +429,4 @@ func _draw_hint() -> void:
 		return
 	var font := ThemeDB.fallback_font
 	draw_rect(Rect2(0, size.y - 14.0, size.x, 14.0), COLOR_BAR)
-	draw_string(font, Vector2(6, size.y - 4.0), hint, HORIZONTAL_ALIGNMENT_LEFT, size.x - 12.0, FONT_SIZE, COLOR_DIM.lightened(0.3))
+	draw_string(font, Vector2(6, size.y - 4.0), Loc.t(hint), HORIZONTAL_ALIGNMENT_LEFT, size.x - 12.0, FONT_SIZE, COLOR_DIM.lightened(0.3))

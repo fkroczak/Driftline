@@ -16,19 +16,19 @@ const COLOR_TITLE := Color("#FDE6BF")
 
 ## id, Überschrift, Text, info (nur WEITER), at ("right" oder "left": wo der Kasten steht)
 const STEPS := [
-	["intro", "Willkommen an Bord", "Das ist dein Frachter. Oben links Hülle und Schilde, daneben Treibstoff und Rohstoffe. Links deine Crew.", true, "right"],
-	["select", "Crew auswählen", "Tippe eine Figur im Schiff an (oder links in der Crew-Liste).", false, "right"],
-	["move", "Crew bewegen", "Tippe jetzt einen Raum an: Die Figur läuft dorthin. An einer Konsole bedient sie das System und macht es stärker.", false, "right"],
-	["power", "Energie verteilen", "Unten links: Spalte antippen gibt +1 Energie, gedrückt halten nimmt 1 weg. Der Reaktor reicht nie für alles.", false, "right"],
-	["doors", "Türen und Schleusen", "Türen unten rechts oder direkt im Schiff antippen. Offene Schleusen saugen die Luft ab und ersticken so Feuer.", true, "right"],
-	["pause", "Pause", "Tippe den Pause-Knopf oben rechts (oder Leertaste). In der Pause gibst du in Ruhe Befehle.", false, "right"],
-	["unpause", "Weiter geht's", "Nochmal antippen, dann läuft die Zeit weiter. Gedrückt halten schaltet die Auto-Pause um.", false, "right"],
-	["jump", "Springen", "Der Sprungantrieb lädt (Balken bei SPRUNG). Ist er voll, tippe SPRUNG an. Im Cockpit muss jemand sitzen.", false, "right"],
-	["map", "Sternenkarte", "Tippe ein gelbes Ziel an, nochmal antippen springt. Jeder Sprung kostet 1 Treibstoff.", false, "right"],
-	["battle", "Feindkontakt!", "Ein Piratenkutter. Solange dieser Kasten offen ist, steht der Kampf. Deine Waffen laden unten, sobald sie Energie haben.", true, "left"],
-	["target", "Ziel wählen", "Tippe einen Raum des Gegners an: Alle Waffen zielen dorthin und feuern, sobald sie geladen sind. Tipp: erst die Schilde!", false, "left"],
-	["win", "Durchhalten", "Schilde fangen Schüsse ab, deine Crew repariert beschädigte Räume. Zerstöre den Kutter!", false, "left"],
-	["done", "Geschafft!", "Du kennst jetzt die Grundlagen. Im Lexikon findest du alle Schiffe und Spezies, die du entdeckt hast. Viel Glück, Captain!", true, "right"],
+	["intro", "Willkommen an Bord", "Das ist dein Frachter. Oben links Hülle und Schilde, daneben Treibstoff und Rohstoffe. Links deine Crew.", true, "right"],  # i18n
+	["select", "Crew auswählen", "Tippe eine Figur im Schiff an (oder links in der Crew-Liste).", false, "right"],  # i18n
+	["move", "Crew bewegen", "Tippe jetzt einen Raum an: Die Figur läuft dorthin. An einer Konsole bedient sie das System und macht es stärker.", false, "right"],  # i18n
+	["power", "Energie verteilen", "Unten links: Spalte antippen gibt +1 Energie, gedrückt halten nimmt 1 weg. Der Reaktor reicht nie für alles.", false, "right"],  # i18n
+	["doors", "Türen und Schleusen", "Türen unten rechts oder direkt im Schiff antippen. Offene Schleusen saugen die Luft ab und ersticken so Feuer.", true, "right"],  # i18n
+	["pause", "Pause", "Tippe den Pause-Knopf oben rechts (oder Leertaste). In der Pause gibst du in Ruhe Befehle.", false, "right"],  # i18n
+	["unpause", "Weiter geht's", "Nochmal antippen, dann läuft die Zeit weiter. Gedrückt halten schaltet die Auto-Pause um.", false, "right"],  # i18n
+	["jump", "Springen", "Der Sprungantrieb lädt (Balken bei SPRUNG). Ist er voll, tippe SPRUNG an. Im Cockpit muss jemand sitzen.", false, "right"],  # i18n
+	["map", "Sternenkarte", "Tippe ein gelbes Ziel an, nochmal antippen springt. Jeder Sprung kostet 1 Treibstoff.", false, "right"],  # i18n
+	["battle", "Feindkontakt!", "Ein Piratenkutter. Solange dieser Kasten offen ist, steht der Kampf. Deine Waffen laden unten, sobald sie Energie haben.", true, "left"],  # i18n
+	["target", "Ziel wählen", "Tippe einen Raum des Gegners an: Alle Waffen zielen dorthin und feuern, sobald sie geladen sind. Tipp: erst die Schilde!", false, "left"],  # i18n
+	["win", "Durchhalten", "Schilde fangen Schüsse ab, deine Crew repariert beschädigte Räume. Zerstöre den Kutter!", false, "left"],  # i18n
+	["done", "Geschafft!", "Du kennst jetzt die Grundlagen. Im Lexikon findest du alle Schiffe und Spezies, die du entdeckt hast. Viel Glück, Captain!", true, "right"],  # i18n
 ]
 
 ## Liefert true, wenn die Aufgabe des Schritts erledigt ist: func(step_id: String) -> bool
@@ -84,12 +84,12 @@ func _draw() -> void:
 		var r: Rect2 = focus.call(s[0])
 		if r.has_area():
 			draw_rect(r.grow(2), Color(COLOR_EDGE, 0.35 + 0.65 * pulse), false, 1.0)
-	var lines := HudStyle.wrap_text(s[2], W - 12)
+	var lines := HudStyle.wrap_text(Loc.t(s[2]), W - 12)
 	var h := 16.0 + lines.size() * LINE + 24.0
 	var x := left_x if s[4] == "left" else size.x - W - 4.0
 	_box = Rect2(Vector2(x, top_y).floor(), Vector2(W, h))
 	HudStyle.box(self, _box, COLOR_EDGE, Color("#0A0B16", 0.94))
-	HudStyle.text(self, _box.position + Vector2(6, 11), s[1], COLOR_TITLE)
+	HudStyle.text(self, _box.position + Vector2(6, 11), Loc.t(s[1]), COLOR_TITLE)
 	var count := "%d/%d" % [step + 1, STEPS.size()]
 	HudStyle.text(self, Vector2(_box.end.x - 6 - HudStyle.text_width(count), _box.position.y + 11), count, HudStyle.COLOR_DIM)
 	var y := _box.position.y + 23.0
@@ -100,8 +100,8 @@ func _draw() -> void:
 	var last := step == STEPS.size() - 1
 	_quit_rect = Rect2(_box.position.x + 6, by, 56, 13) if not last else Rect2()
 	if not last:
-		HudStyle.button(self, _quit_rect, "BEENDEN", HudStyle.COLOR_DIM)
-	var label := "ZUM MENÜ" if last else ("WEITER" if s[3] else "ÜBERSPRINGEN")
+		HudStyle.button(self, _quit_rect, Loc.t("BEENDEN"), HudStyle.COLOR_DIM)
+	var label := Loc.t("ZUM MENÜ") if last else (Loc.t("WEITER") if s[3] else Loc.t("ÜBERSPRINGEN"))
 	var color := HudStyle.COLOR_OK if s[3] else HudStyle.COLOR_DIM
 	_next_rect = Rect2(_box.end.x - 6 - 72, by, 72, 13)
 	if s[3] and fmod(_time, 1.2) < 0.6:

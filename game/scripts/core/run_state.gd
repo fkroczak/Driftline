@@ -374,13 +374,13 @@ func _open_event(id: String) -> void:
 		if req.has("flag") and not flags.has(req.flag):
 			continue  # Ansehens-Optionen erscheinen nur, wenn man sie hat
 		var cost: Dictionary = c.get("cost", {})
-		var label: String = c.text
+		var label: String = Loc.t(c.text)
 		if not cost.is_empty():
 			label += " (%s)" % _cost_text(cost)
 		var enabled := _can_pay(cost) and ship.crew.size() >= int(req.get("crew_min", 0))
 		choices.append({"text": label, "enabled": enabled, "special": req.has("flag")})
 		options.append(c)
-	dialog = {"title": e.title, "text": e.text, "scene": e.get("scene", ""), "choices": choices}
+	dialog = {"title": Loc.t(e.title), "text": Loc.t(e.text), "scene": e.get("scene", ""), "choices": choices}
 	_ctx = {"kind": "event", "id": id, "options": options}
 
 
@@ -399,12 +399,12 @@ func _choose_event(index: int) -> void:
 			outcome = o
 			break
 	var parts := _apply(outcome.get("effects", {}))
-	var text: String = outcome.text
+	var text: String = Loc.t(outcome.text)
 	if not parts.is_empty():
 		text += "\n\n" + " · ".join(parts)
-	var follow := "Kampf!" if outcome.get("battle", false) else "Weiter"
+	var follow := Loc.t("Kampf!") if outcome.get("battle", false) else Loc.t("Weiter")
 	if result == "verloren":
-		follow = "Run vorbei"
+		follow = Loc.t("Run vorbei")
 	dialog = {"title": dialog.title, "text": text, "scene": dialog.scene,
 		"choices": [{"text": follow, "enabled": true, "special": false}]}
 	_ctx = {"kind": "result", "battle": outcome.get("battle", false), "victory": outcome.get("victory", {}),
@@ -439,26 +439,26 @@ func _shop_offers() -> Array[Dictionary]:
 	var amount := int(s.get("hull_amount", 5))
 	var missing := ship.max_hull - ship.hull
 	return [
-		{"text": "1 Treibstoff kaufen", "cost": {"scrap": _price(int(s.get("fuel_price", 3)))}, "fuel": 1},
-		{"text": "Hülle +%d reparieren" % mini(amount, missing), "cost": {"scrap": _price(int(s.get("hull_price", 8)))},
+		{"text": Loc.t("1 Treibstoff kaufen"), "cost": {"scrap": _price(int(s.get("fuel_price", 3)))}, "fuel": 1},
+		{"text": Loc.t("Hülle +%d reparieren") % mini(amount, missing), "cost": {"scrap": _price(int(s.get("hull_price", 8)))},
 			"hull": amount, "needs_damage": true},
-		{"text": "Hülle +%d gegen Treibstoff" % mini(int(s.get("hull_for_fuel", 3)), missing), "cost": {"fuel": 1},
+		{"text": Loc.t("Hülle +%d gegen Treibstoff") % mini(int(s.get("hull_for_fuel", 3)), missing), "cost": {"fuel": 1},
 			"hull": int(s.get("hull_for_fuel", 3)), "needs_damage": true},
 	]
 
 
 func _open_shop() -> void:
-	var text := "Ein Handelsposten der Gilde. Bezahlt wird in Rohstoffen oder Treibstoff."
+	var text := Loc.t("Ein Handelsposten der Gilde. Bezahlt wird in Rohstoffen oder Treibstoff.")
 	if flags.has("gilde_freund"):
-		text += " Euer Gildenbrief bringt %d %% Rabatt." % roundi(_discount() * 100.0)
+		text += Loc.t(" Euer Gildenbrief bringt %d %% Rabatt.") % roundi(_discount() * 100.0)
 	if _shop_note != "":
 		text += "\n\n" + _shop_note
 	var choices: Array[Dictionary] = []
 	for offer in _shop_offers():
 		var enabled: bool = _can_pay(offer.cost) and not (offer.get("needs_damage", false) and ship.hull >= ship.max_hull)
 		choices.append({"text": "%s (%s)" % [offer.text, _cost_text(offer.cost)], "enabled": enabled, "special": false})
-	choices.append({"text": "Ablegen", "enabled": true, "special": false})
-	dialog = {"title": "Händler", "text": text, "scene": "station", "choices": choices}
+	choices.append({"text": Loc.t("Ablegen"), "enabled": true, "special": false})
+	dialog = {"title": Loc.t("Händler"), "text": text, "scene": "station", "choices": choices}
 	_ctx = {"kind": "shop"}
 
 
@@ -474,7 +474,7 @@ func _choose_shop(index: int) -> void:
 	for key in ["fuel", "hull"]:
 		if offer.has(key):
 			effects[key] = offer[key]
-	_shop_note = "Gekauft: " + " · ".join(_apply(effects))
+	_shop_note = Loc.t("Gekauft: ") + " · ".join(_apply(effects))
 	_open_shop()
 
 
@@ -494,25 +494,25 @@ func _repair_offers() -> Array[Dictionary]:
 	var broken := ship_damage_count() > 0
 	var offers: Array[Dictionary] = []
 	if flags.has("kolonie_dank"):
-		offers.append({"text": "[Kolonie] Komplettreparatur auf Kosten der Gilde", "cost": {}, "hull_full": true, "systems": true,
+		offers.append({"text": Loc.t("[Kolonie] Komplettreparatur auf Kosten der Gilde"), "cost": {}, "hull_full": true, "systems": true,
 			"special": true, "flag_used": "kolonie_dank", "useful": missing > 0 or broken})
-	offers.append({"text": "Komplettreparatur", "cost": {"scrap": maxi(1, missing * int(r.get("price_per_hull", 1)) + _systems_price())},
+	offers.append({"text": Loc.t("Komplettreparatur"), "cost": {"scrap": maxi(1, missing * int(r.get("price_per_hull", 1)) + _systems_price())},
 		"hull_full": true, "systems": true, "useful": missing > 0 or broken})
-	offers.append({"text": "Systeme und Lecks instand setzen", "cost": {"scrap": maxi(1, _systems_price())}, "systems": true, "useful": broken})
-	offers.append({"text": "Hülle +%d" % mini(int(r.get("patch_amount", 5)), missing), "cost": {"scrap": int(r.get("patch_price", 5))},
+	offers.append({"text": Loc.t("Systeme und Lecks instand setzen"), "cost": {"scrap": maxi(1, _systems_price())}, "systems": true, "useful": broken})
+	offers.append({"text": Loc.t("Hülle +%d") % mini(int(r.get("patch_amount", 5)), missing), "cost": {"scrap": int(r.get("patch_price", 5))},
 		"hull": int(r.get("patch_amount", 5)), "useful": missing > 0})
-	offers.append({"text": "Hülle +%d gegen Treibstoff" % mini(int(r.get("hull_per_fuel", 4)), missing), "cost": {"fuel": 1},
+	offers.append({"text": Loc.t("Hülle +%d gegen Treibstoff") % mini(int(r.get("hull_per_fuel", 4)), missing), "cost": {"fuel": 1},
 		"hull": int(r.get("hull_per_fuel", 4)), "useful": missing > 0})
 	return offers
 
 
 func _open_repair() -> void:
-	var text := "Eine Reparaturstation mit Werftdock. Die Techniker arbeiten schnell, aber nicht umsonst."
+	var text := Loc.t("Eine Reparaturstation mit Werftdock. Die Techniker arbeiten schnell, aber nicht umsonst.")
 	var broken := ship_damage_count()
 	if broken > 0:
-		text += " Schäden an Bord: %d." % broken
+		text += Loc.t(" Schäden an Bord: %d.") % broken
 	if flags.has("kolonie_dank"):
-		text += " Die Kolonie hat euch angekündigt: Eine Komplettreparatur geht aufs Haus."
+		text += Loc.t(" Die Kolonie hat euch angekündigt: Eine Komplettreparatur geht aufs Haus.")
 	if _shop_note != "":
 		text += "\n\n" + _shop_note
 	var choices: Array[Dictionary] = []
@@ -521,8 +521,8 @@ func _open_repair() -> void:
 		if not offer.cost.is_empty():
 			label += " (%s)" % _cost_text(offer.cost)
 		choices.append({"text": label, "enabled": _can_pay(offer.cost) and offer.useful, "special": offer.get("special", false)})
-	choices.append({"text": "Ablegen", "enabled": true, "special": false})
-	dialog = {"title": "Reparaturstation", "text": text, "scene": "station", "choices": choices}
+	choices.append({"text": Loc.t("Ablegen"), "enabled": true, "special": false})
+	dialog = {"title": Loc.t("Reparaturstation"), "text": text, "scene": "station", "choices": choices}
 	_ctx = {"kind": "repair"}
 
 
@@ -542,9 +542,9 @@ func _choose_repair(index: int) -> void:
 			effects[key] = offer[key]
 	var parts := _apply(effects)
 	if offer.get("systems", false) and ship_damage_count() > 0:
-		parts.append("%d Schäden behoben" % ship_damage_count())
+		parts.append(Loc.t("%d Schäden behoben") % ship_damage_count())
 		ship.repair_systems()
-	_shop_note = "Repariert: " + " · ".join(parts)
+	_shop_note = Loc.t("Repariert: ") + " · ".join(parts)
 	_open_repair()
 
 
@@ -563,10 +563,10 @@ func _pay(cost: Dictionary) -> void:
 func _cost_text(cost: Dictionary) -> String:
 	var parts: Array[String] = []
 	if int(cost.get("scrap", 0)) > 0:
-		parts.append("%d Rohstoffe" % int(cost.scrap))
+		parts.append(Loc.t("%d Rohstoffe") % int(cost.scrap))
 	if int(cost.get("fuel", 0)) > 0:
-		parts.append("%d Treibstoff" % int(cost.fuel))
-	return ", ".join(parts) if not parts.is_empty() else "gratis"
+		parts.append(Loc.t("%d Treibstoff") % int(cost.fuel))
+	return ", ".join(parts) if not parts.is_empty() else Loc.t("gratis")
 
 
 ## Wendet Effekte an und liefert sie als kurze Texte („+12 Rohstoffe“, „Hülle −3“ …).
@@ -575,37 +575,37 @@ func _apply(effects: Dictionary) -> Array[String]:
 	var s := int(effects.get("scrap", 0))
 	if s != 0:
 		scrap = maxi(scrap + s, 0)
-		parts.append("%+d Rohstoffe" % s)
+		parts.append(Loc.t("%+d Rohstoffe") % s)
 	var f := int(effects.get("fuel", 0))
 	if f != 0:
 		fuel = maxi(fuel + f, 0)
-		parts.append("%+d Treibstoff" % f)
+		parts.append(Loc.t("%+d Treibstoff") % f)
 	var before := ship.hull
 	if effects.get("hull_full", false):
 		ship.hull = ship.max_hull
 	ship.hull = clampi(ship.hull + int(effects.get("hull", 0)), 0, ship.max_hull)
 	if ship.hull != before:
-		parts.append("Hülle %+d" % (ship.hull - before))
+		parts.append(Loc.t("Hülle %+d") % (ship.hull - before))
 	if int(effects.get("crew_hp", 0)) != 0 and not ship.crew.is_empty():
 		var member: CrewMember = ship.crew[_rng.randi() % ship.crew.size()]
 		ship.hurt(member, -float(effects.crew_hp))
-		parts.append("%s verletzt" % member.display_name if ship.crew.has(member) else "%s ist gestorben" % member.display_name)
+		parts.append(Loc.t("%s verletzt") % member.display_name if ship.crew.has(member) else Loc.t("%s ist gestorben") % member.display_name)
 	for i in int(effects.get("crew_lose", 0)):
 		if ship.crew.is_empty():
 			break
 		var member: CrewMember = ship.crew[_rng.randi() % ship.crew.size()]
 		ship.hurt(member, CrewMember.MAX_HP * 2.0)
-		parts.append("%s ist gestorben" % member.display_name)
+		parts.append(Loc.t("%s ist gestorben") % member.display_name)
 	for i in int(effects.get("crew_add", 0)):
 		if ship.crew.size() >= MAX_CREW:
-			parts.append("Kein Platz für weitere Crew")
+			parts.append(Loc.t("Kein Platz für weitere Crew"))
 			break
 		var species: String = effects.get("species", Species.pick(_rng))
 		var taken := ship.crew.map(func(m: CrewMember) -> String: return m.display_name)
 		var free: Array = (Species.value(species, "names", []) as Array).filter(func(n: String) -> bool: return not taken.has(n))
-		var name: String = free[_rng.randi() % free.size()] if not free.is_empty() else "Neuling"
+		var name: String = free[_rng.randi() % free.size()] if not free.is_empty() else Loc.t("Neuling")
 		if ship.add_crew_anywhere(name, species):
-			parts.append("%s (%s) kommt an Bord" % [name, Species.display_name(species)])
+			parts.append(Loc.t("%s (%s) kommt an Bord") % [name, Species.display_name(species)])
 	if effects.has("flag"):
 		flags[effects.flag] = true
 		parts.append(_flag_text(effects.flag))
@@ -618,10 +618,10 @@ func _apply(effects: Dictionary) -> Array[String]:
 static func _flag_text(flag: String) -> String:
 	match flag:
 		"gilde_freund":
-			return "Gildenbrief: Händler billiger"
+			return Loc.t("Gildenbrief: Händler billiger")
 		"kolonie_dank":
-			return "Dank der Kolonie: Gratisreparatur in der Reparaturstation"
-	return "Ansehen gewonnen"
+			return Loc.t("Dank der Kolonie: Gratisreparatur in der Reparaturstation")
+	return Loc.t("Ansehen gewonnen")
 
 
 # --- Gegner ---
@@ -690,7 +690,7 @@ func create_enemy(id := -1) -> ShipState:
 	var enemy := ShipState.new(layout)
 	enemy.max_hull += spec.hull_bonus
 	enemy.hull = enemy.max_hull
-	for crew_spec in [["Kapitänin", "cockpit"], ["Schütze", "waffen"], ["Mechaniker", "schilde"]]:
+	for crew_spec in [[Loc.t("Kapitänin"), "cockpit"], [Loc.t("Schütze"), "waffen"], [Loc.t("Mechaniker"), "schilde"]]:
 		var console: Vector2i = layout.console_of(layout.room_index_by_id(crew_spec[1]))
 		enemy.add_crew(crew_spec[0], "mensch", console, {crew_spec[1]: 1.0})
 	return enemy

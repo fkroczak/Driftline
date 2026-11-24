@@ -32,15 +32,15 @@ func _draw() -> void:
 	if not state:
 		return
 	HudStyle.box(self, Rect2(0, 3, size.x, size.y - 3))
-	draw_rect(Rect2(5, 0, HudStyle.text_width("TÜREN") + 4, 7), HudStyle.COLOR_BG)
-	HudStyle.text(self, Vector2(7, 7), "TÜREN", HudStyle.COLOR_TEXT)
+	draw_rect(Rect2(5, 0, HudStyle.text_width(Loc.t("TÜREN")) + 4, 7), HudStyle.COLOR_BG)
+	HudStyle.text(self, Vector2(7, 7), Loc.t("TÜREN"), HudStyle.COLOR_TEXT)
 	var r := _doors_rect()
-	var label := "ALLE ZU" if state.any_door_open() else "ALLE AUF"
+	var label := Loc.t("ALLE ZU") if state.any_door_open() else Loc.t("ALLE AUF")
 	HudStyle.box(self, r, HudStyle.COLOR_EDGE_HI, Color("#161B2B"))
 	HudStyle.text(self, r.position + Vector2(roundf((r.size.x - HudStyle.text_width(label)) / 2.0), 9), label, HudStyle.COLOR_SHIELD)
 	var l := _locks_rect()
 	var open := state.any_airlock_open()
-	var lock_label := "SCHLEUSE"
+	var lock_label := Loc.t("SCHLEUSE")
 	HudStyle.text(self, l.position + Vector2(roundf((l.size.x - HudStyle.text_width(lock_label)) / 2.0), 9), lock_label,
 		HudStyle.COLOR_BAD if open else HudStyle.COLOR_DIM)
 
@@ -53,12 +53,12 @@ func _gui_input(event: InputEvent) -> void:
 		var open := not state.any_door_open()
 		state.set_all_doors(open)
 		Sfx.play("door_open" if open else "door_close")
-		changed.emit("Alle Türen " + ("offen: Luft gleicht sich aus, Feuer kann wandern" if open else "zu"))
+		changed.emit(Loc.t("Alle Türen offen: Luft gleicht sich aus, Feuer kann wandern") if open else Loc.t("Alle Türen zu"))
 	elif _locks_rect().grow(1).has_point(event.position):
 		if state.any_airlock_open():
 			state.close_airlocks()
 			Sfx.play("airlock_close")
-			changed.emit("Alle Schleusen zu")
+			changed.emit(Loc.t("Alle Schleusen zu"))
 		else:
 			Sfx.play("ui_deny")
-			changed.emit("Schleusen öffnet man einzeln: gelbe Luke am Schiff antippen")
+			changed.emit(Loc.t("Schleusen öffnet man einzeln: gelbe Luke am Schiff antippen"))

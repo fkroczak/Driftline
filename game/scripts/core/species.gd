@@ -42,11 +42,11 @@ static func value(id: String, key: String, fallback: Variant) -> Variant:
 
 
 static func display_name(id: String) -> String:
-	return str(value(id, "name", id))
+	return Loc.t(str(value(id, "name", id)))
 
 
 static func traits(id: String) -> Array:
-	return value(id, "traits", [])
+	return (value(id, "traits", []) as Array).map(func(t: String) -> String: return Loc.t(t))
 
 
 static func tint(id: String) -> Color:

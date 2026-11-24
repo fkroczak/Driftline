@@ -43,12 +43,14 @@ func _draw() -> void:
 		for k in 3:
 			draw_rect(Rect2(c + Vector2(-5, -5 + k * 4), Vector2(10, 2)), Color("#FDE6BF"))
 		return
-	var w := HudStyle.text_width(label)
+	var shown := Loc.t(label)
+	var w := HudStyle.text_width(shown)
 	var y := 10.0 if sub != "" else roundf(size.y / 2.0 + 3.0)
-	HudStyle.text(self, Vector2(x + roundf((size.x - w) / 2.0), y), label, color)
+	HudStyle.text(self, Vector2(x + roundf((size.x - w) / 2.0), y), shown, color)
 	if sub != "":
-		var sw := HudStyle.text_width(sub)
-		HudStyle.text(self, Vector2(x + roundf((size.x - sw) / 2.0), 20), sub, HudStyle.COLOR_DIM)
+		var sub_text := Loc.t(sub)
+		var sw := HudStyle.text_width(sub_text)
+		HudStyle.text(self, Vector2(x + roundf((size.x - sw) / 2.0), 20), sub_text, HudStyle.COLOR_DIM)
 
 
 func _gui_input(event: InputEvent) -> void:

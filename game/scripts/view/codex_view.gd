@@ -43,21 +43,21 @@ func _ids() -> Array[String]:
 func _draw() -> void:
 	_hits.clear()
 	draw_rect(Rect2(Vector2.ZERO, size), COLOR_BG)
-	HudStyle.text(self, Vector2(8, 15), "LEXIKON", COLOR_TITLE, -1, 11)
+	HudStyle.text(self, Vector2(8, 15), Loc.t("LEXIKON"), COLOR_TITLE, -1, 11)
 	var count := Codex.count_known()
-	var found := "Entdeckt: %d / %d" % [count.x, count.y]
+	var found := Loc.t("Entdeckt: %d / %d") % [count.x, count.y]
 	HudStyle.text(self, Vector2(70, 14), found, HudStyle.COLOR_DIM)
 	# Reiter
-	var tabs := [[Codex.KIND_SHIP, "SCHIFFE"], [Codex.KIND_SPECIES, "SPEZIES"]]
+	var tabs := [[Codex.KIND_SHIP, "SCHIFFE"], [Codex.KIND_SPECIES, "SPEZIES"]]  # i18n
 	var tx := size.x - 8 - 2 * 62 - 4 - 56
 	for t: Array in tabs:
 		var r := Rect2(tx, 4, 60, 16)
 		var active: bool = _tab == t[0]
-		HudStyle.button(self, r, t[1], HudStyle.COLOR_SHIELD if active else HudStyle.COLOR_DIM, active)
+		HudStyle.button(self, r, Loc.t(t[1]), HudStyle.COLOR_SHIELD if active else HudStyle.COLOR_DIM, active)
 		_hits.append({"rect": r, "tab": t[0]})
 		tx += 62
 	var back := Rect2(size.x - 8 - 54, 4, 54, 16)
-	HudStyle.button(self, back, "ZURÜCK", HudStyle.COLOR_TEXT)
+	HudStyle.button(self, back, Loc.t("ZURÜCK"), HudStyle.COLOR_TEXT)
 	_hits.append({"rect": back, "back": true})
 	# Liste
 	var ids := _ids()
@@ -86,7 +86,7 @@ func _draw() -> void:
 
 
 func _name(id: String) -> String:
-	return str(Codex.ship(id).get("name", id)) if _tab == Codex.KIND_SHIP else Species.display_name(id)
+	return Loc.t(str(Codex.ship(id).get("name", id))) if _tab == Codex.KIND_SHIP else Species.display_name(id)
 
 
 func _texture(path: String) -> Texture2D:
@@ -120,23 +120,23 @@ func _draw_ship(panel: Rect2, id: String, known: bool) -> void:
 	_draw_picture(_texture(str(d.get("sprite", ""))), pic, tint)
 	var y := pic.end.y + 10
 	if not known:
-		HudStyle.text(self, Vector2(x, y), "Noch nicht entdeckt", HudStyle.COLOR_DIM)
-		HudStyle.paragraph(self, Vector2(x, y + 12), "Kämpfe gegen dieses Schiff, um es ins Lexikon aufzunehmen.", w, HudStyle.COLOR_DIM)
+		HudStyle.text(self, Vector2(x, y), Loc.t("Noch nicht entdeckt"), HudStyle.COLOR_DIM)
+		HudStyle.paragraph(self, Vector2(x, y + 12), Loc.t("Kämpfe gegen dieses Schiff, um es ins Lexikon aufzunehmen."), w, HudStyle.COLOR_DIM)
 		return
-	HudStyle.text(self, Vector2(x, y), str(d.get("name", id)), COLOR_TITLE, -1, 11)
-	var role := str(d.get("role", ""))
+	HudStyle.text(self, Vector2(x, y), Loc.t(str(d.get("name", id))), COLOR_TITLE, -1, 11)
+	var role := Loc.t(str(d.get("role", "")))
 	if role != "":
 		HudStyle.text(self, Vector2(panel.end.x - 8 - HudStyle.text_width(role), y), role, HudStyle.COLOR_GOLD)
 	y += 11
 	var weapons: Array[String] = []
 	for wid: String in d.get("weapons", []):
-		weapons.append(Weapon.create(wid).display_name if Weapon.known(wid) else wid)
-	var stats := "Hülle %d · Reaktor %d · Räume %d" % [int(d.get("hull", 0)), int(d.get("reactor", 0)), (d.get("rooms", []) as Array).size()]
+		weapons.append(Loc.t(Weapon.create(wid).display_name) if Weapon.known(wid) else wid)
+	var stats := Loc.t("Hülle %d · Reaktor %d · Räume %d") % [int(d.get("hull", 0)), int(d.get("reactor", 0)), (d.get("rooms", []) as Array).size()]
 	HudStyle.text(self, Vector2(x, y), stats, HudStyle.COLOR_SHIELD, w)
 	y += 10
-	HudStyle.text(self, Vector2(x, y), "Waffen: " + ", ".join(weapons), HudStyle.COLOR_FUEL, w)
+	HudStyle.text(self, Vector2(x, y), Loc.t("Waffen: ") + ", ".join(weapons), HudStyle.COLOR_FUEL, w)
 	y += 12
-	HudStyle.paragraph(self, Vector2(x, y), str(d.get("description", "")), w, HudStyle.COLOR_TEXT)
+	HudStyle.paragraph(self, Vector2(x, y), Loc.t(str(d.get("description", ""))), w, HudStyle.COLOR_TEXT)
 
 
 func _draw_species(panel: Rect2, id: String, known: bool) -> void:
@@ -152,15 +152,15 @@ func _draw_species(panel: Rect2, id: String, known: bool) -> void:
 	var tw := panel.end.x - 8 - tx
 	var y := pic.position.y + 10
 	if not known:
-		HudStyle.text(self, Vector2(tx, y), "Noch nicht entdeckt", HudStyle.COLOR_DIM)
-		HudStyle.paragraph(self, Vector2(tx, y + 12), "Nimm jemanden dieser Spezies in deine Crew auf, zum Beispiel über Ereignisse oder Händler.", tw, HudStyle.COLOR_DIM)
+		HudStyle.text(self, Vector2(tx, y), Loc.t("Noch nicht entdeckt"), HudStyle.COLOR_DIM)
+		HudStyle.paragraph(self, Vector2(tx, y + 12), Loc.t("Nimm jemanden dieser Spezies in deine Crew auf, zum Beispiel über Ereignisse oder Händler."), tw, HudStyle.COLOR_DIM)
 		return
 	HudStyle.text(self, Vector2(tx, y), Species.display_name(id), COLOR_TITLE, -1, 11)
 	y += 12
 	var stats := [
-		["LP", str(int(d.get("hp", 100)))],
-		["Tempo", "%d %%" % roundi(float(d.get("speed", 1.0)) * 100.0)],
-		["Reparatur", "%d %%" % roundi(float(d.get("repair", 1.0)) * 100.0)],
+		[Loc.t("LP"), str(int(d.get("hp", 100)))],
+		[Loc.t("Tempo"), "%d %%" % roundi(float(d.get("speed", 1.0)) * 100.0)],
+		[Loc.t("Reparatur"), "%d %%" % roundi(float(d.get("repair", 1.0)) * 100.0)],
 	]
 	var sx := tx
 	for s: Array in stats:
@@ -170,9 +170,9 @@ func _draw_species(panel: Rect2, id: String, known: bool) -> void:
 	y += 10
 	var extras: Array[String] = []
 	if not d.get("breathes", true):
-		extras.append("atmet nicht")
+		extras.append(Loc.t("atmet nicht"))
 	if float(d.get("fire", 1.0)) <= 0.0:
-		extras.append("feuerfest")
+		extras.append(Loc.t("feuerfest"))
 	for b: String in d.get("bonus", []):
 		extras.append("+15 % " + SystemInfo.display_name(b))
 	if not extras.is_empty():
@@ -183,7 +183,7 @@ func _draw_species(panel: Rect2, id: String, known: bool) -> void:
 		HudStyle.text(self, Vector2(x, y), "· " + t, HudStyle.COLOR_GOLD, w)
 		y += 10
 	y += 4
-	HudStyle.paragraph(self, Vector2(x, y), str(d.get("lore", "")), w, HudStyle.COLOR_TEXT)
+	HudStyle.paragraph(self, Vector2(x, y), Loc.t(str(d.get("lore", ""))), w, HudStyle.COLOR_TEXT)
 
 
 func _gui_input(event: InputEvent) -> void:

@@ -6,6 +6,7 @@ extends Node2D
 ## Eigenes Schiff (hostile = false):
 ## - Figur antippen wählt sie aus (Trefferbereich etwas größer als die Figur).
 ## - Danach eine freie Kachel antippen: Die Figur läuft genau dorthin, die Auswahl endet.
+##   Der Zielraum blinkt zur Bestätigung grün auf und bleibt grün umrandet, bis sie angekommen ist.
 ## - Auf einer besetzten Kachel gedrückt halten: Die Figur geht dorthin, wer dort steht, weicht aus.
 ## - Die ausgewählte Figur erneut antippen oder neben das Schiff tippen hebt die Auswahl auf.
 ## - Tür oder Luftschleuse antippen öffnet bzw. schließt sie.
@@ -29,6 +30,10 @@ const FRAME_BY_FACING := {
 }
 const COLOR_SELECTED := Color("#5DCAA5")
 const COLOR_TARGET := Color("#9FE1CB")
+## Grüner Rahmen um den Raum, in den eine Figur geschickt wurde.
+const COLOR_ORDER := Color("#5DCAA5")
+## So lange blinkt der Zielraum nach einem Laufbefehl kräftig (Sekunden).
+const ORDER_FLASH := 1.2
 const COLOR_ROOM := Color(1, 1, 1, 0.10)
 const COLOR_ROOM_EDGE := Color(1, 1, 1, 0.45)
 const COLOR_CONSOLE_FREE := Color("#5A6370")
@@ -79,6 +84,8 @@ var _target_anim := {}  # Waffenindex -> 1..0 (Fadenkreuz zieht sich zusammen)
 var _room_flash := {}  # Raumindex -> verbleibende Sekunden
 var _shield_flash := 0.0
 var _ghost_hull := 0.0
+var _order_room := -1
+var _order_time := 0.0
 
 
 ## Kann mehrfach aufgerufen werden (neuer Gegner im selben Bildschirm).
@@ -89,6 +96,8 @@ func setup(p_state: ShipState) -> void:
 	selected = null
 	focused_room = -1
 	last_order = null
+	_order_room = -1
+	_order_time = 0.0
 	_target_anim.clear()
 	_room_flash.clear()
 	modulate = Color.WHITE
@@ -152,6 +161,7 @@ func _process(delta: float) -> void:
 	for k in _target_anim.keys():
 		_target_anim[k] = maxf(_target_anim[k] - delta * 4.0, 0.0)
 	_shield_flash = maxf(_shield_flash - delta * 3.0, 0.0)
+	_order_time = maxf(_order_time - delta, 0.0)
 	_ghost_hull = move_toward(_ghost_hull, state.hull, delta * 4.0) if _ghost_hull > state.hull else float(state.hull)
 	for room in _room_flash.keys():
 		_room_flash[room] -= delta
@@ -204,10 +214,12 @@ func _draw() -> void:
 	_draw_fires()
 	if show_jump:
 		_draw_jump_bar()
-	if focused_room >= 0:
+	if focused_room >= 0 and not (focused_room == _order_room and _order_time > 0.0):
 		var rect := layout.room_rect(focused_room).grow(-1)
 		draw_rect(rect, COLOR_ROOM, true)
 		draw_rect(rect, COLOR_ROOM_EDGE, false, 1.0)
+	if not hostile:
+		_draw_order_rooms()
 	# Konsolen: kleine Leiste an der Kachel, grün wenn besetzt
 	for room in layout.rooms.size():
 		var console: Variant = layout.console_of(room)
@@ -466,7 +478,7 @@ func _draw_hull_bar() -> void:
 	var color := Color("#5DCAA5") if ratio > 0.5 else (Color("#FAC775") if ratio > 0.25 else COLOR_DAMAGE)
 	var label := "%d/%d" % [state.hull, state.max_hull]
 	var text_pos := Vector2(4, -9)
-	var title: String = state.layout.display_name
+	var title: String = Loc.t(state.layout.display_name)
 	draw_string(font, Vector2(5, -19), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0, 0, 0, 0.8))
 	draw_string(font, Vector2(4, -20), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("#F7C1C1"))
 	draw_string(font, text_pos + Vector2(1, 1), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0, 0, 0, 0.8))
@@ -485,6 +497,28 @@ func _draw_hull_bar() -> void:
 		draw_rect(Rect2(p, Vector2(5, 3)), COLOR_SHIELD if i < state.shield_layers else Color("#2A2F3A"))
 		if i == state.shield_layers and state.shield_progress > 0.0:
 			draw_rect(Rect2(p, Vector2(roundf(5 * state.shield_progress), 3)), Color(COLOR_SHIELD, 0.4))
+
+
+## Bestätigung für Laufbefehle: Zielräume laufender Figuren grün umrandet.
+## Der zuletzt befohlene Raum blinkt kurz kräftig und ist leicht grün gefüllt.
+func _draw_order_rooms() -> void:
+	var layout := state.layout
+	var rooms := {}
+	for member in state.crew:
+		if member.is_moving():
+			rooms[layout.room_index_at(member.destination())] = true
+	if _order_time > 0.0:
+		rooms[_order_room] = true
+	for room: int in rooms:
+		if room < 0:
+			continue
+		var rect := layout.room_rect(room).grow(-1)
+		var alpha := 0.5
+		if room == _order_room and _order_time > 0.0:
+			alpha = 1.0 if fmod(_order_time * 4.0, 1.0) < 0.6 else 0.55
+			draw_rect(rect, Color(COLOR_ORDER, 0.16 * alpha), true)
+			draw_rect(rect.grow(1), Color(COLOR_ORDER, 0.5 * alpha), false, 1.0)
+		draw_rect(rect, Color(COLOR_ORDER, alpha), false, 1.0)
 
 
 ## Rahmen um eine Kachel; `corners_only` zeichnet nur die Ecken (Ziel-Markierung).
@@ -600,6 +634,8 @@ func _toggle_hatch(local_pos: Vector2, airlocks := true) -> bool:
 func _finish_order(room: int) -> void:
 	Sfx.play("crew_order")
 	last_order = selected
+	_order_room = room
+	_order_time = ORDER_FLASH
 	_set_selection(null, room)
 
 

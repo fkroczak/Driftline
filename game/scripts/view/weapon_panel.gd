@@ -71,8 +71,8 @@ func _draw() -> void:
 		return
 	var font := ThemeDB.fallback_font
 	HudStyle.box(self, Rect2(0, 3, size.x, size.y - 3))
-	draw_rect(Rect2(5, 0, HudStyle.text_width("WAFFEN") + 4, 7), HudStyle.COLOR_BG.lightened(0.0))
-	HudStyle.text(self, Vector2(7, 7), "WAFFEN", HudStyle.COLOR_TEXT)
+	draw_rect(Rect2(5, 0, HudStyle.text_width(Loc.t("WAFFEN")) + 4, 7), HudStyle.COLOR_BG.lightened(0.0))
+	HudStyle.text(self, Vector2(7, 7), Loc.t("WAFFEN"), HudStyle.COLOR_TEXT)
 	for i in state.weapons.size():
 		var w := state.weapons[i]
 		var x := ORIGIN.x + i * (CARD.x + GAP)
@@ -97,7 +97,7 @@ func _draw() -> void:
 		draw_rect(badge, COLOR_AIM if w.target >= 0 else COLOR_OFF)
 		draw_string(font, badge.position + Vector2(2, 8), str(i + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Color.WHITE)
 		var text_color := COLOR_TEXT if w.powered else COLOR_TEXT_OFF
-		draw_string(font, rect.position + Vector2(12, 10), w.display_name, HORIZONTAL_ALIGNMENT_LEFT,
+		draw_string(font, rect.position + Vector2(12, 10), Loc.t(w.display_name), HORIZONTAL_ALIGNMENT_LEFT,
 			CARD.x - 15, FONT_SIZE, text_color)
 		# Energiebedarf als kleine Balken oben rechts
 		for p in w.cost:
@@ -107,17 +107,17 @@ func _draw() -> void:
 		var line := ""
 		var line_color := COLOR_TEXT_OFF
 		if not state.in_combat:
-			line = "kein Gegner" if w.powered else "aus"
+			line = Loc.t("kein Gegner") if w.powered else Loc.t("aus")
 		elif i == selected:
-			line = "Raum antippen"
+			line = Loc.t("Raum antippen")
 			line_color = COLOR_AIM
 		elif not w.powered:
-			line = "aus"
+			line = Loc.t("aus")
 		elif waiting:
-			line = "Ziel wählen"
+			line = Loc.t("Ziel wählen")
 			line_color = COLOR_READY
 		elif w.target >= 0 and enemy:
-			line = "» " + enemy.layout.rooms[w.target].name
+			line = "» " + Loc.t(enemy.layout.rooms[w.target].name)
 			line_color = COLOR_TEXT
 		draw_string(font, rect.position + Vector2(3, 18), line, HORIZONTAL_ALIGNMENT_LEFT, CARD.x - 6, FONT_SIZE, line_color)
 		# Ladebalken
