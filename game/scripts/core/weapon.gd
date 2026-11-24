@@ -29,7 +29,35 @@ var target := -1
 ## Gibt es diese Waffe (z. B. für Spielstände aus älteren Versionen)?
 static func known(weapon_id: String) -> bool:
 	_load_defs()
-	return _defs.has(weapon_id)
+	return _defs.has(weapon_id) and not weapon_id.begins_with("_")
+
+
+## Alle Waffen aus data/weapons.json (ohne Einträge wie _doc).
+static func all_ids() -> Array[String]:
+	_load_defs()
+	var out: Array[String] = []
+	for id: String in _defs:
+		if not id.begins_with("_"):
+			out.append(id)
+	return out
+
+
+## Kaufpreis beim Händler in Rohstoffen.
+static func price_of(weapon_id: String) -> int:
+	_load_defs()
+	return int((_defs.get(weapon_id, {}) as Dictionary).get("price", 30))
+
+
+static func name_of(weapon_id: String) -> String:
+	_load_defs()
+	return Loc.t(str((_defs.get(weapon_id, {}) as Dictionary).get("name", weapon_id)))
+
+
+## Kurzwerte für Händler und Schiffsbildschirm, z. B. „2×1 · 1 Energie · 8 s“.
+static func summary(weapon_id: String) -> String:
+	_load_defs()
+	var d: Dictionary = _defs.get(weapon_id, {})
+	return Loc.t("%d×%d · %d Energie · %d s") % [int(d.get("shots", 1)), int(d.get("damage", 1)), int(d.get("power", 1)), roundi(float(d.get("charge", 10.0)))]
 
 
 static func _load_defs() -> void:

@@ -84,6 +84,10 @@ var hull := 0
 var max_hull := 0
 var systems: Dictionary = {}  # System-ID -> ShipSystem
 var weapons: Array[Weapon] = []
+## Ausgebaute Waffen im Lager (IDs); sie feuern nicht, bis sie wieder eingebaut sind.
+var stored_weapons: Array[String] = []
+## Gekaufte Perks (IDs aus data/upgrades.json), Wirkung über perk_value.
+var perks: Array[String] = []
 var shield_layers := 0
 var shield_progress := 0.0
 var oxygen: Array[float] = []  # je Raum
@@ -219,7 +223,7 @@ func evasion() -> float:
 	var engineer := operator_of_system("antrieb")
 	if engineer:
 		value += 0.05 + engineer.level("antrieb") * 0.01
-	return minf(value, MAX_EVASION)
+	return minf(value + perk_value("evasion"), MAX_EVASION)
 
 
 ## Faktor für Lade- und Aufladezeiten: besetzte Konsole und Erfahrung beschleunigen.
@@ -402,6 +406,8 @@ func _crew_work(delta: float) -> void:
 				workers += member.repair_factor()
 				var console: Variant = layout.console_of(room)
 				member.set_activity("reparieren", console if console != null and console != member.tile else layout.rooms[room].pos)
+		if workers <= 0.0 and sys.damage > 0:
+			workers = perk_value("drone_repair")  # Reparaturdrohne arbeitet, wo niemand steht
 		if sys.repair(delta, workers):
 			events.append({"type": "repaired", "system": sys.id, "room": room})
 
@@ -443,8 +449,8 @@ func _update_fires(delta: float) -> void:
 				fires.erase(t)
 				events.append({"type": "extinguished", "tile": t, "room": room})
 			continue
-		fires[t] = minf(fires[t] + delta * FIRE_GROWTH, 1.0)
-		if o > FIRE_MIN_O2 and rng.randf() < FIRE_SPREAD * delta:
+		fires[t] = minf(fires[t] + delta * FIRE_GROWTH * fire_factor(), 1.0)
+		if o > FIRE_MIN_O2 and rng.randf() < FIRE_SPREAD * fire_factor() * delta:
 			var options: Array[Vector2i] = []
 			for n in layout.neighbors(t):
 				if fires.has(n) or (layout.room_index_at(n) != room and not is_door_open(t, n)):
@@ -562,13 +568,99 @@ func _update_combat(delta: float) -> void:
 			jump_charge = minf(jump_charge + delta * (1 + level("antrieb")) * skill_factor("antrieb") / PEACE_JUMP_TIME, 1.0)
 	elif can_charge_jump():
 		jump_charge = minf(jump_charge + delta * level("antrieb") * skill_factor("antrieb") / JUMP_TIME, 1.0)
-	var speed := skill_factor("waffen")
+	var speed := skill_factor("waffen") * (1.0 + perk_value("weapon_speed"))
 	for weapon in weapons:
 		var was_powered := weapon.powered
 		if not in_combat:
 			weapon.powered = false  # außerhalb des Kampfs laden Waffen nicht
 		weapon.update(delta, speed)
 		weapon.powered = was_powered
+
+
+# --- Ausbau: Perks und Waffenplätze ---
+
+
+func has_perk(id: String) -> bool:
+	return perks.has(id)
+
+
+## Summe eines Perk-Werts über alle gekauften Perks (0, wenn keiner ihn hat).
+func perk_value(key: String) -> float:
+	var total := 0.0
+	for id in perks:
+		total += float(Upgrades.perk(id).get(key, 0.0))
+	return total
+
+
+## Faktor für Wachstum und Ausbreitung von Feuer (Brandschutzanlage).
+func fire_factor() -> float:
+	var factor := 1.0
+	for id in perks:
+		factor *= float(Upgrades.perk(id).get("fire_factor", 1.0))
+	return factor
+
+
+## Waffenplätze am Schiff (data/ships: weapon_slots); ohne Angabe so viele, wie eingebaut sind.
+func weapon_slots() -> int:
+	return int(layout.stats.get("weapon_slots", maxi(weapons.size(), 1)))
+
+
+## Neue Waffe: in einen freien Platz, sonst ins Lager. Falsch, wenn beides voll ist.
+func add_weapon(weapon_id: String) -> bool:
+	if weapons.size() < weapon_slots():
+		weapons.append(Weapon.create(weapon_id))
+		_rebalance()
+		return true
+	if stored_weapons.size() < Upgrades.weapon_storage():
+		stored_weapons.append(weapon_id)
+		return true
+	return false
+
+
+## Eingebaute Waffe ins Lager. Falsch, wenn das Lager voll ist.
+func store_weapon(idx: int) -> bool:
+	if idx < 0 or idx >= weapons.size() or stored_weapons.size() >= Upgrades.weapon_storage():
+		return false
+	stored_weapons.append(weapons[idx].id)
+	weapons.remove_at(idx)
+	_rebalance()
+	return true
+
+
+## Waffe aus dem Lager einbauen (ausgeschaltet). Falsch, wenn kein Platz frei ist.
+func install_weapon(store_idx: int) -> bool:
+	if store_idx < 0 or store_idx >= stored_weapons.size() or weapons.size() >= weapon_slots():
+		return false
+	weapons.append(Weapon.create(stored_weapons[store_idx]))
+	stored_weapons.remove_at(store_idx)
+	_rebalance()
+	return true
+
+
+## Alle Waffen an Bord (eingebaut, dann Lager) als IDs, z. B. für den Verkauf.
+func all_weapon_ids() -> Array[String]:
+	var out: Array[String] = []
+	for w in weapons:
+		out.append(w.id)
+	out.append_array(stored_weapons)
+	return out
+
+
+## Entfernt eine Waffe nach Index in all_weapon_ids (Verkauf).
+func remove_weapon_at(idx: int) -> String:
+	if idx < 0:
+		return ""
+	if idx < weapons.size():
+		var id := weapons[idx].id
+		weapons.remove_at(idx)
+		_rebalance()
+		return id
+	idx -= weapons.size()
+	if idx < stored_weapons.size():
+		var id := stored_weapons[idx]
+		stored_weapons.remove_at(idx)
+		return id
+	return ""
 
 
 ## Kampfende bzw. Sprung: nur was zum Kampf selbst gehört, wird zurückgesetzt. Waffen sind

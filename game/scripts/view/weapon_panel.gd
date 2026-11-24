@@ -35,14 +35,33 @@ var _deny := {}  # Waffenindex -> Sekunden Schütteln
 var _fired := {}  # Waffenindex -> Sekunden Aufleuchten
 var _press_time := 0
 var _press_idx := -1
+## Kartenbreite: CARD.x, bei mehr Waffen schmaler, damit die Leiste zwischen Energie und Türen passt.
+var _card_w := CARD.x
+var _max_width := INF
 
 
 func setup(p_state: ShipState, p_enemy: ShipState) -> void:
 	state = p_state
 	enemy = p_enemy
-	custom_minimum_size = Vector2(state.weapons.size() * (CARD.x + GAP) - GAP + ORIGIN.x * 2, CARD.y + ORIGIN.y + 3)
-	size = custom_minimum_size
+	if selected >= state.weapons.size():
+		selected = -1
+	_resize()
 	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+## Höchstens so breit werden (Platz zwischen Energieleiste und Türen).
+func fit_width(max_width: float) -> void:
+	_max_width = max_width
+	_resize()
+
+
+func _resize() -> void:
+	if not state:
+		return
+	var n := maxi(state.weapons.size(), 1)
+	_card_w = floorf(minf(CARD.x, (_max_width - ORIGIN.x * 2 - GAP * (n - 1)) / n))
+	custom_minimum_size = Vector2(n * (_card_w + GAP) - GAP + ORIGIN.x * 2, CARD.y + ORIGIN.y + 3)
+	size = custom_minimum_size
 
 
 func select(idx: int) -> void:
@@ -75,10 +94,10 @@ func _draw() -> void:
 	HudStyle.text(self, Vector2(7, 7), Loc.t("WAFFEN"), HudStyle.COLOR_TEXT)
 	for i in state.weapons.size():
 		var w := state.weapons[i]
-		var x := ORIGIN.x + i * (CARD.x + GAP)
+		var x := ORIGIN.x + i * (_card_w + GAP)
 		if _deny.has(i):
 			x += roundf(sin(_deny[i] * 60.0) * 1.5)
-		var rect := Rect2(Vector2(x, ORIGIN.y), CARD)
+		var rect := Rect2(Vector2(x, ORIGIN.y), Vector2(_card_w, CARD.y))
 		var waiting := w.is_ready() and w.target < 0
 		var blink := fmod(_time, 0.6) < 0.3
 		var edge := COLOR_EDGE
@@ -98,10 +117,10 @@ func _draw() -> void:
 		draw_string(font, badge.position + Vector2(2, 8), str(i + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Color.WHITE)
 		var text_color := COLOR_TEXT if w.powered else COLOR_TEXT_OFF
 		draw_string(font, rect.position + Vector2(12, 10), Loc.t(w.display_name), HORIZONTAL_ALIGNMENT_LEFT,
-			CARD.x - 15, FONT_SIZE, text_color)
+			_card_w - 15, FONT_SIZE, text_color)
 		# Energiebedarf als kleine Balken oben rechts
 		for p in w.cost:
-			var pip := Rect2(rect.position + Vector2(CARD.x - 5 - p * 4, 13), Vector2(3, 2))
+			var pip := Rect2(rect.position + Vector2(_card_w - 5 - p * 4, 13), Vector2(3, 2))
 			draw_rect(pip, COLOR_READY if w.powered else COLOR_OFF)
 		# Zweite Zeile: Ziel oder Hinweis
 		var line := ""
@@ -119,9 +138,9 @@ func _draw() -> void:
 		elif w.target >= 0 and enemy:
 			line = "» " + Loc.t(enemy.layout.rooms[w.target].name)
 			line_color = COLOR_TEXT
-		draw_string(font, rect.position + Vector2(3, 18), line, HORIZONTAL_ALIGNMENT_LEFT, CARD.x - 6, FONT_SIZE, line_color)
+		draw_string(font, rect.position + Vector2(3, 18), line, HORIZONTAL_ALIGNMENT_LEFT, _card_w - 6, FONT_SIZE, line_color)
 		# Ladebalken
-		var bar := Rect2(rect.position + Vector2(3, CARD.y - 5), Vector2(CARD.x - 6, 3))
+		var bar := Rect2(rect.position + Vector2(3, CARD.y - 5), Vector2(_card_w - 6, 3))
 		draw_rect(bar, COLOR_OFF)
 		var fill := Rect2(bar.position, Vector2(roundf(bar.size.x * w.ratio()), bar.size.y))
 		draw_rect(fill, COLOR_READY if w.is_ready() else (COLOR_CHARGING if w.powered else COLOR_TEXT_OFF))
@@ -130,7 +149,7 @@ func _draw() -> void:
 func _gui_input(event: InputEvent) -> void:
 	if not state or not (event is InputEventMouseButton):
 		return
-	var idx := int((event.position.x - ORIGIN.x) / (CARD.x + GAP))
+	var idx := int((event.position.x - ORIGIN.x) / (_card_w + GAP))
 	if idx < 0 or idx >= state.weapons.size():
 		return
 	accept_event()

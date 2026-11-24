@@ -71,13 +71,14 @@ func _draw() -> void:
 	var reactor := state.get_system("reaktor")
 	if reactor:
 		var free := state.power_free()
+		var step := _step(reactor.capacity, 8)
 		for i in reactor.capacity:
 			var color := COLOR_OFF
 			if i >= reactor.usable():
 				color = COLOR_BROKEN
 			elif i < free:
 				color = COLOR_REACTOR
-			draw_rect(Rect2(Vector2(3, HEIGHT - 4 - i * BAR_STEP), Vector2(REACTOR_W - 4, BAR_H)), color)
+			draw_rect(Rect2(Vector2(3, HEIGHT - 4 - i * step), Vector2(REACTOR_W - 4, step - 1)), color)
 	for c in _columns.size():
 		_draw_column(c)
 
@@ -95,6 +96,7 @@ func _draw_column(c: int) -> void:
 	if id == "schilde":
 		_draw_shield_pairs(sys, x)
 		return
+	var step := _step(sys.capacity, 5)
 	for b in sys.capacity:
 		var color := COLOR_OFF
 		if b >= sys.usable():
@@ -103,7 +105,12 @@ func _draw_column(c: int) -> void:
 			color = COLOR_ON
 			if _pop.has(id) and b == sys.power - 1:
 				color = Color.WHITE
-		draw_rect(Rect2(Vector2(x + 4, HEIGHT - 17 - b * BAR_STEP), Vector2(12, BAR_H)), color)
+		draw_rect(Rect2(Vector2(x + 4, HEIGHT - 17 - b * step), Vector2(12, step - 1)), color)
+
+
+## Abstand der Balken: 3 px, nach einem Ausbau über `fits` Balken enger (2 px), damit alles in die Leiste passt.
+func _step(count: int, fits: int) -> int:
+	return BAR_STEP if count <= fits else 2
 
 
 func _draw_shield_pairs(sys: ShipSystem, x: float) -> void:

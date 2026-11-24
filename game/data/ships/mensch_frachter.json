@@ -13,6 +13,7 @@
   "power": {"lebenserhaltung": 1, "schilde": 2, "antrieb": 1},
   "weapons": ["pulslaser", "schwerer_laser"],
   "weapons_powered": 2,
+  "weapon_slots": 3,
   "weapon_mount": [167, 130],
   "engines": [[40, 23], [40, 33], [40, 107], [40, 117]],
   "engine_dir": -1,

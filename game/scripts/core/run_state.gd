@@ -86,6 +86,11 @@ var result := ""
 var dialog: Dictionary = {}
 ## Beute des letzten Kampfs als Text (für das Banner).
 var last_reward := ""
+## Händlerwaren im aktuellen Sektor: Knoten -> {weapons: [IDs], crew: [{name, species}]}.
+## Beim ersten Besuch festgelegt, Gekauftes verschwindet.
+var shop_stock: Dictionary = {}
+## Der letzte Sprung war dank Treibstoffrecycler gratis (für den Hinweis).
+var last_jump_free := false
 
 var rules: Dictionary = {}
 var _enemy_table: Dictionary = {}
@@ -116,6 +121,7 @@ func _setup_sector() -> void:
 	cleared = {}
 	pending_battle = {}
 	node_events = {}
+	shop_stock = {}
 	jumps = 0
 	front = FRONT_START
 	hunter_battle = false
@@ -136,7 +142,7 @@ func can_leave_sector() -> bool:
 func leave_sector() -> bool:
 	if not can_leave_sector():
 		return false
-	fuel -= jump_cost()
+	_pay_jump()
 	total_jumps += 1
 	next_sector()
 	return true
@@ -225,7 +231,7 @@ func can_jump_to(id: int) -> bool:
 func jump_to(id: int) -> bool:
 	if not can_jump_to(id):
 		return false
-	fuel -= jump_cost()
+	_pay_jump()
 	fleeing = false
 	ship.end_combat()
 	_pass_ship_time(JUMP_SHIP_TIME)
@@ -250,6 +256,14 @@ func jump_to(id: int) -> bool:
 	return true
 
 
+## Treibstoff für einen Sprung; der Treibstoffrecycler spart ihn manchmal.
+func _pay_jump() -> void:
+	var chance := ship.perk_value("free_jump")
+	last_jump_free = chance > 0.0 and _rng.randf() < chance
+	if not last_jump_free:
+		fuel -= jump_cost()
+
+
 ## Lässt an Bord Zeit vergehen (ohne Kampf). Wer dabei stirbt, ist tot; ohne Crew ist der Run verloren.
 func _pass_ship_time(seconds: float) -> void:
 	var t := 0.0
@@ -267,7 +281,7 @@ func _open_node_dialog() -> void:
 			_open_event(node_events.get(current, ""))
 		"haendler":
 			_shop_note = ""
-			_open_shop()
+			_open_shop("main")
 		"reparatur":
 			_shop_note = ""
 			_open_repair()
@@ -348,11 +362,14 @@ func finish_battle(outcome: String) -> void:
 			ship.end_combat()
 
 
+## Beute nach einem Sieg; der Bergungsgreifer bringt mehr Rohstoffe.
 func _roll_loot(reward: Dictionary) -> Dictionary:
 	var loot := {}
 	for key: String in reward:
 		var span: Array = reward[key]
 		loot[key] = _rng.randi_range(int(span[0]), int(span[1]))
+	if loot.has("scrap"):
+		loot["scrap"] = roundi(int(loot.scrap) * (1.0 + ship.perk_value("loot_bonus")))
 	return loot
 
 
@@ -465,35 +482,138 @@ func _shop_offers() -> Array[Dictionary]:
 	]
 
 
-func _open_shop() -> void:
-	var text := Loc.t("Ein Handelsposten der Gilde. Bezahlt wird in Rohstoffen oder Treibstoff.")
+## Händler: Hauptseite (Vorräte, Hülle), Seite „Waffen“ (kaufen, verkaufen) und Seite „Crew“ (anheuern).
+func _open_shop(page := "main") -> void:
+	var stock := _stock()
+	var text := ""
+	var choices: Array[Dictionary] = []
+	match page:
+		"weapons":
+			text = Loc.t("Waffen der Gilde. Neue Waffen kommen in einen freien Waffenplatz, sonst ins Lager (%d/%d). Verkauft wird zum halben Preis.") \
+				% [ship.stored_weapons.size(), Upgrades.weapon_storage()]
+			var room := ship.weapons.size() < ship.weapon_slots() or ship.stored_weapons.size() < Upgrades.weapon_storage()
+			for id: String in stock.weapons:
+				var cost := {"scrap": _price(Weapon.price_of(id))}
+				choices.append({"text": Loc.t("%s kaufen · %s (%s)") % [Weapon.name_of(id), Weapon.summary(id), _cost_text(cost)],
+					"enabled": _can_pay(cost) and room, "special": false})
+			var owned := ship.all_weapon_ids()
+			for i in owned.size():
+				var stored := i >= ship.weapons.size()
+				var label := Loc.t("%s verkaufen (+%d Rohstoffe)") % [Weapon.name_of(owned[i]), sell_price(owned[i])]
+				if stored:
+					label += " · " + Loc.t("Lager")
+				choices.append({"text": label, "enabled": owned.size() > 1, "special": false})
+			if stock.weapons.is_empty():
+				text += " " + Loc.t("Ausverkauft.")
+		"crew":
+			text = Loc.t("Im Hafen warten Leute auf eine Heuer. Platz an Bord: %d/%d.") % [ship.crew.size(), MAX_CREW]
+			for c: Dictionary in stock.crew:
+				var cost := {"scrap": _price(Upgrades.crew_price(c.species))}
+				var traits := ", ".join(PackedStringArray(Species.traits(c.species)))
+				choices.append({"text": Loc.t("%s (%s) anheuern (%s)") % [c.name, Species.display_name(c.species), _cost_text(cost)],
+					"enabled": _can_pay(cost) and ship.crew.size() < MAX_CREW, "special": false})
+				text += "\n%s: %s" % [Species.display_name(c.species), traits]
+			if stock.crew.is_empty():
+				text += " " + Loc.t("Niemand mehr da.")
+		_:
+			page = "main"
+			text = Loc.t("Ein Handelsposten der Gilde. Bezahlt wird in Rohstoffen oder Treibstoff.")
+			for offer in _shop_offers():
+				var enabled: bool = _can_pay(offer.cost) and not (offer.get("needs_damage", false) and ship.hull >= ship.max_hull)
+				choices.append({"text": "%s (%s)" % [offer.text, _cost_text(offer.cost)], "enabled": enabled, "special": false})
+			choices.append({"text": Loc.t("Waffen kaufen und verkaufen …"), "enabled": true, "special": false})
+			choices.append({"text": Loc.t("Crew anheuern …"), "enabled": true, "special": false})
 	if flags.has("gilde_freund"):
 		text += Loc.t(" Euer Gildenbrief bringt %d %% Rabatt.") % roundi(_discount() * 100.0)
 	if _shop_note != "":
 		text += "\n\n" + _shop_note
-	var choices: Array[Dictionary] = []
-	for offer in _shop_offers():
-		var enabled: bool = _can_pay(offer.cost) and not (offer.get("needs_damage", false) and ship.hull >= ship.max_hull)
-		choices.append({"text": "%s (%s)" % [offer.text, _cost_text(offer.cost)], "enabled": enabled, "special": false})
-	choices.append({"text": Loc.t("Ablegen"), "enabled": true, "special": false})
+	choices.append({"text": Loc.t("Ablegen") if page == "main" else Loc.t("Zurück"), "enabled": true, "special": false})
 	dialog = {"title": Loc.t("Händler"), "text": text, "scene": "station", "choices": choices}
-	_ctx = {"kind": "shop"}
+	_ctx = {"kind": "shop", "page": page}
 
 
 func _choose_shop(index: int) -> void:
-	var offers := _shop_offers()
-	if index >= offers.size():
-		dialog = {}
-		_ctx = {}
-		return
-	var offer: Dictionary = offers[index]
-	_pay(offer.cost)
-	var effects := {}
-	for key in ["fuel", "hull"]:
-		if offer.has(key):
-			effects[key] = offer[key]
-	_shop_note = Loc.t("Gekauft: ") + " · ".join(_apply(effects))
-	_open_shop()
+	var page: String = _ctx.get("page", "main")
+	var stock := _stock()
+	match page:
+		"weapons":
+			if index < stock.weapons.size():
+				var id: String = stock.weapons[index]
+				_pay({"scrap": _price(Weapon.price_of(id))})
+				ship.add_weapon(id)
+				stock.weapons.remove_at(index)
+				_shop_note = Loc.t("Gekauft: ") + Weapon.name_of(id)
+				_open_shop(page)
+				return
+			index -= stock.weapons.size()
+			var owned := ship.all_weapon_ids()
+			if index < owned.size():
+				var price := sell_price(owned[index])
+				var sold := ship.remove_weapon_at(index)
+				scrap += price
+				_shop_note = Loc.t("Verkauft: %s (+%d Rohstoffe)") % [Weapon.name_of(sold), price]
+				_open_shop(page)
+				return
+		"crew":
+			if index < stock.crew.size():
+				var c: Dictionary = stock.crew[index]
+				_pay({"scrap": _price(Upgrades.crew_price(c.species))})
+				if ship.add_crew_anywhere(c.name, c.species):
+					stock.crew.remove_at(index)
+					_shop_note = Loc.t("%s (%s) kommt an Bord") % [c.name, Species.display_name(c.species)]
+				_open_shop(page)
+				return
+		_:
+			var offers := _shop_offers()
+			if index < offers.size():
+				var offer: Dictionary = offers[index]
+				_pay(offer.cost)
+				var effects := {}
+				for key in ["fuel", "hull"]:
+					if offer.has(key):
+						effects[key] = offer[key]
+				_shop_note = Loc.t("Gekauft: ") + " · ".join(_apply(effects))
+				_open_shop()
+				return
+			index -= offers.size()
+			if index < 2:
+				_shop_note = ""
+				_open_shop(["weapons", "crew"][index])
+				return
+			dialog = {}
+			_ctx = {}
+			return
+	_shop_note = ""
+	_open_shop()  # Zurück zur Hauptseite
+
+
+## Verkaufspreis einer Waffe (ohne Gildenrabatt).
+func sell_price(weapon_id: String) -> int:
+	return maxi(1, roundi(Weapon.price_of(weapon_id) * Upgrades.sell_factor()))
+
+
+## Waren des Händlers am aktuellen Knoten, beim ersten Besuch aus dem Seed festgelegt.
+func _stock() -> Dictionary:
+	if shop_stock.has(current):
+		return shop_stock[current]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([seed_value, sector, current, "haendler"])
+	var pool := Weapon.all_ids()
+	var weapons: Array = []
+	for i in mini(Upgrades.shop_weapons(), pool.size()):
+		weapons.append(pool.pop_at(rng.randi() % pool.size()))
+	var crew: Array = []
+	var taken: Array = ship.crew.map(func(m: CrewMember) -> String: return m.display_name)
+	for i in Upgrades.crew_offers():
+		var species := Species.pick(rng)
+		var names: Array = (Species.value(species, "names", []) as Array).filter(func(n: String) -> bool: return not taken.has(n))
+		if names.is_empty():
+			continue
+		var name: String = names[rng.randi() % names.size()]
+		taken.append(name)
+		crew.append({"name": name, "species": species})
+	shop_stock[current] = {"weapons": weapons, "crew": crew}
+	return shop_stock[current]
 
 
 ## Schäden außer der Hülle: beschädigte Systembalken, Lecks und Brände.
@@ -712,3 +832,57 @@ func create_enemy(id := -1) -> ShipState:
 		var console: Vector2i = layout.console_of(layout.room_index_by_id(crew_spec[1]))
 		enemy.add_crew(crew_spec[0], "mensch", console, {crew_spec[1]: 1.0})
 	return enemy
+
+
+# --- Schiffsausbau (Knopf SCHIFF, nur außerhalb des Kampfs) ---
+
+
+## Ausbauen geht nur ohne Kampf, ohne offenen Dialog und solange der Run läuft.
+func can_refit() -> bool:
+	return result == "" and not ship.in_combat and dialog.is_empty()
+
+
+## Preis für den nächsten Balken eines Systems; -1, wenn es nicht ausbaubar oder schon voll ist.
+func system_upgrade_price(id: String) -> int:
+	var rule := Upgrades.system_rule(id)
+	var sys := ship.get_system(id)
+	if rule.is_empty() or sys == null or sys.capacity >= int(rule.get("max", 0)):
+		return -1
+	var start := int(ship.layout.stats.get("reactor", sys.capacity)) if id == "reaktor" \
+		else int((ship.layout.stats.get("systems", {}) as Dictionary).get(id, sys.capacity))
+	return int(rule.get("base", 20)) + int(rule.get("step", 10)) * maxi(sys.capacity - start, 0)
+
+
+func can_upgrade_system(id: String) -> bool:
+	var price := system_upgrade_price(id)
+	return can_refit() and price >= 0 and scrap >= price
+
+
+## Ein Balken mehr. Neue Reaktorleistung ist sofort frei; Energie verteilt der Spieler selbst.
+func upgrade_system(id: String) -> bool:
+	if not can_upgrade_system(id):
+		return false
+	scrap -= system_upgrade_price(id)
+	ship.get_system(id).capacity += 1
+	ship._rebalance()
+	return true
+
+
+func perk_price(id: String) -> int:
+	return int(Upgrades.perk(id).get("price", 30))
+
+
+func can_buy_perk(id: String) -> bool:
+	return can_refit() and not Upgrades.perk(id).is_empty() and not ship.has_perk(id) and scrap >= perk_price(id)
+
+
+func buy_perk(id: String) -> bool:
+	if not can_buy_perk(id):
+		return false
+	scrap -= perk_price(id)
+	ship.perks.append(id)
+	var hull := int(Upgrades.perk(id).get("hull", 0))
+	if hull != 0:
+		ship.max_hull += hull
+		ship.hull += hull
+	return true
