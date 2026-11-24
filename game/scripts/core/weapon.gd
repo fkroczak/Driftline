@@ -18,6 +18,8 @@ var damage := 1
 var system_chance := 0.5
 var fire_chance := 0.2
 var breach_chance := 0.1
+## Schildschichten, die der Schuss durchschlägt, ohne sie zu verbrauchen (9 = alle).
+var pierce := 0
 var charge := 0.0
 ## Vom Spieler eingeschaltet; ob sie wirklich Energie hat, steht in `powered`.
 var wanted := false
@@ -57,7 +59,13 @@ static func name_of(weapon_id: String) -> String:
 static func summary(weapon_id: String) -> String:
 	_load_defs()
 	var d: Dictionary = _defs.get(weapon_id, {})
-	return Loc.t("%d×%d · %d Energie · %d s") % [int(d.get("shots", 1)), int(d.get("damage", 1)), int(d.get("power", 1)), roundi(float(d.get("charge", 10.0)))]
+	var text: String = Loc.t("%d×%d · %d Energie · %d s") % [int(d.get("shots", 1)), int(d.get("damage", 1)), int(d.get("power", 1)), roundi(float(d.get("charge", 10.0)))]
+	var pierce := int(d.get("pierce", 0))
+	if pierce >= 9:
+		text += " · " + Loc.t("ignoriert Schilde")
+	elif pierce > 0:
+		text += " · " + Loc.t("durchschlägt %d Schild") % pierce
+	return text
 
 
 static func _load_defs() -> void:
@@ -80,6 +88,7 @@ static func create(weapon_id: String) -> Weapon:
 	w.system_chance = float(d.get("system", w.system_chance))
 	w.fire_chance = float(d.get("fire", w.fire_chance))
 	w.breach_chance = float(d.get("breach", w.breach_chance))
+	w.pierce = int(d.get("pierce", 0))
 	return w
 
 

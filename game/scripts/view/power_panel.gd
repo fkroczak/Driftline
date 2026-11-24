@@ -71,14 +71,19 @@ func _draw() -> void:
 	var reactor := state.get_system("reaktor")
 	if reactor:
 		var free := state.power_free()
-		var step := _step(reactor.capacity, 8)
+		# Über 12 Balken: zwei schmale Spalten nebeneinander (Balken i links, i+1 rechts)
+		var double := reactor.capacity > 12
+		var step := _step(ceili(reactor.capacity / 2.0) if double else reactor.capacity, 8)
+		var w := (REACTOR_W - 5) / 2.0 if double else REACTOR_W - 4.0
 		for i in reactor.capacity:
 			var color := COLOR_OFF
 			if i >= reactor.usable():
 				color = COLOR_BROKEN
 			elif i < free:
 				color = COLOR_REACTOR
-			draw_rect(Rect2(Vector2(3, HEIGHT - 4 - i * step), Vector2(REACTOR_W - 4, step - 1)), color)
+			var row := i / 2 if double else i
+			var x := 3.0 + (w + 1.0) * (i % 2) if double else 3.0
+			draw_rect(Rect2(Vector2(x, HEIGHT - 4 - row * step), Vector2(w, step - 1)), color)
 	for c in _columns.size():
 		_draw_column(c)
 

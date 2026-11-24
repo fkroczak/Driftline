@@ -5,7 +5,8 @@ extends RefCounted
 ## Ablauf eines Schusses: Eine geladene Waffe feuert auf ihren eigenen Zielraum (Spieler:
 ## je Waffe angetippt, Gegner: je Waffe zufällig ein Raum mit System). Das Geschoss fliegt FLIGHT_TIME Sekunden.
 ## Beim Einschlag wird entschieden: Ausweichen (Antrieb + besetztes Cockpit), sonst
-## Schild (eine Schicht fällt), sonst Treffer (Hülle immer, System, Feuer und Leck mit den
+## Schild (eine Schicht fällt; Waffen mit `pierce` durchschlagen so viele Schichten, ohne sie zu
+## verbrauchen), sonst Treffer (Hülle immer, System, Feuer und Leck mit den
 ## Chancen der Waffe, siehe ShipState.take_hit).
 ##
 ## Alles, was die Darstellung animieren soll, landet in `events`:
@@ -191,17 +192,19 @@ func _move_projectiles(delta: float) -> void:
 
 func _resolve(p: Dictionary) -> void:
 	var defender := enemy if p.player else player
+	var attacker := player if p.player else enemy
+	var weapon: Weapon = attacker.weapons[p.weapon] if p.weapon < attacker.weapons.size() else null
+	var pierce := weapon.pierce if weapon else 0
 	var event := {"projectile": p.id, "from_player": p.player, "room": p.room, "damage": p.damage}
 	if _rng.randf() < defender.evasion():
 		event["type"] = "miss"
-	elif defender.shield_layers > 0:
+	elif defender.shield_layers > pierce:
 		defender.shield_layers -= 1
 		defender.shield_progress = 0.0
 		event["type"] = "shield"
 	else:
 		event["type"] = "hit"
-		var attacker := player if p.player else enemy
-		var weapon: Weapon = attacker.weapons[p.weapon] if p.weapon < attacker.weapons.size() else null
+		event["pierced"] = pierce > 0 and defender.shield_layers > 0
 		event["system_damage"] = defender.take_hit(p.room, p.damage, weapon)
 	_emit(event)
 

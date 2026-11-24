@@ -1470,10 +1470,10 @@ func test_save_keeps_refit() -> void:
 
 func test_scrap_gain_from_loot_and_events() -> void:
 	var run := RunState.new(5)
-	check(is_equal_approx(float(run.rules.get("scrap_gain", 1.0)), 1.25), "scrap_gain ist nicht 1,25")
+	check(is_equal_approx(float(run.rules.get("scrap_gain", 1.0)), 1.15), "scrap_gain ist nicht 1,15")
 	var scrap := run.scrap
 	run._apply({"scrap": 12})
-	check(run.scrap == scrap + 15, "+12 Rohstoffe werden nicht zu +15: %d" % (run.scrap - scrap))
+	check(run.scrap == scrap + 14, "+12 Rohstoffe werden nicht zu +14: %d" % (run.scrap - scrap))
 	scrap = run.scrap
 	run._apply({"scrap": -4})
 	check(run.scrap == scrap - 4, "Verluste werden mit vervielfacht")
@@ -1632,3 +1632,47 @@ func test_bad_reputation_raises_prices() -> void:
 	check(run._price(8) == 9, "Schlechter Ruf macht Hülle +5 nicht teurer: %d" % run._price(8))
 	run.flags["gilde_freund"] = true
 	check(run._price(8) == 7, "Gildenbrief und schlechter Ruf verrechnen sich nicht: %d" % run._price(8))
+
+
+func test_piercing_weapons_pass_shields() -> void:
+	var player := ShipState.new(_layout())
+	var enemy := _enemy_ship()
+	var battle := Battle.new(player, enemy, 3)
+	enemy.shield_layers = 1
+	var laser := Weapon.create("durchschlaglaser")
+	check(laser.pierce == 1 and Weapon.create("torpedo").pierce >= 9, "Durchschlag fehlt in den Waffenwerten")
+	player.weapons.append(laser)
+	var room := enemy.layout.room_index_by_id("waffen")
+	battle._resolve({"id": 1, "player": true, "weapon": player.weapons.size() - 1, "room": room, "damage": 2})
+	var events := battle.take_events()
+	var hit := events.filter(func(e: Dictionary) -> bool: return e.get("type", "") == "hit")
+	check(hit.size() == 1 and hit[0].get("pierced", false), "Durchschlaglaser kommt nicht durch eine Schicht")
+	check(enemy.shield_layers == 1, "Durchschlag verbraucht die Schildschicht")
+	enemy.shield_layers = 2
+	battle._resolve({"id": 2, "player": true, "weapon": player.weapons.size() - 1, "room": room, "damage": 2})
+	check(enemy.shield_layers == 1, "Zwei Schichten halten den Durchschlaglaser nicht auf")
+
+
+func test_enemies_get_stronger_deep_in_the_universe() -> void:
+	var run := RunState.new(12, RunState.MODE_ENDLESS)
+	check(is_equal_approx(run.create_enemy().repair_speed, 0.9), "Gegner reparieren nicht 10 % langsamer")
+	run.sector = 7  # Tiefe ab 18: Durchschlaglaser und eine Schildschicht mehr
+	var spec := run.enemy_spec(run.map.start_id())
+	check(spec.weapons.has("durchschlaglaser") and spec.shield_bonus == 2, "Tiefe Gegner ohne Zusatzwaffe oder Schild: %s" % spec)
+	var enemy := run.create_enemy(run.map.start_id())
+	check(enemy.max_shield_layers() == 2, "Zusatzschild ohne Energie")
+	for w in enemy.weapons:
+		check(w.powered, "Zusatzwaffe %s ohne Energie" % w.id)
+	var hunt := RunState.new(12)
+	hunt.sector = 4
+	var boss := hunt.enemy_spec(hunt.map.exit_id())
+	check(boss.weapons.has("torpedo") and boss.weapons.has("durchschlaglaser") and boss.shield_bonus == 2, "Boss in Sektor 4 nicht aufgerüstet")
+
+
+func test_reactor_goes_to_20() -> void:
+	var run := RunState.new(31)
+	run.scrap = 10000
+	while run.upgrade_system("reaktor"):
+		pass
+	check(run.ship.get_system("reaktor").capacity == 20, "Reaktor nicht bis 20: %d" % run.ship.get_system("reaktor").capacity)
+	check(run.scrap == 10000 - 364, "Reaktor 7 → 20 kostet nicht 364: %d" % (10000 - run.scrap))

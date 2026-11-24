@@ -92,6 +92,8 @@ var shield_layers := 0
 var shield_progress := 0.0
 ## Sekunden je Schildschicht (aus `shield_recharge` im Schiffs-JSON, sonst SHIELD_RECHARGE).
 var shield_recharge := SHIELD_RECHARGE
+## Tempo beim Löschen, Flicken und Reparieren (Gegner: repair_speed aus data/enemies.json).
+var repair_speed := 1.0
 var oxygen: Array[float] = []  # je Raum
 var fires: Dictionary = {}  # Kachel -> Stärke (0..1)
 var breaches: Dictionary = {}  # Kachel -> Reparaturfortschritt (0..1)
@@ -384,7 +386,7 @@ func _crew_work(delta: float) -> void:
 				var t: Vector2i = room_fires[i % room_fires.size()]
 				workers[i].set_activity("loeschen", t)
 				if fires.has(t):
-					fires[t] -= delta * EXTINGUISH * workers[i].repair_factor()
+					fires[t] -= delta * EXTINGUISH * workers[i].repair_factor() * repair_speed
 					if fires[t] <= 0.0:
 						fires.erase(t)
 						events.append({"type": "extinguished", "tile": t, "room": room})
@@ -397,7 +399,7 @@ func _crew_work(delta: float) -> void:
 			for member: CrewMember in workers:
 				member.set_activity("flicken", t)
 				power += member.repair_factor()
-			breaches[t] += delta * power / BREACH_REPAIR_TIME
+			breaches[t] += delta * power * repair_speed / BREACH_REPAIR_TIME
 			if breaches[t] >= 1.0:
 				breaches.erase(t)
 				events.append({"type": "breach_fixed", "tile": t, "room": room})
@@ -411,7 +413,7 @@ func _crew_work(delta: float) -> void:
 				member.set_activity("reparieren", console if console != null and console != member.tile else layout.rooms[room].pos)
 		if workers <= 0.0 and sys.damage > 0:
 			workers = perk_value("drone_repair")  # Reparaturdrohne arbeitet, wo niemand steht
-		if sys.repair(delta, workers):
+		if sys.repair(delta, workers * repair_speed):
 			events.append({"type": "repaired", "system": sys.id, "room": room})
 
 

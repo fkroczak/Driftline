@@ -795,6 +795,9 @@ func _on_battle_event(e: Dictionary) -> void:
 			var pos: Vector2 = b.get("to", view.position + view.room_center(e.room))
 			effects.explosion(pos, e.damage)
 			effects.float_text(pos + Vector2(0, -8), "-%d" % e.damage, Color("#F7C1C1"))
+			if e.get("pierced", false):
+				view.flash_shield()
+				effects.float_text(pos + Vector2(0, -14), Loc.t("DURCHSCHLAG"), COLOR_SHIELD)
 			Sfx.play("hit_hull", _side_db(not e.from_player) + (e.damage - 2) * 1.5)
 			if int(e.get("system_damage", 0)) > 0:
 				Sfx.play("hit_system", _side_db(not e.from_player) - 2.0)

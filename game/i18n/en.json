@@ -666,5 +666,10 @@
   " · letzter Sprung!": " · last jump!",
   " · noch %d Sprünge": " · %d jumps left",
   "Schlechter Ruf: Händler teurer": "Bad reputation: traders cost more",
-  " Euer Ruf ist euch vorausgeeilt: %d %% Aufschlag.": " Your reputation precedes you: %d %% markup."
+  " Euer Ruf ist euch vorausgeeilt: %d %% Aufschlag.": " Your reputation precedes you: %d %% markup.",
+  "ignoriert Schilde": "ignores shields",
+  "durchschlägt %d Schild": "pierces %d shield",
+  "DURCHSCHLAG": "PIERCED",
+  "Durchschlaglaser": "Piercing laser",
+  "Torpedo": "Torpedo"
 }

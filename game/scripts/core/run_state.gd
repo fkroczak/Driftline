@@ -908,17 +908,28 @@ func enemy_spec(id := -1) -> Dictionary:
 	if id == current and hunter_battle:
 		var hunter: Dictionary = _enemy_table.get("hunter", {})
 		var extra := maxi(jumps - HUNT_JUMPS, 0) * int(hunter.get("hull_per_late_jump", 0))
+		var armed: bool = sector >= int(hunter.get("weapons_from_sector", 99))
 		return {
 			"ship": SHIPS_DIR % hunter.get("ship", "jaeger_fregatte"),
 			"name": hunter.get("name", ""),
 			"hull_bonus": int(hunter.get("hull_bonus", 0)) + per_sector + extra,
+			"weapons": hunter.get("weapons", []) if armed else [],
+			"shield_bonus": 0,
 		}
 	if n.type == "boss":
 		var boss: Dictionary = _enemy_table.get("boss", {})
+		var weapons: Array = []
+		var shield_bonus := 0
+		for up: Dictionary in boss.get("upgrades", []):
+			if sector >= int(up.get("from_sector", 99)):
+				weapons.append_array(up.get("weapons", []))
+				shield_bonus += int(up.get("shield_bonus", 0))
 		return {
 			"ship": SHIPS_DIR % boss.get("ship", "piraten_kutter_schwer"),
 			"name": boss.get("name", ""),
 			"hull_bonus": int(boss.get("hull_bonus", 0)) + (sector - 1) * int(boss.get("hull_per_sector", 0)),
+			"weapons": weapons,
+			"shield_bonus": shield_bonus,
 		}
 	var stage := _stage_for(_depth(n.column))
 	var pool: Array = stage.get("pool", [["piraten_kutter", 1.0]])
@@ -934,7 +945,8 @@ func enemy_spec(id := -1) -> Dictionary:
 		if roll <= 0.0:
 			pick = entry[0]
 			break
-	return {"ship": SHIPS_DIR % pick, "name": "", "hull_bonus": int(stage.get("hull_bonus", 0)) + per_sector}
+	return {"ship": SHIPS_DIR % pick, "name": "", "hull_bonus": int(stage.get("hull_bonus", 0)) + per_sector,
+		"weapons": stage.get("weapons", []), "shield_bonus": int(stage.get("shield_bonus", 0))}
 
 
 ## Baut das Gegnerschiff für den Knoten samt Besatzung (Kapitänin, Schütze, Mechaniker).
@@ -948,10 +960,33 @@ func create_enemy(id := -1) -> ShipState:
 	var enemy := ShipState.new(layout)
 	enemy.max_hull += spec.hull_bonus
 	enemy.hull = enemy.max_hull
+	enemy.repair_speed = float(_enemy_table.get("repair_speed", 1.0))
+	_arm_enemy(enemy, spec.get("weapons", []), int(spec.get("shield_bonus", 0)))
 	for crew_spec in [[Loc.t("Kapitänin"), "cockpit"], [Loc.t("Schütze"), "waffen"], [Loc.t("Mechaniker"), "schilde"]]:
 		var console: Vector2i = layout.console_of(layout.room_index_by_id(crew_spec[1]))
 		enemy.add_crew(crew_spec[0], "mensch", console, {crew_spec[1]: 1.0})
 	return enemy
+
+
+## Tiefer im Universum: zusätzliche Waffen und Schildbalken. Reaktor und Waffensystem wachsen mit,
+## damit alles Energie hat.
+static func _arm_enemy(enemy: ShipState, weapons: Array, shield_bonus: int) -> void:
+	var reactor := enemy.get_system("reaktor")
+	for id: Variant in weapons:
+		if not Weapon.known(str(id)):
+			continue
+		var w := Weapon.create(str(id))
+		w.wanted = true
+		enemy.weapons.append(w)
+		enemy.get_system("waffen").capacity += w.cost
+		reactor.capacity += w.cost
+	var shields := enemy.get_system("schilde")
+	if shield_bonus > 0 and shields:
+		shields.capacity += shield_bonus
+		shields.wanted += shield_bonus
+		reactor.capacity += shield_bonus
+	enemy._rebalance()
+	enemy.shield_layers = enemy.max_shield_layers()
 
 
 # --- Schiffsausbau (Knopf SCHIFF, nur außerhalb des Kampfs) ---
