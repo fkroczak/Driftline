@@ -151,8 +151,35 @@ func level(id: String) -> int:
 	return sys.level() if sys else 0
 
 
+## Verfügbare Energie: Reaktor plus Batterie (beide verlieren Balken, wenn sie getroffen werden).
 func reactor_output() -> int:
-	return level("reaktor")
+	return level("reaktor") + level("batterie")
+
+
+## Batterie in den ersten freien Erweiterungsraum einbauen (oder in `room_id`). Falsch, wenn schon
+## eine an Bord ist oder kein Erweiterungsraum frei ist.
+func install_battery(bars := 2, room_id := "") -> bool:
+	if systems.has("batterie"):
+		return false
+	var room := layout.room_index_by_id(room_id) if room_id != "" else -1
+	if room < 0:
+		for i in layout.rooms.size():
+			if layout.rooms[i].system == "" and str(layout.rooms[i].id).begins_with("erweiterung"):
+				room = i
+				break
+	if room < 0 or layout.rooms[room].system != "":
+		return false
+	layout.rooms[room].system = "batterie"
+	layout.rooms[room].name = "Batterie"  # i18n
+	systems["batterie"] = ShipSystem.new("batterie", bars)
+	_rebalance()
+	return true
+
+
+## Raum der Batterie ("" = keine).
+func battery_room_id() -> String:
+	var room := layout.room_of_system("batterie")
+	return str(layout.rooms[room].id) if room >= 0 else ""
 
 
 func power_used() -> int:
@@ -496,6 +523,9 @@ func _update_crew_health(delta: float) -> void:
 			if member.hp < member.max_hp and member.activity == "":
 				member.activity = "heilen"
 			member.hp = minf(member.hp + level("medbay") * HEAL_PER_LEVEL * heal * delta, member.max_hp)
+		var regen := float(Species.value(member.species, "regen", 0.0))
+		if regen > 0.0 and damage <= 0.0 and member.hp < member.max_hp:
+			member.hp = minf(member.hp + regen * delta, member.max_hp)  # Petrani wachsen nach
 		if damage > 0.0:
 			_hurt(member, damage * delta)
 

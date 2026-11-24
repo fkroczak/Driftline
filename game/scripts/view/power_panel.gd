@@ -20,6 +20,8 @@ const COLOR_ON := Color("#5DCAA5")
 const COLOR_OFF := Color("#2A2F3A")
 const COLOR_BROKEN := Color("#E24B4A")
 const COLOR_REACTOR := Color("#FAC775")
+const COLOR_BATTERY := Color("#F4C0D1")
+const COLOR_BATTERY_USED := Color("#8A2E4F")
 const COLOR_HALF := Color("#FAC775")
 const LONG_PRESS_MS := 400
 
@@ -70,22 +72,34 @@ func _draw() -> void:
 	# Reaktor: unten freie Balken (gelb), darüber belegte (dunkel), oben zerstörte (rot)
 	var reactor := state.get_system("reaktor")
 	if reactor:
-		var free := state.power_free()
-		# Über 12 Balken: zwei schmale Spalten nebeneinander (Balken i links, i+1 rechts)
-		var double := reactor.capacity > 12
-		var step := _step(ceili(reactor.capacity / 2.0) if double else reactor.capacity, 8)
-		var w := (REACTOR_W - 5) / 2.0 if double else REACTOR_W - 4.0
-		for i in reactor.capacity:
-			var color := COLOR_OFF
-			if i >= reactor.usable():
-				color = COLOR_BROKEN
-			elif i < free:
-				color = COLOR_REACTOR
-			var row := i / 2 if double else i
-			var x := 3.0 + (w + 1.0) * (i % 2) if double else 3.0
-			draw_rect(Rect2(Vector2(x, HEIGHT - 4 - row * step), Vector2(w, step - 1)), color)
+		_draw_reactor(reactor)
 	for c in _columns.size():
 		_draw_column(c)
+
+
+## Reaktor (gelb = frei, dunkel = belegt, rot = zerstört), darüber die Batterie (pink = frei).
+func _draw_reactor(reactor: ShipSystem) -> void:
+	var battery := state.get_system("batterie")
+	var total := reactor.capacity + (battery.capacity if battery else 0)
+	var free := state.power_free()
+	# Über 12 Balken: zwei schmale Spalten nebeneinander (Balken i links, i+1 rechts)
+	var double := total > 12
+	var step := _step(ceili(total / 2.0) if double else total, 8)
+	var w := (REACTOR_W - 5) / 2.0 if double else REACTOR_W - 4.0
+	# Reihenfolge von unten: nutzbare Reaktor- und Batteriebalken (frei zuerst), dann zerstörte
+	var usable := reactor.usable() + (battery.usable() if battery else 0)
+	for i in total:
+		var color := COLOR_OFF
+		var from_battery := battery != null and i >= reactor.usable() and i < usable
+		if i >= usable:
+			color = COLOR_BROKEN
+		elif from_battery:
+			color = COLOR_BATTERY if i < free else COLOR_BATTERY_USED
+		elif i < free:
+			color = COLOR_REACTOR
+		var row := i / 2 if double else i
+		var x := 3.0 + (w + 1.0) * (i % 2) if double else 3.0
+		draw_rect(Rect2(Vector2(x, HEIGHT - 4 - row * step), Vector2(w, step - 1)), color)
 
 
 func _draw_column(c: int) -> void:

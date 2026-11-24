@@ -7,7 +7,7 @@ extends RefCounted
 ## gerade wirklich (begrenzt durch Schaden und freie Reaktorleistung, siehe ShipState).
 
 ## Systeme ohne eigene Energie: Sie laufen, solange sie nicht ganz zerstört sind.
-const PASSIVE := ["cockpit", "reaktor"]
+const PASSIVE := ["cockpit", "reaktor", "batterie"]
 ## Sekunden, die eine Person für einen Balken Reparatur braucht.
 const REPAIR_TIME := 4.0
 

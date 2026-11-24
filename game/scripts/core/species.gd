@@ -65,3 +65,24 @@ static func pick(rng: RandomNumberGenerator) -> String:
 		if roll <= 0.0:
 			return id
 	return DEFAULT
+
+
+## Geschlecht zum Namen: "w" oder "m". Aus names_w/names_m bzw. genders, sonst aus dem Namen gewürfelt.
+static func gender_of(id: String, p_name: String) -> String:
+	var fixed: Dictionary = value(DEFAULT, "genders", {})
+	if fixed.has(p_name):
+		return str(fixed[p_name])
+	if (value(id, "names_w", []) as Array).has(p_name):
+		return "w"
+	if (value(id, "names_m", []) as Array).has(p_name):
+		return "m"
+	return "w" if absi(hash(p_name)) % 2 == 0 else "m"
+
+
+## Farbvariante (0–2) zum Namen, damit dieselbe Person immer gleich aussieht.
+static func look_of(p_name: String) -> int:
+	return absi(hash(p_name + "#look")) % 3
+
+
+static func gender_label(gender: String) -> String:
+	return Loc.t("weiblich") if gender == "w" else Loc.t("männlich")

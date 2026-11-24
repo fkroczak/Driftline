@@ -93,6 +93,7 @@ var menu_button: HudButton
 ## Schiffsausbau: Knopf SCHIFF oben und die Überlagerung mit Systemen, Waffen und Perks.
 var ship_button: HudButton
 var ship_panel: ShipPanel
+var shop_panel: ShopPanel
 var settings_panel: SettingsPanel
 var coach: TutorialCoach
 ## Tutorial: Energie wurde verteilt, Tür oder Schleuse geschaltet, Kampf gewonnen.
@@ -174,6 +175,16 @@ func _setup_menu() -> void:
 	hud.add_child(ship_panel)
 	ship_panel.changed.connect(_on_refit)
 	ship_panel.closed.connect(func() -> void: Game.save())
+	shop_panel = ShopPanel.new()
+	hud.add_child(shop_panel)
+	shop_panel.changed.connect(func() -> void:
+		_on_refit()
+		crew_panel.setup(state)
+		_discover()
+		Game.save())
+	shop_panel.closed.connect(func() -> void:
+		Game.save()
+		_layout())
 	settings_panel = SettingsPanel.new()
 	settings_panel.in_game = true
 	settings_panel.tutorial = Game.tutorial
@@ -300,7 +311,7 @@ func _enter_node() -> void:
 		return
 	if not run.dialog.is_empty():
 		_phase = "ruhe"
-		dialog.show_dialog(run.dialog)
+		_show_run_dialog()
 		Sfx.play("dialog_open")
 		return
 	if run.needs_battle():
@@ -540,13 +551,22 @@ func _warp_in(done: Callable) -> void:
 # --- Dialoge ---
 
 
+## Offener Dialog des Runs: der Händler als eigener Bildschirm, alles andere im Ereignis-Dialog.
+func _show_run_dialog() -> void:
+	if run.is_shop_open():
+		dialog.show_dialog({})
+		shop_panel.open(run)
+	else:
+		dialog.show_dialog(run.dialog)
+
+
 func _on_choice(index: int) -> void:
 	Sfx.play("dialog_choice")
 	call_deferred("_discover")
 	run.choose(index)
 	Game.save()
 	if not run.dialog.is_empty():
-		dialog.show_dialog(run.dialog)
+		_show_run_dialog()
 		return
 	dialog.show_dialog({})
 	if run.result != "":
@@ -560,7 +580,7 @@ func _on_distress() -> void:
 		Sfx.play("distress")
 		Game.save()
 		_close_map()
-		dialog.show_dialog(run.dialog)
+		_show_run_dialog()
 
 
 # --- Pause ---
@@ -679,7 +699,7 @@ func _layout() -> void:
 	_place_crew_card()
 	coach.left_x = crew_panel.position.x + crew_panel.slot().x + 4.0
 	coach.top_y = TOP + 2.0
-	for c: Control in [damage_flash, warp_flash, banner, legend, pause_overlay, dialog, map_view, coach, settings_panel, ship_panel]:
+	for c: Control in [damage_flash, warp_flash, banner, legend, pause_overlay, dialog, map_view, coach, settings_panel, ship_panel, shop_panel]:
 		c.position = Vector2.ZERO
 		c.size = view_size
 	pause_label.size.x = view_size.x
@@ -710,9 +730,10 @@ func _process(delta: float) -> void:
 	_update_info()
 	_place_crew_card()
 	enemy_view.show_jump = battle != null and battle.enemy_fleeing
+	enemy_view.sensor_level = state.level("sensoren")
 	_update_sound_loops()
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende" \
-			or settings_panel.visible or ship_panel.visible or coach.wants_pause():
+			or settings_panel.visible or ship_panel.visible or shop_panel.visible or coach.wants_pause():
 		return  # Spiel steht, Befehle gehen trotzdem
 	delta *= Settings.speed()
 	if battle:
@@ -921,6 +942,11 @@ func _ambient_effects(view: ShipView, delta: float) -> void:
 func _on_enemy_room(room: int) -> void:
 	if battle == null:
 		return
+	if not enemy_view.can_see_rooms():
+		_show_hint(Loc.t("Unbekannter Raum · mit Energie in den Sensoren erkennst du die Systeme"), 3.0)
+	else:
+		var r: Dictionary = battle.enemy.layout.rooms[room]
+		_show_hint(Loc.t("Ziel: %s") % Loc.t(r.name))
 	var idx := weapon_panel.selected
 	if idx >= 0:
 		battle.set_weapon_target(idx, -1 if state.weapons[idx].target == room else room)

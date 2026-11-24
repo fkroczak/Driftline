@@ -128,7 +128,9 @@ def meta(name):
     }
 
 
-def build_svg(name):
+def build_svg(name, with_icons=False):
+    """Ohne Raumsymbole: Welcher Raum was ist, zeigt das Spiel erst mit Sensoren (und die Räume
+    werden je Gegner neu verteilt)."""
     sp = SHIPS[name]
     W, H = sp["size"]
     X0, Y0 = sp["origin"]
@@ -174,7 +176,8 @@ def build_svg(name):
             for j in range(h):
                 f = "#2B3249" if (i + j) % 2 == 0 else "#20263A"
                 s.append(f'<rect x="{x + i * T}" y="{y + j * T}" width="{T}" height="{T}" fill="{f}"/>')
-        s.append(icon_svg(label, x + w * T / 2 - 6, y + h * T / 2 - 6))
+        if with_icons:
+            s.append(icon_svg(label, x + w * T / 2 - 6, y + h * T / 2 - 6))
     for rid, label, system, c, r, w, h, _ in sp["rooms"]:
         x, y = X0 + c * T, Y0 + r * T
         s.append(f'<rect x="{x}" y="{y}" width="{w * T}" height="{h * T}" fill="none" stroke="#0A0B16" stroke-width="2"/>')

@@ -15,6 +15,9 @@ const REPAIR_LEVEL_BONUS := 0.1
 
 var display_name: String
 var species: String
+## "w" oder "m" und Farbvariante 0–2 (Grafik assets/crew/<spezies>_<w|m><n>_*), aus dem Namen.
+var gender := "w"
+var look := 0
 ## "captain" oder "" (die übrigen Aufgaben ergeben sich aus der Erfahrung).
 var role := ""
 var max_hp := MAX_HP
@@ -40,6 +43,8 @@ var activity_tile := Vector2i.ZERO
 func _init(p_name: String, p_species: String, p_tile: Vector2i) -> void:
 	display_name = p_name
 	species = p_species if Species.known(p_species) else Species.DEFAULT
+	gender = Species.gender_of(species, p_name)
+	look = Species.look_of(p_name)
 	tile = p_tile
 	home_tile = p_tile
 	max_hp = float(Species.value(species, "hp", MAX_HP))

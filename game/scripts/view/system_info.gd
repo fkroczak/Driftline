@@ -11,7 +11,7 @@ const ENTRIES := [
 	["cockpit", "Cockpit", "Pilot hier = Ausweichen und Sprung"],  # i18n
 	["lebenserhaltung", "Lebenserhaltung", "füllt Sauerstoff in allen Räumen nach"],  # i18n
 	["medbay", "Medbay", "heilt Crew, die im Raum steht"],  # i18n
-	["sensoren", "Sensoren", "noch ohne Wirkung (später: Gegner sehen)"],  # i18n
+	["sensoren", "Sensoren", "1 Balken: Räume des Gegners, 2: seine Crew, 3: seine Energie"],  # i18n
 	["", "Erweiterung", "freier Platz für spätere Module"],  # i18n
 ]
 

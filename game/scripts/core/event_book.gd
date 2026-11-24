@@ -51,7 +51,7 @@ func pick(pool: String, rng: RandomNumberGenerator, exclude := {}) -> String:
 
 ## Prüft alle Ereignisse auf Tippfehler in Effekten und Bedingungen. Liefert Fehlertexte.
 func validate() -> Array[String]:
-	const EFFECTS := ["scrap", "fuel", "hull", "hull_full", "crew_hp", "crew_lose", "crew_add", "species", "flag", "weapon", "quest"]
+	const EFFECTS := ["scrap", "fuel", "hull", "hull_full", "crew_hp", "crew_lose", "crew_add", "species", "flag", "weapon", "quest", "battery"]
 	var errors: Array[String] = []
 	for id: String in events:
 		var e: Dictionary = events[id]

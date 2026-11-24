@@ -1,12 +1,14 @@
 {
-  "_doc": "Schiffsausbau (Knopf SCHIFF, nur außerhalb des Kampfs) und Händlerwaren. systems: je System max = höchste Stufe, Preis für den nächsten Balken = base + step × bisher gekaufte Balken. perks: einmalige Module; Wirkung über die Schlüssel hull (Hülle +n), weapon_speed (Waffen laden schneller, 0.15 = 15 %), evasion (Ausweichen +), drone_repair (Reparatur ohne Crew in Personen je System), fire_factor (Feuer wächst und breitet sich mit diesem Faktor aus), loot_bonus (Rohstoffe nach Siegen +), free_jump (Chance, dass ein Sprung keinen Treibstoff kostet). weapon_storage: Plätze im Waffenlager. sell_factor: Anteil des Kaufpreises beim Verkauf. shop_weapons: Waffen im Angebot je Händler. crew: Preis je Spezies beim Anheuern, offers = Angebote je Händler.",
+  "_doc": "Schiffsausbau (Knopf SCHIFF, nur außerhalb des Kampfs) und Händlerwaren. systems: je System max = höchste Stufe, Preis für den nächsten Balken = base + step × bisher gekaufte Balken. perks: einmalige Module; Wirkung über die Schlüssel hull (Hülle +n), weapon_speed (Waffen laden schneller, 0.15 = 15 %), evasion (Ausweichen +), drone_repair (Reparatur ohne Crew in Personen je System), fire_factor (Feuer wächst und breitet sich mit diesem Faktor aus), loot_bonus (Rohstoffe nach Siegen +), free_jump (Chance, dass ein Sprung keinen Treibstoff kostet). Batterie: erst beim Händler kaufen (battery_price, bei battery_chance der Händler im Angebot; kommt mit battery_bars Balken in einen freien Erweiterungsraum), danach im Schiffsausbau bis max erweiterbar; jeder Balken ist zusätzliche Energie. weapon_storage: Plätze im Waffenlager. sell_factor: Anteil des Kaufpreises beim Verkauf. shop_weapons: Waffen im Angebot je Händler. shop_perks: Perks im Angebot je Händler (zufällig aus denen, die noch nicht an Bord sind; Perks gibt es nur beim Händler). crew: Preis je Spezies beim Anheuern, offers = Angebote je Händler.",
   "systems": {
     "reaktor": {"max": 20, "base": 10, "step": 3},
     "schilde": {"max": 8, "base": 25, "step": 10},
     "waffen": {"max": 6, "base": 20, "step": 8},
     "antrieb": {"max": 5, "base": 15, "step": 8},
+    "sensoren": {"max": 3, "base": 15, "step": 10},
     "medbay": {"max": 3, "base": 15, "step": 10},
-    "lebenserhaltung": {"max": 3, "base": 15, "step": 10}
+    "lebenserhaltung": {"max": 3, "base": 15, "step": 10},
+    "batterie": {"max": 4, "base": 0, "step": 15}
   },
   "perks": {
     "panzerung": {"name": "Verstärkte Panzerung", "text": "Hülle +6, als Maximum und sofort", "price": 30, "hull": 6},
@@ -17,8 +19,12 @@
     "bergungsgreifer": {"name": "Bergungsgreifer", "text": "+25 % Rohstoffe nach jedem Sieg", "price": 30, "loot_bonus": 0.25},
     "treibstoffrecycler": {"name": "Treibstoffrecycler", "text": "Jeder Sprung kostet mit 25 % Chance keinen Treibstoff", "price": 35, "free_jump": 0.25}
   },
+  "battery_bars": 2,
+  "battery_price": 55,
+  "battery_chance": 0.4,
   "weapon_storage": 2,
   "sell_factor": 0.5,
-  "shop_weapons": 2,
+  "shop_weapons": 3,
+  "shop_perks": 2,
   "crew": {"offers": 2, "price": {"mensch": 20, "kithra": 25, "androide": 30, "veyari": 25, "ormok": 25, "petrani": 30}}
 }

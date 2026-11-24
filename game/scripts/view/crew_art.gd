@@ -1,7 +1,9 @@
 class_name CrewArt
 extends RefCounted
 ## Grafiken der Crew je Spezies: Figur an Bord (Sheet mit 4 Richtungen, je 16 × 16) und Porträt
-## (40 × 44, Blick nach unten) aus assets/crew/. Fehlt eine Datei, gilt der Mensch.
+## (40 × 44, Blick nach unten) aus assets/crew/. Je Person gibt es Varianten nach Geschlecht und
+## Farbe (<spezies>_<w|m><0-2>_..., tools/artgen/crew_variants.py). Fehlt eine Datei, gilt die
+## Grundform der Spezies, dann der Mensch.
 ## Der Porträtausschnitt richtet sich nach `face` in data/species.json (Mitte des Kopfs im Porträt).
 
 const SHEET := "res://assets/crew/%s_klein_sheet.png"
@@ -17,6 +19,22 @@ static func sheet(species: String) -> Texture2D:
 
 static func portrait(species: String) -> Texture2D:
 	return _texture(PORTRAIT, species)
+
+
+## Figur und Porträt einer bestimmten Person (Geschlecht und Farbvariante).
+static func sheet_of(species: String, gender: String, look: int) -> Texture2D:
+	return _variant(SHEET, species, gender, look)
+
+
+static func portrait_of(species: String, gender: String, look: int) -> Texture2D:
+	return _variant(PORTRAIT, species, gender, look)
+
+
+static func _variant(pattern: String, species: String, gender: String, look: int) -> Texture2D:
+	var key := pattern % ("%s_%s%d" % [species, gender, look])
+	if not _cache.has(key):
+		_cache[key] = load(key) if ResourceLoader.exists(key) else _texture(pattern, species)
+	return _cache[key]
 
 
 static func _texture(pattern: String, species: String) -> Texture2D:

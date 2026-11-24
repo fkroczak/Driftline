@@ -13,6 +13,9 @@ extends Node2D
 ##
 ## Gegnerschiff (hostile = true): Einen Raum antippen meldet room_tapped (Ziel wählen).
 ## Fadenkreuze zeigen die Ziele der eigenen Waffen mit ihrer Nummer.
+## Was man im Gegnerschiff sieht, hängt an den eigenen Sensoren (`sensor_level`):
+## 0 = nur der Grundriss, 1 = welcher Raum welches System ist (Symbole, Konsolen),
+## 2 = zusätzlich die Besatzung, 3 = zusätzlich die Energie je System.
 
 signal selection_changed(member: CrewMember, room_idx: int)
 signal room_tapped(room_idx: int)
@@ -57,6 +60,8 @@ const FIRE_COLORS := [Color("#D85A30"), Color("#EF9F27"), Color("#FDE6BF")]
 const LONG_PRESS_MS := 400
 
 @export var hostile := false
+## Sensorstufe des Spielers (nur für das Gegnerschiff wichtig).
+var sensor_level := 3
 
 var state: ShipState
 var selected: CrewMember
@@ -106,7 +111,7 @@ func setup(p_state: ShipState) -> void:
 
 func _add_sprite(member: CrewMember) -> void:
 	var sprite := Sprite2D.new()
-	sprite.texture = CrewArt.sheet(member.species)
+	sprite.texture = CrewArt.sheet_of(member.species, member.gender, member.look)
 	sprite.hframes = 4
 	if hostile:
 		sprite.modulate = Color(1.0, 0.82, 0.78)
@@ -184,6 +189,7 @@ func _sync_crew() -> void:
 			if member == last_order:
 				last_order = null
 			continue
+		sprite.visible = can_see_crew()
 		sprite.position = state.layout.tile_center(member.tile_position()).round()
 		sprite.frame = FRAME_BY_FACING.get(member.facing, 0)
 		# Arbeiten sichtbar machen: Hämmern wippt, Löschen zittert leicht
@@ -201,6 +207,10 @@ func _draw() -> void:
 	var layout := state.layout
 	_draw_engines()
 	draw_texture(_ship_texture, Vector2.ZERO, Color(state.layout.stats.get("tint", "#ffffff")))
+	if hostile:
+		_draw_room_info()
+	else:
+		_draw_installed_rooms()
 	_draw_oxygen()
 	_draw_doors()
 	_draw_airlocks()
@@ -218,9 +228,9 @@ func _draw() -> void:
 	# Konsolen: kleine Leiste an der Kachel, grün wenn besetzt
 	for room in layout.rooms.size():
 		var console: Variant = layout.console_of(room)
-		if console == null:
+		if console == null or not can_see_rooms():
 			continue
-		var color := COLOR_CONSOLE_MANNED if state.operator_of(room) else COLOR_CONSOLE_FREE
+		var color := COLOR_CONSOLE_MANNED if state.operator_of(room) and can_see_crew() else COLOR_CONSOLE_FREE
 		var top_left := layout.tile_center(Vector2(console)) - Vector2(7, 7)
 		draw_rect(Rect2(top_left + Vector2(4, 1), Vector2(6, 2)), color)
 	# Ziele aller laufenden Figuren
@@ -238,7 +248,51 @@ func _draw() -> void:
 		_draw_hull_bar()
 
 
-## Triebwerksflammen: Länge folgt der Antriebsenergie, flackern leicht.
+## Eigenes Schiff: nachträglich eingebaute Systeme (Batterie) überdecken das „+“ des Erweiterungsraums.
+func _draw_installed_rooms() -> void:
+	var layout := state.layout
+	for room in layout.rooms.size():
+		if layout.rooms[room].system != "batterie":
+			continue
+		var rect := layout.room_rect(room)
+		var t := layout.tile_size
+		for tx in int(rect.size.x / t):
+			for ty in int(rect.size.y / t):
+				var c := Color("#2B3249") if (tx + ty) % 2 == 0 else Color("#20263A")
+				draw_rect(Rect2(rect.position + Vector2(tx * t, ty * t), Vector2(t, t)), c)
+		SystemIcons.draw(self, rect.get_center(), "batterie")
+
+
+func can_see_rooms() -> bool:
+	return not hostile or Sensors.shows_rooms(sensor_level)
+
+
+func can_see_crew() -> bool:
+	return not hostile or Sensors.shows_crew(sensor_level)
+
+
+func can_see_power() -> bool:
+	return not hostile or Sensors.shows_power(sensor_level)
+
+
+## Gegnerschiff: Raumsymbole (ab Sensorstufe 1) und Energiebalken je System (ab Stufe 3).
+## Ohne Sensoren nur ein Fragezeichen je Raum.
+func _draw_room_info() -> void:
+	var layout := state.layout
+	var font := ThemeDB.fallback_font
+	for room in layout.rooms.size():
+		var rect := layout.room_rect(room)
+		var system: String = layout.rooms[room].system
+		if not can_see_rooms():
+			draw_string(font, rect.get_center() + Vector2(-2, 3), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1, 1, 1, 0.25))
+			continue
+		SystemIcons.draw(self, rect.get_center(), system)
+		var sys: ShipSystem = state.systems.get(system)
+		if not can_see_power() or sys == null or system in ["reaktor", "cockpit"]:
+			continue
+		for b in sys.capacity:
+			var color := Color("#5DCAA5") if b < sys.power else (COLOR_DAMAGE if b >= sys.usable() else Color("#2A2F3A"))
+			draw_rect(Rect2(rect.position + Vector2(2 + b * 3, rect.size.y - 4), Vector2(2, 2)), color)
 func _draw_engines() -> void:
 	var level := state.level("antrieb")
 	if level <= 0 or state.is_destroyed():
@@ -365,6 +419,8 @@ func _draw_fires() -> void:
 
 ## Über den Figuren: Tätigkeitssymbol und (wenn verletzt) ein kleiner Lebensbalken.
 func _draw_crew_health() -> void:
+	if not can_see_crew():
+		return
 	for member in state.crew:
 		var head := state.layout.tile_center(member.tile_position()).round()
 		if member.activity != "":

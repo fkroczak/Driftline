@@ -50,6 +50,11 @@ static func price_of(weapon_id: String) -> int:
 	return int((_defs.get(weapon_id, {}) as Dictionary).get("price", 30))
 
 
+static func text_of(weapon_id: String) -> String:
+	_load_defs()
+	return Loc.t(str((_defs.get(weapon_id, {}) as Dictionary).get("text", "")))
+
+
 static func name_of(weapon_id: String) -> String:
 	_load_defs()
 	return Loc.t(str((_defs.get(weapon_id, {}) as Dictionary).get("name", weapon_id)))
