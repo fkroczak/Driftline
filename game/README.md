@@ -32,7 +32,7 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 
 ### Die Jagd
 
-- **4 Sektoren**, je mit einem Boss am Ausgang (rechts auf der Karte). Nach dem Sieg über den Boss springt das Schiff von selbst in den nächsten Sektor (neue Karte, Front von vorn). Nach dem vierten ist der Run geschafft.
+- **4 Sektoren**, je mit einem Boss am Ausgang (rechts auf der Karte). Nach dem Sieg über den Boss ist das Schiff direkt im nächsten Sektor, ohne eigenen Sprung: Das Flaggschiff explodiert, ein kurzer Lichtblitz, dann neue Karte und neue Sterne, die Front beginnt von vorn. Nach dem vierten ist der Run geschafft.
 - **Jägerfront:** Sie rückt mit jedem Sprung um 0,1 Kartenbreite von links vor (rote Fläche, gestrichelt die Lage nach dem nächsten Sprung). Nach 10 Sprüngen hat sie den Ausgang erreicht. Einen Sprungzähler gibt es nicht mehr, die Front auf der Karte zeigt die Lage.
 - **Springen kann man trotzdem, solange Treibstoff da ist.** Jedes System hinter der Front ist von den Jägern besetzt: Wer dort ankommt (auch zurück in besuchte Systeme), kämpft gegen eine **Jäger-Fregatte** (Hülle 22, Reaktor 9, Pulslaser, Schwerlaser und Bordkanone). Ab Sprung 11 kommen je Sprung 2 Hülle dazu. Händler und Ereignisse hinter der Front sind weg. Der Sieg bringt wenig Beute (4–8 Rohstoffe); die Flucht ist der Notausgang.
 - **Vorwarnung:** Das Infofeld auf der Karte zeigt „Jäger in 1/2 Sprüngen hier“.

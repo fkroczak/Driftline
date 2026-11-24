@@ -28,7 +28,8 @@ const WIDE_SCREEN := 440.0
 const WARP_OUT := 0.9
 const WARP_IN := 1.0
 const VICTORY_BANNER := 2.6
-const SECTOR_DELAY := 3.0
+## Nach dem Boss-Sieg: so lange explodiert das Flaggschiff, bevor der neue Sektor erscheint.
+const SECTOR_SWITCH_DELAY := 1.2
 const MAP_JUMP_TIME := 0.6
 
 var run: RunState
@@ -263,13 +264,7 @@ func _enter_node() -> void:
 		_show_run_over()
 		return
 	if run.sector_cleared:
-		_phase = "ruhe"
-		var text := Loc.t("Flaggschiff vernichtet – Sektor %d geschafft") % run.sector
-		if run.last_reward != "":
-			text += "\n" + Loc.t("Beute: ") + run.last_reward
-		_show_banner_text(text + "\n" + Loc.t("Sprung ins nächste Universum …"), SECTOR_DELAY)
-		Sfx.play("sector_clear")
-		get_tree().create_timer(SECTOR_DELAY).timeout.connect(_sector_jump)
+		_enter_next_sector()
 		return
 	if not run.dialog.is_empty():
 		_phase = "ruhe"
@@ -446,16 +441,26 @@ func _arrive() -> void:
 	_warp_in(_enter_node)
 
 
-func _sector_jump() -> void:
-	if not run.sector_cleared:
-		return
-	_phase = "warp"
-	Game.can_save = false
-	_warp_out(func() -> void:
+## Nach dem Boss (Jagd): kein eigener Sprung, man ist direkt im nächsten Sektor. Erst darf das
+## Flaggschiff noch explodieren, dann wechseln Karte und Sterne unter einem kurzen Lichtblitz.
+## Bis dahin gilt `sector_cleared` (kein Sprung möglich); wird die App jetzt beendet, geht es beim
+## Laden genau hier weiter.
+func _enter_next_sector() -> void:
+	_phase = "ruhe"
+	var text := Loc.t("Flaggschiff vernichtet – Sektor %d geschafft") % run.sector
+	if run.last_reward != "":
+		text += "\n" + Loc.t("Beute: ") + run.last_reward
+	Sfx.play("sector_clear")
+	get_tree().create_timer(SECTOR_SWITCH_DELAY).timeout.connect(func() -> void:
+		if not run.sector_cleared or run.result != "":
+			return
 		run.next_sector()
 		Game.save()
-		_arrive()
-		_show_hint(Loc.t("Sektor %d · neue Karte, die Jäger beginnen von vorn") % run.sector if run.is_hunt() else Loc.t("Sektor %d") % run.sector, 4.0))
+		map_view.refresh()
+		starfield.reseed(hash([run.seed_value, run.sector, run.current, run.total_jumps]))
+		warp_flash.color = Color(0.85, 0.9, 1.0, 0.8)
+		create_tween().tween_property(warp_flash, "color", Color(0.85, 0.9, 1.0, 0.0), 0.6)
+		_show_banner_text(text + "\n" + Loc.t("Willkommen in Sektor %d · die Jäger beginnen von vorn") % run.sector, VICTORY_BANNER + 1.0))
 
 
 ## Abflug: Blase baut sich auf, Schiff leuchtet, schießt nach rechts davon, Sterne werden zu Streifen.
