@@ -3,7 +3,7 @@ extends Control
 ## und „Neuer Run“. Ein neuer Run überschreibt einen gespeicherten erst nach einem zweiten Antippen.
 
 const CARD := Vector2(172, 118)
-const COLOR_TITLE := Color("#FDE6BF")
+const LOGO := preload("res://assets/ui/logo.png")
 const MODES := [
 	{"id": RunState.MODE_HUNT, "name": "DIE JAGD", "color": Color("#E24B4A"),
 		"text": ["4 Sektoren, je ein Boss am Ausgang.", "Die Jägerfront rückt mit jedem", "Sprung vor: nach 10 Sprüngen", "holt sie dich ein."]},
@@ -33,9 +33,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var title := "HULLBOUND"
-	var tw := HudStyle.text_width(title, 22)
-	HudStyle.text(self, Vector2(roundf((size.x - tw) / 2.0), 34), title, COLOR_TITLE, -1, 22)
+	draw_texture(LOGO, Vector2(roundf((size.x - LOGO.get_width()) / 2.0), 9))
 	var sub := "Raumschiff-Roguelike"
 	HudStyle.text(self, Vector2(roundf((size.x - HudStyle.text_width(sub)) / 2.0), 46), sub, HudStyle.COLOR_DIM)
 	_buttons.clear()

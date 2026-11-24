@@ -47,7 +47,7 @@ def damaged(cv, m, rnd, cracks, hole, scorch_r=5):
         cv.set(hx + rnd.randint(-5, 9), hy - rnd.randint(8, 18), rnd.choice([C["g7"], C["g8"]]))
 
 
-def logo(transparent=False):
+def logo(transparent=False, subtitle=True):
     L.W, L.H = 256, 72
     cv = L.Canvas(seed=5, stars=not transparent)
     if transparent:
@@ -57,6 +57,8 @@ def logo(transparent=False):
     word = L2.union(m for _, m, _ in ls)
     rnd = random.Random(12)
     damaged(cv, word, rnd, [(x + 14, 16, 26), (x + 104, 16, 26), (x + 150, 16, 26)], (x + 63, 30))
+    if not subtitle:
+        return cv
     s = Mask(); s.text("EIN RAUMSCHIFF-ROGUELIKE", (L.W - L.text_w("EIN RAUMSCHIFF-ROGUELIKE", "mini")) // 2, 52, "mini")
     cv.fill(s, C["r1"])
     return cv
@@ -96,6 +98,11 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     save(logo(), os.path.join(OUT, "logo.png"), (256 * 6, 72 * 6))
     save(logo(True), os.path.join(OUT, "logo_transparent.png"), (256 * 6, 72 * 6))
+    # Menü-Logo in Spielauflösung (1 px = 1 Pixel), transparent, ohne Untertitel, eng beschnitten
+    menu = logo(True, subtitle=False).img
+    menu = menu.crop(menu.getbbox())
+    os.makedirs(os.path.join(ROOT, "game", "assets", "ui"), exist_ok=True)
+    menu.save(os.path.join(ROOT, "game", "assets", "ui", "logo.png"))
     ic = icon()
     for n in (1024, 512, 192, 180, 128):
         save(ic, os.path.join(OUT, f"app_icon_{n}.png"), (n, n))
