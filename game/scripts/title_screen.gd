@@ -44,6 +44,8 @@ func _draw() -> void:
 	var x0 := roundf((size.x - total) / 2.0)
 	for i in MODES.size():
 		_draw_card(Rect2(Vector2(x0 + i * (CARD.x + gap), 58), CARD), MODES[i])
+	var sound := "TON AUS" if Sfx.muted else "TON AN"
+	_button(Rect2(4, size.y - 21, 52, 17), sound, HudStyle.COLOR_DIM if Sfx.muted else HudStyle.COLOR_TEXT, "", "sound")
 	var version := "v" + str(ProjectSettings.get_setting("application/config/version", ""))
 	HudStyle.text(self, Vector2(size.x - HudStyle.text_width(version) - 4, size.y - 4), version, HudStyle.COLOR_DIM)
 
@@ -87,6 +89,10 @@ func _gui_input(event: InputEvent) -> void:
 	for b in _buttons:
 		if not (b.rect as Rect2).grow(2).has_point(event.position):
 			continue
+		Sfx.play("ui_click")
+		if b.action == "sound":
+			Sfx.muted = not Sfx.muted
+			return
 		if b.action == "continue":
 			Game.continue_run(b.mode)
 			Game.to_ship()

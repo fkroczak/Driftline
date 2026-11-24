@@ -52,10 +52,13 @@ func _gui_input(event: InputEvent) -> void:
 	if _doors_rect().grow(1).has_point(event.position):
 		var open := not state.any_door_open()
 		state.set_all_doors(open)
+		Sfx.play("door_open" if open else "door_close")
 		changed.emit("Alle Türen " + ("offen: Luft gleicht sich aus, Feuer kann wandern" if open else "zu"))
 	elif _locks_rect().grow(1).has_point(event.position):
 		if state.any_airlock_open():
 			state.close_airlocks()
+			Sfx.play("airlock_close")
 			changed.emit("Alle Schleusen zu")
 		else:
+			Sfx.play("ui_deny")
 			changed.emit("Schleusen öffnet man einzeln: gelbe Luke am Schiff antippen")

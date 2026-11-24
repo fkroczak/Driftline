@@ -14,6 +14,7 @@ Raumschiff-Roguelike für Android und iOS in Draufsicht, inspiriert von FTL, mit
 | [docs/art-styleguide.md](docs/art-styleguide.md) | Styleguide: Maßstab (Kachel 14 px, Crew 14 px an Bord / 40×44 Porträt), feste Palette, Pipeline, Raumsymbole |
 | [docs/referenz-notizen.md](docs/referenz-notizen.md) | Beobachtungen aus dem Genre-Vorbild: Screens, HUD, Tooltips, Touch-Umsetzung |
 | [docs/schiffe/](docs/schiffe/mensch-frachter.md) | Raumlisten der Schiffe |
+| [tools/sfxgen/](tools/sfxgen/build.py) | Soundeffekte, prozedural mit numpy; `python3 tools/sfxgen/build.py` erzeugt `game/assets/sfx` |
 | [tools/artgen/](tools/artgen/build.py) | Sprite-Pipeline mit fester 62-Farben-Palette; `python3 tools/artgen/build.py` erzeugt `art/export`, `art/preview`, `art/palette` |
 
 ## Eckdaten
