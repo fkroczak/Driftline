@@ -24,6 +24,7 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
   - **Waffen:** bis zu den Waffenplätzen des Schiffs; reicht das Waffensystem nicht für alle, bekommen die ersten Energie (Hinweis im Reiter). Beim Schiffswechsel gelten wieder die Startwaffen des Schiffs.
 - **Tutorial:** ein Jagd-Run auf fester Karte, der nie gespeichert wird und keinen Spielstand berührt. Alle Nachbarn des Startsystems sind Kämpfe, der erste Sprung führt also sicher zu einem Piratenkutter. 13 Schritte (Crew wählen und bewegen, Energie, Türen, Pause, Sprung, Karte, Ziel wählen, Kampf gewinnen) in einem Kasten oben; ein blinkender Rahmen zeigt auf das Bedienelement. Aufgaben gehen von selbst weiter, sobald sie erledigt sind, Info-Schritte mit WEITER (das Spiel steht so lange). Jeder Schritt lässt sich überspringen, BEENDEN führt ins Hauptmenü (`scripts/view/tutorial_coach.gd`).
 - **Lexikon:** Reiter SCHIFFE und SPEZIES mit Bild, Werten und Beschreibung (`description`/`role` in `data/ships/*.json`, `lore` in `data/species.json`). Freigeschaltet wird über alle Runs hinweg (`user://codex.json`): ein Schiff, sobald man gegen es kämpft, eine Spezies, sobald sie in der eigenen Crew ist. Frachter und Menschen sind von Anfang an bekannt; neue Einträge meldet die Infozeile („Neu im Lexikon: …“). Unbekannte Einträge zeigen nur einen Schatten und einen Hinweis.
+- **Update-Hinweis:** Gibt es unter Releases eine neuere Version, zeigt das Hauptmenü oben ein Banner („Neue Version 0.3.23 verfügbar“, x blendet es aus). Android: LADEN lädt die APK in der App und öffnet den Installationsdialog; iOS: ANSEHEN öffnet die Release-Seite. Details unter **Android-APK → Updates in der App**.
 - **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Sprache (Deutsch/English), Ton, Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
 
 ### Mehrsprachigkeit
@@ -231,6 +232,7 @@ Logik und Darstellung sind getrennt, damit Spielregeln testbar bleiben und Einga
 | `scripts/core/settings.gd`, `scripts/core/codex.gd` | `Settings` (Einstellungen laden, speichern, anwenden) und `Codex` (entdeckte Schiffe und Spezies) |
 | `scripts/view/` | Darstellung und Eingabe: `SettingsPanel`, `CodexView` (Lexikon), `TutorialCoach`, `ShipView` (eigenes und Gegnerschiff), `Effects` (auch Warpblase), `Starfield` (mit Lichtstreifen), `HudStyle` und `HudButton` (Kasten-Look), `StatusBar`, `ResourceBar`, `JumpButton`, `PowerPanel`, `WeaponPanel`, `DoorPanel`, `CrewPanel`, `CrewCard`, `MapView` (Sternenkarte als Überlagerung), `EventDialog` (Ereignis-, Händler- und Werftdialog), `ShipPanel` (Schiffsausbau), `LoadoutView` (Startauswahl) |
 | `scripts/core/save_game.gd` | `SaveGame`: Spielstand speichern und laden, Formatversion und Migration |
+| `scripts/updater.gd`, `scripts/core/update_check.gd` | Autoload `Updater`: fragt beim Start die GitHub-Releases ab, Banner im Hauptmenü, lädt und öffnet die APK (Android); `UpdateCheck`: Versionsvergleich und Wahl der Release-Datei (ohne Netz, getestet) |
 | `scripts/sfx.gd` | Autoload `Sfx`: Effekte abspielen (16 Stimmen, Tonhöhe leicht variiert), Schleifen mit Pegel, Ton aus/an |
 | `assets/sfx/` | Soundeffekte (WAV, erzeugt mit `tools/sfxgen`) |
 | `scripts/game.gd` | Autoload `Game`: hält den Run, wechselt zwischen Hauptmenü und Schiff, speichert je Modus, führt die Rekorde |
@@ -276,6 +278,15 @@ Der iOS-Teil ist derselbe Ablauf wie `ios-ipa.yml` (wird aufgerufen, nur ohne ei
 - **Fester Schlüssel:** Alle Builds werden mit `tools/android/debug.keystore` signiert (Passwort `android`, Alias `androiddebugkey`). Diesen Schlüssel nicht austauschen, sonst muss jedes Handy einmal deinstallieren. Ein Repository-Secret `ANDROID_DEBUG_KEYSTORE_BASE64` hätte Vorrang. Der Schlüssel ist öffentlich und taugt nur für Testversionen; für den Play Store braucht es später einen eigenen, geheimen Release-Schlüssel.
 - **Versionsnummer:** `versionCode` ist die Laufnummer des Workflows und steigt mit jedem Build. Der Versionsname setzt sich aus `config/version` in `project.godot` (z. B. `0.2`) und dieser Nummer zusammen, etwa `0.2.17`. Er steht klein oben rechts auf der Sternenkarte, im Namen der APK und im Release. Für einen neuen Meilenstein nur `config/version` anheben.
 
+**Updates in der App** (`scripts/updater.gd`, Logik in `scripts/core/update_check.gd`):
+
+- Beim Start fragt die App einmal die Releases des Repositorys ab (`api.github.com/repos/fkroczak/Hullbound/releases`: öffentlich, ohne Anmeldung, kein eigener Server; GitHub erlaubt so 60 Abfragen pro Stunde und IP). Die Version steht im Dateinamen der APK (`hullbound-0.3.23-debug.apk`). Ist sie neuer als die eigene, erscheint im Hauptmenü das Banner; ohne Netz erscheint nichts.
+- LADEN lädt die APK nach `user://updates/` (Fortschritt im Banner) und öffnet sie. Android zeigt seinen Installationsdialog, das Update landet über der alten Version, der Spielstand bleibt. Beim ersten Mal fragt Android, ob Hullbound unbekannte Apps installieren darf: einmal erlauben, zurück, INSTALLIEREN. Jedes Update bestätigt man selbst; das verlangt Android bei Apps außerhalb des Play Store.
+- Dafür hat das Preset „Android“ die Berechtigungen `INTERNET` und `REQUEST_INSTALL_PACKAGES`. Die Datei öffnet `OS.shell_open` über Godots eingebauten FileProvider; Plugin oder Gradle-Build sind nicht nötig.
+- Geprüft wird nur in Builds aus dem Release-Workflow (Version mit Build-Nummer), nicht im Editor und nicht am Computer. Jeder Release zählt, auch einer von einem anderen Branch. Releases des reinen iOS-Workflows (`ipa-…`) zählen nicht, der zählt eigene Nummern.
+- Updates melden erst Builds, die diese Funktion haben: die erste solche APK also noch einmal von Hand installieren.
+- **Für den Play Store abschalten:** Dort sind Selbst-Updates und `REQUEST_INSTALL_PACKAGES` nicht erlaubt; Updates kommen dann vom Store.
+
 Einmalig: Builds vor dieser Umstellung hatten jeweils einen zufälligen Schlüssel. Die alte Version also ein letztes Mal deinstallieren (es gibt noch keine Spielstände, es geht nichts verloren).
 
 Lokal aus dem Editor: Exportvorlagen und Android SDK in Godot einrichten, Handy per USB anschließen, oben rechts auf das Android-Symbol klicken (Remote Debug).
@@ -294,6 +305,6 @@ Godot exportiert ein Xcode-Projekt, `xcodebuild` baut daraus die App **ohne Sign
 - **Sideloadly** (Mac/Windows, iPhone per USB) oder **AltStore/SideStore**: IPA auswählen, mit Apple-ID anmelden, installieren.
 - Auf dem iPhone einmalig *Einstellungen → Allgemein → VPN und Geräteverwaltung* dem Entwicklerzertifikat vertrauen; ab iOS 16 außerdem *Datenschutz & Sicherheit → Entwicklermodus* einschalten.
 - Mit einer kostenlosen Apple-ID läuft die App 7 Tage, dann neu signieren (AltStore/SideStore erledigt das automatisch). Mit dem Apple Developer Program (99 €/Jahr) 1 Jahr, und TestFlight wird möglich.
-- **Updates:** Neue IPA mit derselben Bundle-ID drüberinstallieren, der Spielstand (`user://`) bleibt.
+- **Updates:** Neue IPA mit derselben Bundle-ID drüberinstallieren, der Spielstand (`user://`) bleibt. Das Hauptmenü meldet neue Versionen wie bei Android; ANSEHEN öffnet aber nur die Release-Seite, denn iOS lässt eine App sich nicht selbst installieren.
 
 **Bekannt:** Auf iPhones mit Notch oder Dynamic Island kann der Rand der HUD-Leisten im Querformat knapp unter der Aussparung liegen; die sichere Zone (`DisplayServer.get_display_safe_area()`) wird noch nicht berücksichtigt.
