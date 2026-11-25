@@ -1,13 +1,13 @@
 # Dateiname bleibt android-apk.yml: GitHub zählt die Laufnummer je Datei, und die
 # Laufnummer ist der versionCode der APK. Eine neue Datei finge wieder bei 1 an,
 # dann ließe sich die neue APK nicht mehr über die alte installieren.
-# Baut bei jedem Release beide Apps, Android (APK) und iOS (IPA), und veröffentlicht sie
+# Baut bei jedem Release Android (APK), iOS (IPA) und Windows (EXE als ZIP), und veröffentlicht sie
 # gemeinsam als Vorabversion unter „Releases“. Nur auf ausdrücklichen Wunsch:
 #  - Actions → „Release bauen (Android + iOS)“ → „Run workflow“ (Branch wählbar)
 #  - oder ein Tag pushen, z. B. git tag release-0.2 && git push origin release-0.2
 #    (alte „apk-…“-Tags gehen weiter und bauen ebenfalls beide)
 # Das Release entsteht nur, wenn beide Builds geklappt haben.
-name: Release bauen (Android + iOS)
+name: Release bauen (Android + iOS + Windows)
 
 on:
   workflow_dispatch:
@@ -121,6 +121,46 @@ jobs:
           path: build/*.apk
           retention-days: 14
 
+  windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Godot installieren
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -sSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
+          echo "GODOT=$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
+          curl -sSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz 'templates/windows_release_x86_64*' 'templates/version.txt' -d "$RUNNER_TEMP/tpl"
+          dest="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$dest"
+          mv "$RUNNER_TEMP"/tpl/templates/* "$dest/"
+
+      - name: Versionsnummer setzen
+        run: |
+          base=$(sed -n 's/^config\/version="\(.*\)"/\1/p' game/project.godot)
+          name="${base}.${GITHUB_RUN_NUMBER}"
+          sed -i "s/^config\/version=.*/config\/version=\"${name}\"/" game/project.godot
+          echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Windows-EXE exportieren
+        # Eine einzelne EXE mit eingebetteten Spieldaten, gepackt als ZIP
+        run: |
+          "$GODOT" --headless --path game --import
+          mkdir -p build/windows
+          "$GODOT" --headless --path game --export-release "Windows" ../build/windows/Hullbound.exe
+          test -s build/windows/Hullbound.exe
+          (cd build/windows && zip -q -9 "../hullbound-${VERSION_NAME}-windows.zip" Hullbound.exe)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hullbound-windows
+          path: build/*.zip
+          retention-days: 14
+
   ios:
     # Derselbe Ablauf wie „iOS-IPA bauen“ (ios-ipa.yml), nur ohne eigenes Release
     uses: ./.github/workflows/ios-ipa.yml
@@ -128,7 +168,7 @@ jobs:
       called_from_release: true
 
   release:
-    needs: [android, ios]
+    needs: [android, ios, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -146,9 +186,12 @@ jobs:
           files: |
             dist/*.apk
             dist/*.ipa
+            dist/*.zip
           body: |
             Version ${{ needs.android.outputs.version }} (Build ${{ github.run_number }}) vom Branch `${{ github.ref_name }}`, Commit ${{ github.sha }}.
 
             **Android:** APK auf dem Handy herunterladen und öffnen; sie installiert sich als Update über die vorige Version. Beim ersten Mal „Aus dieser Quelle installieren“ erlauben.
+
+            **Windows:** ZIP herunterladen, entpacken, `Hullbound.exe` starten. Windows SmartScreen warnt beim ersten Start („Unbekannter Herausgeber“): „Weitere Informationen“ → „Trotzdem ausführen“.
 
             **iOS:** Die IPA ist unsigniert. Mit AltStore oder Sideloadly und der eigenen Apple-ID aufs iPhone bringen (kostenlose Apple-ID: alle 7 Tage neu signieren).
