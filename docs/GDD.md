@@ -279,7 +279,7 @@ Realistische Pixel-Art in hoher Auflösung: echte Proportionen, Materialien und 
 - **Crew:** Pixel-Figuren in Draufsicht (passend zur Schiffsansicht), Spezies an Silhouette und Farbe von oben erkennbar
 - **Effekte:** Feuer, Funken, Schildblitze als kurze Pixel-Animationen
 - **UI:** Statusleiste oben (Hülle, Energie, Sprungzähler), drei Daumen-Buttons unten, Textereignisse als Pixel-Dialogbox mit kleiner Szenen-Illustration (Planet, Wrack, Station)
-- **Grafik-Quellen:** zuerst Asset-Packs von itch.io als Platzhalter, später ein Artist für Schiffe, Crew und Bosse
+- **Grafik-Quellen:** eigene Pipeline (`tools/artgen`, feste Palette) und Fable-Prompt; ein Artist höchstens für Bosse, Porträts und Store-Grafik kurz vor dem Release
 - **Musik:** Chiptune, ruhig auf der Karte, treibend im Kampf
 
 ### Bildschirme (Querformat, Touch)
@@ -334,7 +334,7 @@ Durchsicht von GDD und Prototyp: Der Kern trägt (Jägerfront, bleibender Schade
 ### Erweitern
 
 - **Planeten als längere Ereigniskette:** Mit dem vorhandenen Ereignis- und Auftragssystem statt einer eigenen Mechanik. Landen kostet in der Jagd einen Frontschritt (ersetzt die Regel „jede zweite Landung“), danach 3–5 Stufen mit Spezies-Optionen.
-- **Grund für die Jagd:** Früh festlegen, z. B. eine Fracht oder ein Datenkern an Bord, hinter dem die Jägerflotte her ist. Daraus folgen Ereignisse, Bossdialoge und das Finale.
+- **Grund für die Jagd:** Ein Datenkern an Bord, hinter dem die Jägerflotte her ist (siehe Offene Fragen). Daraus folgen Ereignisse, Bossdialoge und das Finale.
 - **Run-Protokoll für das Balancing:** Die Bot-Simulation ist seit dem bleibenden Schaden nicht mehr aussagekräftig. Stattdessen pro Run ein Log: wo Hülle, Treibstoff und Crew verloren gingen und woran der Run endete. So wird nach echten Testspielen balanciert.
 
 ### Weglassen oder zusammenlegen
@@ -354,11 +354,13 @@ Durchsicht von GDD und Prototyp: Der Kern trägt (Jägerfront, bleibender Schade
 
 ## Offene Fragen
 
-- [ ] Endgültiger Name des Spiels
-- [ ] Welt und Hintergrund: Warum jagt dich die Jägerflotte? (Vorschlag: Fracht oder Datenkern an Bord, siehe Überarbeitung)
-- [ ] Anzahl Universen im Jagd-Modus (4 oder 5) und Bosse pro Universum
-- [ ] Welche Spezies und Fraktionen genau, mit Namen und Stärken
-- [ ] Grafik: Asset-Pack-Auswahl und später Artist suchen
-- [ ] Preis und Umfang der Demo festlegen
-- [ ] Bodenkämpfe/Entern (Crew auf Gegnerschiff beamen): ja oder später? (Vorschlag: ja, als Nächstes, siehe Überarbeitung)
-- [ ] Lebenserhaltung als eigener Raum in allen Schiffslayouts (außer reinen Petrani-/Androiden-Schiffen)?
+Antworten Stand 26.11.2026.
+
+- [x] **Endgültiger Name des Spiels:** Hullbound (früher Arbeitstitel Driftline).
+- [x] **Welt und Hintergrund: Warum jagt dich die Jägerflotte?** Die Crew hat zufällig eine Fracht an Bord, einen Datenkern (z. B. Koordinaten oder Beweise), den die Jägerflotte um jeden Preis zurückwill. Was darauf ist, erfährt man Stück für Stück über Ereignisse und Bossdialoge. Der letzte Boss holt ihn persönlich; im Finale entscheidet der Spieler, was mit dem Kern geschieht. Story-Fragmente bleiben über Runs hinweg freigeschaltet.
+- [x] **Anzahl Universen im Jagd-Modus und Bosse:** 4 Sektoren (Run 45–90 Minuten), je Sektor ein eigener Boss mit eigener Mechanik; der letzte ist das Flaggschiff der Jägerflotte.
+- [x] **Spezies und Fraktionen:** Die sechs Spezies wie im Abschnitt „Spezies“. Vier Fraktionen: Händlergilde, Piratenclans, eine Maschinen-Spezies (Bezug zu den Androiden) und die Jägerflotte. Ansehen über die vorhandenen Ruf-Flags (Gildenbrief, schlechter Ruf), kein volles Fraktionssystem.
+- [x] **Grafik:** Keine Asset-Packs mehr; weiter mit der eigenen Pipeline (`tools/artgen`, feste Palette) und dem Fable-Prompt. Ein Artist höchstens für Bosse, Porträts und Store-Grafik, kurz vor dem Release.
+- [x] **Preis und Umfang der Demo:** 4,99 € Einmalkauf. Demo = Tutorial plus Sektor 1 mit Boss, nur Menschen-Frachter. Freischaltung der Vollversion in derselben App (kein zweites App-Listing), der Spielstand läuft weiter.
+- [x] **Bodenkämpfe/Entern:** Ja, als nächster Schritt (siehe Überarbeitung): Kampfwerte, Teleporter, Gegner-Enterkommandos.
+- [x] **Lebenserhaltung als eigener Raum:** Ja, in allen Schiffen mit Crew, die Luft braucht; reine Petrani- oder Androiden-Schiffe ohne, dafür mit einem anderen Nachteil. Auch Gegnerschiffe bekommen Lebenserhaltung, sobald es Entern gibt (bisher hat sie nur der Menschen-Frachter), sonst wirken Sauerstoff und Luftschleusen nicht gegen Enterer.
