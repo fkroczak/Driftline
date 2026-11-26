@@ -1,6 +1,6 @@
 # Hullbound – Game-Design-Dokument
 
-Stand: 22.11.2026 · Autor: Filip Kroczak · Online-Fassung: [Claude Doc](https://claude.ai/artifact/FhYZsfLYM6pFQa2jdF4vUp)
+Stand: 26.11.2026 · Autor: Filip Kroczak · Online-Fassung: [Claude Doc](https://claude.ai/artifact/FhYZsfLYM6pFQa2jdF4vUp)
 
 ## Vision und Eckdaten
 
@@ -279,7 +279,7 @@ Realistische Pixel-Art in hoher Auflösung: echte Proportionen, Materialien und 
 - **Crew:** Pixel-Figuren in Draufsicht (passend zur Schiffsansicht), Spezies an Silhouette und Farbe von oben erkennbar
 - **Effekte:** Feuer, Funken, Schildblitze als kurze Pixel-Animationen
 - **UI:** Statusleiste oben (Hülle, Energie, Sprungzähler), drei Daumen-Buttons unten, Textereignisse als Pixel-Dialogbox mit kleiner Szenen-Illustration (Planet, Wrack, Station)
-- **Grafik-Quellen:** zuerst Asset-Packs von itch.io als Platzhalter, später ein Artist für Schiffe, Crew und Bosse
+- **Grafik-Quellen:** eigene Pipeline (`tools/artgen`, feste Palette) und Fable-Prompt; ein Artist höchstens für Bosse, Porträts und Store-Grafik kurz vor dem Release
 - **Musik:** Chiptune, ruhig auf der Karte, treibend im Kampf
 
 ### Bildschirme (Querformat, Touch)
@@ -320,13 +320,47 @@ Godot 4 mit GDScript, Export als Android-App (AAB für den Play Store); alle Inh
 
 Phase 1 hat kein Menü und keine Karte; sie beantwortet nur, ob der Kampf per Touch funktioniert. Erst danach lohnt sich Inhalt.
 
+## Überarbeitung des Spielprinzips (Vorschläge, Stand 26.11.2026)
+
+Durchsicht von GDD und Prototyp: Der Kern trägt (Jägerfront, bleibender Schaden, Aufträge mit Frist, Startauswahl mit Punktebudget). Die größten Risiken sind der geplante Umfang für ein Ein-Personen-Projekt und Systeme, die im Spiel noch nichts bewirken. Die Punkte sind Vorschläge, noch keine Entscheidungen.
+
+### Verbessern
+
+- **Entern vor neuen Spezies:** Ohne Kampfwerte sind Ormok und Kith’ra nur schwächere Reparierer, und das Kith’ra-Kaperschiff hat keinen Zweck. Entern (Teleporter, Nahkampf im Raum, Gegner-Enterkommandos) macht drei Spezies auf einmal sinnvoll und ist Voraussetzung für Abwehrbots.
+- **Bosse mit eigener Mechanik:** Statt eines hochskalierten Piraten-Flaggschiffs bekommt jeder Sektor-Boss einen eigenen Kniff, z. B. Phasen mit wechselnder Bewaffnung, Tarnung, oder ein Schiff, das Jäger nachruft.
+- **Währung klarstellen:** Im Prototyp zahlt man fast alles mit Rohstoffen. Vorschlag: Rohstoffe sind offiziell die Währung, Treibstoff ist der Engpass (1 pro Sprung, auch beim Händler kaufbar). Abschnitt „Ressourcen“ entsprechend anpassen.
+- **Zeit als Preis in Ereignissen (Jagd):** Optionen können statt Rohstoffen auch „Front +1“ kosten, z. B. gründlich durchsuchen, Überlebende bergen, Umweg fliegen. Passt zum Modus und braucht kein neues System.
+
+### Erweitern
+
+- **Planeten als längere Ereigniskette:** Mit dem vorhandenen Ereignis- und Auftragssystem statt einer eigenen Mechanik. Landen kostet in der Jagd einen Frontschritt (ersetzt die Regel „jede zweite Landung“), danach 3–5 Stufen mit Spezies-Optionen.
+- **Grund für die Jagd:** Ein Datenkern an Bord, hinter dem die Jägerflotte her ist (siehe Offene Fragen). Daraus folgen Ereignisse, Bossdialoge und das Finale.
+- **Run-Protokoll für das Balancing:** Die Bot-Simulation ist seit dem bleibenden Schaden nicht mehr aussagekräftig. Stattdessen pro Run ein Log: wo Hülle, Treibstoff und Crew verloren gingen und woran der Run endete. So wird nach echten Testspielen balanciert.
+
+### Weglassen oder zusammenlegen
+
+- **Schiffe:** Zum Release ein Schiff pro Spezies (6 statt 12); die zweiten Varianten danach.
+- **Module:** Droiden-Bay und Drohnensteuerung zu einem Modul zusammenlegen. Kryokapseln und Klonbank vorerst streichen.
+- **Munition:** Höchstens eine Verbrauchsressource (Raketen); Drohnenteile entfallen, Ersatz-Bots kosten Rohstoffe.
+- **Ideen aus Space Haven:** Nahrung/Vorräte entfallen (konkurriert mit Treibstoff als knapper Ressource). Moral und Beziehungen in der Crew erst nach dem Release.
+- **Endlos-Modus:** Ohne Front und Fraktionen fehlt ihm der Druck. Entweder bis nach dem Release zurückstellen oder schlank halten: die vorhandenen Ruf-Flags (Gildenbrief, schlechter Ruf) ausbauen statt eines vollen Fraktionssystems.
+
+### Vorgeschlagene Reihenfolge
+
+1. Entern (Kampfwerte, Teleporter, Gegner-Enterkommandos)
+2. Planeten als Ereignisketten
+3. Eigene Bosse je Sektor
+4. Run-Protokoll und Balancing mit Testspielern
+
 ## Offene Fragen
 
-- [ ] Endgültiger Name des Spiels
-- [ ] Welt und Hintergrund: Warum jagt dich die Jägerflotte?
-- [ ] Anzahl Universen im Jagd-Modus (4 oder 5) und Bosse pro Universum
-- [ ] Welche Spezies und Fraktionen genau, mit Namen und Stärken
-- [ ] Grafik: Asset-Pack-Auswahl und später Artist suchen
-- [ ] Preis und Umfang der Demo festlegen
-- [ ] Bodenkämpfe/Entern (Crew auf Gegnerschiff beamen): ja oder später?
-- [ ] Lebenserhaltung als eigener Raum in allen Schiffslayouts (außer reinen Petrani-/Androiden-Schiffen)?
+Antworten Stand 26.11.2026.
+
+- [x] **Endgültiger Name des Spiels:** Hullbound (früher Arbeitstitel Driftline).
+- [x] **Welt und Hintergrund: Warum jagt dich die Jägerflotte?** Die Crew hat zufällig eine Fracht an Bord, einen Datenkern (z. B. Koordinaten oder Beweise), den die Jägerflotte um jeden Preis zurückwill. Was darauf ist, erfährt man Stück für Stück über Ereignisse und Bossdialoge. Der letzte Boss holt ihn persönlich; im Finale entscheidet der Spieler, was mit dem Kern geschieht. Story-Fragmente bleiben über Runs hinweg freigeschaltet.
+- [x] **Anzahl Universen im Jagd-Modus und Bosse:** 4 Sektoren (Run 45–90 Minuten), je Sektor ein eigener Boss mit eigener Mechanik; der letzte ist das Flaggschiff der Jägerflotte.
+- [x] **Spezies und Fraktionen:** Die sechs Spezies wie im Abschnitt „Spezies“. Vier Fraktionen: Händlergilde, Piratenclans, eine Maschinen-Spezies (Bezug zu den Androiden) und die Jägerflotte. Ansehen über die vorhandenen Ruf-Flags (Gildenbrief, schlechter Ruf), kein volles Fraktionssystem.
+- [x] **Grafik:** Keine Asset-Packs mehr; weiter mit der eigenen Pipeline (`tools/artgen`, feste Palette) und dem Fable-Prompt. Ein Artist höchstens für Bosse, Porträts und Store-Grafik, kurz vor dem Release.
+- [x] **Preis und Umfang der Demo:** 4,99 € Einmalkauf. Demo = Tutorial plus Sektor 1 mit Boss, nur Menschen-Frachter. Freischaltung der Vollversion in derselben App (kein zweites App-Listing), der Spielstand läuft weiter.
+- [x] **Bodenkämpfe/Entern:** Ja, als nächster Schritt (siehe Überarbeitung): Kampfwerte, Teleporter, Gegner-Enterkommandos.
+- [x] **Lebenserhaltung als eigener Raum:** Ja, in allen Schiffen mit Crew, die Luft braucht; reine Petrani- oder Androiden-Schiffe ohne, dafür mit einem anderen Nachteil. Auch Gegnerschiffe bekommen Lebenserhaltung, sobald es Entern gibt (bisher hat sie nur der Menschen-Frachter), sonst wirken Sauerstoff und Luftschleusen nicht gegen Enterer.
