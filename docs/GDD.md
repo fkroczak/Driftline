@@ -235,7 +235,7 @@ Jeder Schiffsstil hat ein eigenes Raumlayout und 1–3 leere Erweiterungsräume,
 | Mensch Frachter | 3 | keine |
 | Mensch Flottenkreuzer | 2 | keine |
 | Kith’ra Schwarmschiff | 2 | Drohnensteuerung |
-| Kith’ra Kaperschiff | 2 | Teleporter |
+| Kith’ra Kaperschiff | 2 | Teleporterraum vorbereitet (Teleporter ab Sektor 2 zum halben Preis) |
 | Androide Modulwürfel | 3 | keine |
 | Androide Ionenjäger | 2 | Hacking |
 | Veyari Forschungsschiff | 2 | Labor |
