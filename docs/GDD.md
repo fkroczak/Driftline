@@ -107,9 +107,15 @@ Crew kämpft Raum gegen Raum, auf dem eigenen Schiff gegen Enterkommandos und pe
 - Der Teleporter des Gegners ist ein eigener Raum: Wird er getroffen, bleiben weitere Enterkommandos aus
 - Welche Gegner entern: Plünderer ab Stufe 6, Schwerer Kutter ab Stufe 10, Bosse ab Sektor 2. Gegnerschiffe bekommen dafür Lebenserhaltung und benannte Crew mit Spezies
 
-**Eigener Teleporter**
+**Eigener Teleporter (erst Mitte bis Ende des Runs)**
 
-- Modul für einen Erweiterungsraum (beim Händler ca. 40 Rohstoffe; das Kith’ra-Kaperschiff startet damit), Stufe 1–3, je Stufe 1 Energie
+Teleporter und Kaperung gehören zum ausgebauten Schiff, nicht zum Start: Am Anfang fehlen Reaktor, Erweiterungsraum und Crew dafür. Der Spieler soll sich erst gegen Enterkommandos verteidigen lernen und später selbst entern.
+
+- Freischaltung im Run: Händler bieten den Teleporter erst ab Sektor 2 an (Jagd und Endlos), selten auch als Beute aus Aufträgen ab Sektor 2. In der Startauswahl ist er nicht wählbar
+- Voraussetzungen zum Einbau: ein freier Erweiterungsraum und Reaktor mindestens 10 (Start: 8); ohne Ausbau lässt er sich also nicht betreiben
+- Preis beim Händler ca. 50 Rohstoffe; Stufe 2 und 3 als Upgrade in der Werft bzw. beim Schiffsausbau
+- Kith’ra-Kaperschiff: startet nicht mit Teleporter, sondern mit vorbereitetem Teleporterraum; dort kostet der Teleporter die Hälfte und braucht nur Reaktor 9, ist aber ebenfalls erst ab Sektor 2 zu haben
+- Modul Stufe 1–3, je Stufe 1 Energie
 - Kapazität 2 / 3 / 4 Personen, Aufladezeit 20 / 15 / 10 Sekunden
 - Bedienung: Knopf TELEPORTER unten rechts, dann Crew im Teleporterraum wählen, dann einen Raum am Gegnerschiff antippen (Auto-Pause wie beim Zielen der Waffen)
 - ZURÜCKBEAMEN holt alle auf einmal zurück, sobald der Teleporter geladen ist, egal wo sie stehen
@@ -126,7 +132,7 @@ Crew kämpft Raum gegen Raum, auf dem eigenen Schiff gegen Enterkommandos und pe
 
 1. `melee` je Spezies, Raumkampf und Tür-Aufbrechen auf dem eigenen Schiff
 2. Gegner-Enterkommandos mit Vorwarnung, Lebenserhaltung und Crew für Gegnerschiffe
-3. Eigener Teleporter als Modul, Zurückbeamen, Warnung bei niedriger Gegnerhülle
+3. Eigener Teleporter als Modul (Händler ab Sektor 2, Reaktor ≥ 10), Zurückbeamen, Warnung bei niedriger Gegnerhülle
 4. Kaperung mit Beute, Selbstzerstörung bei Jägern und Bossen
 5. Tutorial-Hinweis und Lexikon-Eintrag; danach Abwehrbots (Droiden-Bay)
 
@@ -210,7 +216,7 @@ Jede Spezies hat zwei Schiffsstile mit eigener Optik, Raumaufteilung und Spielwe
 | Spezies | Optik | Typ A | Typ B |
 | --- | --- | --- | --- |
 | Mensch | zweckmäßig, grau-blau, Nieten und Paneele | Frachter: ausgewogen, großer Laderaum, leicht zu lernen | Flottenkreuzer: mehr Waffenslots, starke Schilde, kleinere Crew |
-| Kith’ra | organischer Chitinpanzer, grün, Waben | Schwarmschiff: startet mit Kampfdrohnen | Kaperschiff: Teleporter zum Entern, schwache Waffen |
+| Kith’ra | organischer Chitinpanzer, grün, Waben | Schwarmschiff: startet mit Kampfdrohnen | Kaperschiff: auf Entern ausgelegt (Teleporter ab Sektor 2 günstiger), schwache Waffen |
 | Androide | geometrisch, weiße Module, Leuchtlinien | Modulwürfel: Reparaturdrohne, Räume umbaubar | Ionenjäger: Ionenwaffen, Hacking-System |
 | Veyari | elegant, violett, geschwungene Linien | Forschungsschiff: starke Sensoren und Schilde, dünne Hülle | Lanzenschiff: Strahlenwaffe mit großer Reichweite, fragil |
 | Ormok | grob verschweißt, Rost, Schrottplatten | Schrottkoloss: sehr viel Hülle, Panzerung, langsam | Rammbock: Rammsporn als Waffe, starke Front, wenig Systeme |
