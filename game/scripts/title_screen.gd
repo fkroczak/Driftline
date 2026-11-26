@@ -114,6 +114,7 @@ func _draw() -> void:
 	_buttons.clear()
 	if _page == "start":
 		_draw_start()
+		_draw_update_banner()
 	else:
 		_draw_modes()
 	var version := "v" + str(ProjectSettings.get_setting("application/config/version", ""))
@@ -151,6 +152,43 @@ func _draw_start() -> void:
 	var count := Codex.count_known()
 	var note := Loc.t("Lexikon: %d / %d entdeckt") % [count.x, count.y]
 	HudStyle.text(self, Vector2(roundf((size.x - HudStyle.text_width(note)) / 2.0), y + 8), note, HudStyle.COLOR_DIM)
+
+
+## Banner oben, wenn es auf GitHub eine neuere Version gibt (Autoload Updater); x blendet es aus.
+func _draw_update_banner() -> void:
+	if Updater.state == UpdateCheck.State.NONE or Updater.dismissed:
+		return
+	var version: String = Updater.offer.version
+	var label := ""
+	var action := ""
+	var color := HudStyle.COLOR_OK
+	match Updater.state:
+		UpdateCheck.State.AVAILABLE:
+			label = Loc.t("Neue Version %s verfügbar") % version
+			var android := UpdateCheck.platform() == "android"
+			action = Loc.t("LADEN") if android else Loc.t("ANSEHEN")
+		UpdateCheck.State.DOWNLOADING:
+			label = Loc.t("Update wird geladen: %d %%") % roundi(Updater.progress() * 100.0)
+		UpdateCheck.State.READY:
+			label = Loc.t("Version %s ist geladen") % version
+			action = Loc.t("INSTALLIEREN")
+		UpdateCheck.State.FAILED:
+			action = Loc.t("NOCHMAL")
+			color = HudStyle.COLOR_WARN
+	if Updater.error != "":
+		label = Loc.t(Updater.error)
+	var bw: float = HudStyle.text_width(action) + 12.0 if action != "" else 0.0
+	var w := HudStyle.text_width(label) + bw + 32.0
+	var rect := Rect2(roundf((size.x - w) / 2.0), 3, w, 19)
+	HudStyle.box(self, rect, color)
+	if Updater.state == UpdateCheck.State.DOWNLOADING:
+		var bar := Vector2((rect.size.x - 2) * Updater.progress(), rect.size.y - 2)
+		draw_rect(Rect2(rect.position + Vector2.ONE, bar), Color(color, 0.22))
+	HudStyle.text(self, rect.position + Vector2(6, 13), label, color)
+	var y := rect.position.y + 2
+	if action != "":
+		_button(Rect2(rect.end.x - bw - 20, y, bw, 15), action, color, "update")
+	_button(Rect2(rect.end.x - 17, y, 15, 15), "x", HudStyle.COLOR_DIM, "update_close")
 
 
 func _draw_modes() -> void:
@@ -213,6 +251,10 @@ func _gui_input(event: InputEvent) -> void:
 				_codex.open()
 			"settings":
 				_settings.open()
+			"update":
+				Updater.start()
+			"update_close":
+				Updater.dismissed = true
 			"continue":
 				Game.continue_run(b.mode)
 				Game.to_ship()

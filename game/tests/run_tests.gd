@@ -1943,3 +1943,43 @@ func test_shop_goods_stay_the_same_on_revisits() -> void:
 	run.close_shop()
 	run.next_sector()
 	check(run.shop_stock.is_empty(), "Neuer Sektor behält alte Waren")
+
+
+func test_update_version_compare() -> void:
+	check(UpdateCheck.is_newer("0.3.23", "0.3.22"), "0.3.23 nicht neuer als 0.3.22")
+	check(UpdateCheck.is_newer("0.3.100", "0.3.99"), "Build-Nummer als Text verglichen")
+	check(UpdateCheck.is_newer("0.4.1", "0.3.40"), "Neuer Meilenstein nicht neuer")
+	check(not UpdateCheck.is_newer("0.3.22", "0.3.22"), "Gleiche Version gilt als neuer")
+	check(not UpdateCheck.is_newer("0.3.21", "0.3.22"), "Ältere Version gilt als neuer")
+	check(UpdateCheck.can_check("0.3.22"), "Release-Build prüft nicht")
+	check(not UpdateCheck.can_check("0.3"), "Editor-Build ohne Build-Nummer prüft")
+	check(not UpdateCheck.can_check(""), "Leere Version prüft")
+
+
+func test_update_picks_newest_release_file() -> void:
+	# So liefert die GitHub-API die Releases (Zahlen als float, Reihenfolge nicht sortiert)
+	var releases := [
+		{"tag_name": "release-build-22", "html_url": "https://r/22", "assets": [
+			{"name": "hullbound-0.3.22-debug.apk", "browser_download_url": "https://d/22.apk", "size": 100.0},
+			{"name": "hullbound-0.3.22-unsigned.ipa", "browser_download_url": "https://d/22.ipa", "size": 50.0}]},
+		{"tag_name": "release-build-23", "html_url": "https://r/23", "assets": [
+			{"name": "hullbound-0.3.23-debug.apk", "browser_download_url": "https://d/23.apk", "size": 101.0}]},
+		{"tag_name": "ipa-build-30", "html_url": "https://r/i30", "assets": [  # eigene iOS-Nummern
+			{"name": "hullbound-0.3.30-unsigned.ipa", "browser_download_url": "https://d/i30.ipa", "size": 51.0}]},
+		{"tag_name": "apk-build-9", "html_url": "https://r/9", "assets": [  # alter Name mit Commit
+			{"name": "hullbound-9698ee6-debug.apk", "browser_download_url": "https://d/9.apk", "size": 99.0}]},
+		{"tag_name": "release-build-99", "draft": true, "html_url": "https://r/99", "assets": [
+			{"name": "hullbound-0.3.99-debug.apk", "browser_download_url": "https://d/99.apk", "size": 1.0}]},
+		{"tag_name": "release-build-40", "html_url": "https://r/40", "assets": [  # kein HTTPS, keine Größe
+			{"name": "hullbound-0.3.40-debug.apk", "browser_download_url": "http://d/40.apk", "size": 1.0},
+			{"name": "hullbound-0.3.41-debug.apk", "browser_download_url": "https://d/41.apk", "size": 0.0}]},
+	]
+	var apk := UpdateCheck.find_update(releases, "android", "0.3.21")
+	check(apk != null and apk.version == "0.3.23", "Android: 0.3.23 erwartet")
+	if apk:
+		check(apk.url == "https://d/23.apk" and apk.size == 101 and apk.file == "hullbound-0.3.23-debug.apk"
+			and apk.page == "https://r/23", "Android: falsche Datei %s" % apk.url)
+	check(UpdateCheck.find_update(releases, "android", "0.3.23") == null, "Android: Update obwohl aktuell")
+	var ipa := UpdateCheck.find_update(releases, "ios", "0.3.21")
+	check(ipa != null and ipa.version == "0.3.22" and ipa.page == "https://r/22", "iOS: 0.3.22 erwartet")
+	check(UpdateCheck.find_update(releases, "", "0.3.1") == null, "Update für unbekannte Plattform")

@@ -764,5 +764,14 @@
   "3 Schaden mit einem Schuss, reißt oft Lecks.": "3 damage in one shot, often causes breaches.",
   "Fliegt durch eine Schildschicht hindurch, ohne sie zu verbrauchen.": "Passes through one shield layer without using it up.",
   "Ignoriert alle Schilde. Langsam, aber trifft immer durch.": "Ignores all shields. Slow, but always gets through.",
-  "Batterie": "Battery"
+  "Batterie": "Battery",
+  "Neue Version %s verfügbar": "New version %s available",
+  "LADEN": "DOWNLOAD",
+  "ANSEHEN": "VIEW",
+  "Update wird geladen: %d %%": "Downloading update: %d %%",
+  "Version %s ist geladen": "Version %s downloaded",
+  "INSTALLIEREN": "INSTALL",
+  "NOCHMAL": "RETRY",
+  "Download fehlgeschlagen": "Download failed",
+  "Installation ließ sich nicht starten": "Could not start the installation"
 }
