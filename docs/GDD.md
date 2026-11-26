@@ -1,6 +1,6 @@
 # Hullbound – Game-Design-Dokument
 
-Stand: 22.11.2026 · Autor: Filip Kroczak · Online-Fassung: [Claude Doc](https://claude.ai/artifact/FhYZsfLYM6pFQa2jdF4vUp)
+Stand: 26.11.2026 · Autor: Filip Kroczak · Online-Fassung: [Claude Doc](https://claude.ai/artifact/FhYZsfLYM6pFQa2jdF4vUp)
 
 ## Vision und Eckdaten
 
@@ -320,13 +320,45 @@ Godot 4 mit GDScript, Export als Android-App (AAB für den Play Store); alle Inh
 
 Phase 1 hat kein Menü und keine Karte; sie beantwortet nur, ob der Kampf per Touch funktioniert. Erst danach lohnt sich Inhalt.
 
+## Überarbeitung des Spielprinzips (Vorschläge, Stand 26.11.2026)
+
+Durchsicht von GDD und Prototyp: Der Kern trägt (Jägerfront, bleibender Schaden, Aufträge mit Frist, Startauswahl mit Punktebudget). Die größten Risiken sind der geplante Umfang für ein Ein-Personen-Projekt und Systeme, die im Spiel noch nichts bewirken. Die Punkte sind Vorschläge, noch keine Entscheidungen.
+
+### Verbessern
+
+- **Entern vor neuen Spezies:** Ohne Kampfwerte sind Ormok und Kith’ra nur schwächere Reparierer, und das Kith’ra-Kaperschiff hat keinen Zweck. Entern (Teleporter, Nahkampf im Raum, Gegner-Enterkommandos) macht drei Spezies auf einmal sinnvoll und ist Voraussetzung für Abwehrbots.
+- **Bosse mit eigener Mechanik:** Statt eines hochskalierten Piraten-Flaggschiffs bekommt jeder Sektor-Boss einen eigenen Kniff, z. B. Phasen mit wechselnder Bewaffnung, Tarnung, oder ein Schiff, das Jäger nachruft.
+- **Währung klarstellen:** Im Prototyp zahlt man fast alles mit Rohstoffen. Vorschlag: Rohstoffe sind offiziell die Währung, Treibstoff ist der Engpass (1 pro Sprung, auch beim Händler kaufbar). Abschnitt „Ressourcen“ entsprechend anpassen.
+- **Zeit als Preis in Ereignissen (Jagd):** Optionen können statt Rohstoffen auch „Front +1“ kosten, z. B. gründlich durchsuchen, Überlebende bergen, Umweg fliegen. Passt zum Modus und braucht kein neues System.
+
+### Erweitern
+
+- **Planeten als längere Ereigniskette:** Mit dem vorhandenen Ereignis- und Auftragssystem statt einer eigenen Mechanik. Landen kostet in der Jagd einen Frontschritt (ersetzt die Regel „jede zweite Landung“), danach 3–5 Stufen mit Spezies-Optionen.
+- **Grund für die Jagd:** Früh festlegen, z. B. eine Fracht oder ein Datenkern an Bord, hinter dem die Jägerflotte her ist. Daraus folgen Ereignisse, Bossdialoge und das Finale.
+- **Run-Protokoll für das Balancing:** Die Bot-Simulation ist seit dem bleibenden Schaden nicht mehr aussagekräftig. Stattdessen pro Run ein Log: wo Hülle, Treibstoff und Crew verloren gingen und woran der Run endete. So wird nach echten Testspielen balanciert.
+
+### Weglassen oder zusammenlegen
+
+- **Schiffe:** Zum Release ein Schiff pro Spezies (6 statt 12); die zweiten Varianten danach.
+- **Module:** Droiden-Bay und Drohnensteuerung zu einem Modul zusammenlegen. Kryokapseln und Klonbank vorerst streichen.
+- **Munition:** Höchstens eine Verbrauchsressource (Raketen); Drohnenteile entfallen, Ersatz-Bots kosten Rohstoffe.
+- **Ideen aus Space Haven:** Nahrung/Vorräte entfallen (konkurriert mit Treibstoff als knapper Ressource). Moral und Beziehungen in der Crew erst nach dem Release.
+- **Endlos-Modus:** Ohne Front und Fraktionen fehlt ihm der Druck. Entweder bis nach dem Release zurückstellen oder schlank halten: die vorhandenen Ruf-Flags (Gildenbrief, schlechter Ruf) ausbauen statt eines vollen Fraktionssystems.
+
+### Vorgeschlagene Reihenfolge
+
+1. Entern (Kampfwerte, Teleporter, Gegner-Enterkommandos)
+2. Planeten als Ereignisketten
+3. Eigene Bosse je Sektor
+4. Run-Protokoll und Balancing mit Testspielern
+
 ## Offene Fragen
 
 - [ ] Endgültiger Name des Spiels
-- [ ] Welt und Hintergrund: Warum jagt dich die Jägerflotte?
+- [ ] Welt und Hintergrund: Warum jagt dich die Jägerflotte? (Vorschlag: Fracht oder Datenkern an Bord, siehe Überarbeitung)
 - [ ] Anzahl Universen im Jagd-Modus (4 oder 5) und Bosse pro Universum
 - [ ] Welche Spezies und Fraktionen genau, mit Namen und Stärken
 - [ ] Grafik: Asset-Pack-Auswahl und später Artist suchen
 - [ ] Preis und Umfang der Demo festlegen
-- [ ] Bodenkämpfe/Entern (Crew auf Gegnerschiff beamen): ja oder später?
+- [ ] Bodenkämpfe/Entern (Crew auf Gegnerschiff beamen): ja oder später? (Vorschlag: ja, als Nächstes, siehe Überarbeitung)
 - [ ] Lebenserhaltung als eigener Raum in allen Schiffslayouts (außer reinen Petrani-/Androiden-Schiffen)?
