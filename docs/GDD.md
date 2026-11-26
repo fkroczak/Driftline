@@ -130,7 +130,7 @@ Teleporter und Kaperung gehören zum ausgebauten Schiff, nicht zum Start: Am Anf
 
 **Umsetzung in Schritten**
 
-1. `melee` je Spezies, Raumkampf und Tür-Aufbrechen auf dem eigenen Schiff
+1. `melee` je Spezies, Raumkampf und Tür-Aufbrechen auf dem eigenen Schiff (umgesetzt; Charakterzüge folgen, sobald es individuelle Züge im Spiel gibt)
 2. Gegner-Enterkommandos mit Vorwarnung, Lebenserhaltung und Crew für Gegnerschiffe
 3. Eigener Teleporter als Modul (Händler ab Sektor 2, Reaktor ≥ 10), Zurückbeamen, Warnung bei niedriger Gegnerhülle
 4. Kaperung mit Beute, Selbstzerstörung bei Jägern und Bossen
@@ -192,7 +192,7 @@ Jedes Crewmitglied basiert auf dem Grundsprite seiner Spezies, ist aber ein Indi
 | Ormok | 160 | 2 | 1 | 5 | keiner |
 | Petrani | 140 | 1 | 3 | 3 | Reaktor |
 
-Im Prototyp umgesetzt (`game/data/species.json`): Lebenspunkte, Lauftempo, Reparaturtempo, Konsolenboni, Feuer- und Luftbedarf und Medbay-Heilung je Spezies; die Crew-Karte im Spiel zeigt sie an. Der Captain ist markiert. Kampfwerte folgen mit dem Entern.
+Im Prototyp umgesetzt (`game/data/species.json`): Lebenspunkte, Lauftempo, Reparaturtempo, Konsolenboni, Feuer- und Luftbedarf und Medbay-Heilung je Spezies; die Crew-Karte im Spiel zeigt sie an. Der Captain ist markiert. Kampfwerte (`melee`) und Nahkampf im Raum sind seit Entern-Schritt 1 drin.
 
 **Charakterzüge (Auswahl):**
 

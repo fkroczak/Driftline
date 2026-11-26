@@ -14,6 +14,7 @@ extends RefCounted
 ## - repaired, destroyed: own_ship (betrifft das Schiff des Spielers)
 ## - target: weapon, room (Zielwechsel einer Spielerwaffe)
 ## - fire_started, extinguished, breach, breach_fixed, crew_died: own_ship, tile, room
+## - intruder_died (Enterer gefallen), door_broken (Tür aufgebrochen): own_ship, tile, room
 ## - enemy_flee: Gegner lädt den Sprungantrieb (er will fliehen); enemy_jumped: er ist weg
 ## Kampfende: Hülle auf 0 oder ganze Besatzung tot (destroyed mit reason "hull"/"crew").
 ##
