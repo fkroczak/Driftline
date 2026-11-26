@@ -84,7 +84,51 @@ Sauerstoff ist eine eigene Ressource pro Raum; die Lebenserhaltung füllt ihn na
 - Jedes Schiffslayout hat mindestens eine Schleuse in einem Außenraum (Feld `airlocks` in `game/data/ships/*.json`)
 - Androiden und Petrani brauchen keinen Sauerstoff und sind damit ideale Verteidiger in gefluteten Räumen
 
-**Enterkommandos:** Gegner können per Teleporter eigene Crew auf dein Schiff schicken; deine Crew kämpft im Raum, Nahkampfwerte und Spezies entscheiden.
+### Entern (Konzept, Stand 26.11.2026)
+
+Crew kämpft Raum gegen Raum, auf dem eigenen Schiff gegen Enterkommandos und per Teleporter auf dem Gegnerschiff. Ziel: Die Kampfstärke der Spezies zählt, und ein Gegner lässt sich kapern statt nur zerstören. Alle Zahlen sind Startwerte für das Balancing.
+
+**Nahkampf im Raum**
+
+- Neuer Wert `melee` je Spezies (in `data/species.json`), abgeleitet aus der Spalte „Kampf“: Schaden je Sekunde = 2 × Kampfwert. Mensch, Androide und Petrani 3 (6 LP/s), Kith’ra und Ormok 5 (10 LP/s), Veyari 1 (2 LP/s)
+- Charakterzüge wirken direkt: Mutig +1, Hitzkopf +2, Ängstlich −1 Kampf
+- Sind Feinde im selben Raum, kämpfen alle automatisch; jede Figur greift eine Gegnerfigur an, bevorzugt die schwächste. Wer kämpft, repariert, löscht und bedient keine Konsole
+- Richtwert: zwei Menschen gegen zwei Menschen dauert etwa 15 Sekunden; ein Ormok hält zwei Menschen etwa 25 Sekunden stand
+- Feuer und Sauerstoffmangel treffen beide Seiten gleich; Spezies ohne Luftbedarf und feuerfeste Spezies sind hier im Vorteil
+- Verletzte ziehen sich nicht von selbst zurück; der Spieler schickt sie in die Medbay
+
+**Gegner-Enterkommandos (zuerst bauen)**
+
+- Gegner mit Teleporter beamen 2 Crew (später 3) in einen Raum mit System, bevorzugt Waffen, Schilde oder Reaktor
+- Vorwarnung: Der Zielraum blinkt 2 Sekunden lang rot, die Auto-Pause greift. So bleibt Zeit, Türen zu schließen oder Crew zu schicken, auch auf dem Handy
+- Enterer in einem Raum ohne Verteidiger beschädigen das System (eine Stufe je 4 Sekunden) und ziehen dann zum nächsten Systemraum weiter
+- Geschlossene Türen müssen sie aufbrechen (Tür-Stufe 1: 4 s, 2: 8 s, 3: 12 s)
+- Abwehr: eigene Crew, Türen, Luftschleuse (Raum leeren, Enterer verlieren Luft), später Abwehrbots
+- Der Teleporter des Gegners ist ein eigener Raum: Wird er getroffen, bleiben weitere Enterkommandos aus
+- Welche Gegner entern: Plünderer ab Stufe 6, Schwerer Kutter ab Stufe 10, Bosse ab Sektor 2. Gegnerschiffe bekommen dafür Lebenserhaltung und benannte Crew mit Spezies
+
+**Eigener Teleporter**
+
+- Modul für einen Erweiterungsraum (beim Händler ca. 40 Rohstoffe; das Kith’ra-Kaperschiff startet damit), Stufe 1–3, je Stufe 1 Energie
+- Kapazität 2 / 3 / 4 Personen, Aufladezeit 20 / 15 / 10 Sekunden
+- Bedienung: Knopf TELEPORTER unten rechts, dann Crew im Teleporterraum wählen, dann einen Raum am Gegnerschiff antippen (Auto-Pause wie beim Zielen der Waffen)
+- ZURÜCKBEAMEN holt alle auf einmal zurück, sobald der Teleporter geladen ist, egal wo sie stehen
+- Crew auf dem Gegnerschiff erscheint in der Crew-Liste mit Markierung. Fällt dort die Luft weg, nimmt sie Schaden wie auf dem eigenen Schiff
+- Risiko: Wird das Gegnerschiff zerstört, während eigene Crew drüben ist, stirbt sie. Ab 25 % Gegnerhülle warnt die Infozeile
+
+**Kaperung statt Zerstörung**
+
+- Ist die gesamte Gegner-Crew tot, ist das Schiff gekapert: Der Kampf endet, Beute +50 % Rohstoffe, 50 % Chance auf eine Waffe des Gegners (ohne freien Platz ins Lager), Treibstoff aus den Tanks
+- Gekaperte Schiffe fliehen nicht mehr; eine fliehende Gegner-Crew lässt sich also durch Entern aufhalten
+- Jäger-Fregatte und Bosse haben eine Selbstzerstörung: Sobald ihre Crew fällt, explodiert das Schiff nach 10 Sekunden. Rechtzeitig zurückbeamen
+
+**Umsetzung in Schritten**
+
+1. `melee` je Spezies, Raumkampf und Tür-Aufbrechen auf dem eigenen Schiff
+2. Gegner-Enterkommandos mit Vorwarnung, Lebenserhaltung und Crew für Gegnerschiffe
+3. Eigener Teleporter als Modul, Zurückbeamen, Warnung bei niedriger Gegnerhülle
+4. Kaperung mit Beute, Selbstzerstörung bei Jägern und Bossen
+5. Tutorial-Hinweis und Lexikon-Eintrag; danach Abwehrbots (Droiden-Bay)
 
 **Munition (Vorschlag):** Raketen und Drohnenteile als zusätzliche Verbrauchsgüter für starke Waffen und Drohnen; sie werden wie Treibstoff bei Händlern und aus Wracks erworben.
 
@@ -362,5 +406,5 @@ Antworten Stand 26.11.2026.
 - [x] **Spezies und Fraktionen:** Die sechs Spezies wie im Abschnitt „Spezies“. Vier Fraktionen: Händlergilde, Piratenclans, eine Maschinen-Spezies (Bezug zu den Androiden) und die Jägerflotte. Ansehen über die vorhandenen Ruf-Flags (Gildenbrief, schlechter Ruf), kein volles Fraktionssystem.
 - [x] **Grafik:** Keine Asset-Packs mehr; weiter mit der eigenen Pipeline (`tools/artgen`, feste Palette) und dem Fable-Prompt. Ein Artist höchstens für Bosse, Porträts und Store-Grafik, kurz vor dem Release.
 - [x] **Preis und Umfang der Demo:** 4,99 € Einmalkauf. Demo = Tutorial plus Sektor 1 mit Boss, nur Menschen-Frachter. Freischaltung der Vollversion in derselben App (kein zweites App-Listing), der Spielstand läuft weiter.
-- [x] **Bodenkämpfe/Entern:** Ja, als nächster Schritt (siehe Überarbeitung): Kampfwerte, Teleporter, Gegner-Enterkommandos.
+- [x] **Bodenkämpfe/Entern:** Ja, als nächster Schritt; Konzept im Abschnitt „Entern“.
 - [x] **Lebenserhaltung als eigener Raum:** Ja, in allen Schiffen mit Crew, die Luft braucht; reine Petrani- oder Androiden-Schiffe ohne, dafür mit einem anderen Nachteil. Auch Gegnerschiffe bekommen Lebenserhaltung, sobald es Entern gibt (bisher hat sie nur der Menschen-Frachter), sonst wirken Sauerstoff und Luftschleusen nicht gegen Enterer.
