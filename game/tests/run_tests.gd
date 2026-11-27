@@ -1447,7 +1447,8 @@ func test_shop_sells_random_perks_and_battery() -> void:
 			offered[p] = true
 		if goods.battery:
 			battery += 1
-	check(offered.size() == Upgrades.perk_ids().size(), "Nicht alle Perks kommen vor: %s" % offered.keys())
+	# Array in [] einpacken: sonst gilt es bei % als Argumentliste (Formatfehler ab 2 Einträgen)
+	check(offered.size() == Upgrades.perk_ids().size(), "Nicht alle Perks kommen vor: %s" % [offered.keys()])
 	check(battery > 5 and battery < 30, "Batterie zu oft oder nie im Angebot: %d von 39" % battery)
 	var run := RunState.new(3)
 	run.scrap = 500
@@ -1856,7 +1857,7 @@ func test_enemy_rooms_are_shuffled_but_fixed_per_node() -> void:
 		layouts[str(enemy.layout.room_of_system("schilde"))] = true
 		var again := run.create_enemy(run.map.node(run.current).links[0])
 		check(again.layout.room_of_system("schilde") == enemy.layout.room_of_system("schilde"), "Raumverteilung nicht fest je Knoten")
-	check(layouts.size() >= 3, "Schilde sitzen fast immer im selben Raum: %s" % layouts.keys())
+	check(layouts.size() >= 3, "Schilde sitzen fast immer im selben Raum: %s" % [layouts.keys()])
 
 
 func test_petrani_heal_by_themselves() -> void:
