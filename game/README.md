@@ -25,7 +25,21 @@ Prototyp Phase 2 (siehe [GDD](../docs/GDD.md#technik-und-roadmap)): ganze Runs i
 - **Tutorial:** ein Jagd-Run auf fester Karte, der nie gespeichert wird und keinen Spielstand berührt. Alle Nachbarn des Startsystems sind Kämpfe, der erste Sprung führt also sicher zu einem Piratenkutter. 13 Schritte (Crew wählen und bewegen, Energie, Türen, Pause, Sprung, Karte, Ziel wählen, Kampf gewinnen) in einem Kasten oben; ein blinkender Rahmen zeigt auf das Bedienelement. Aufgaben gehen von selbst weiter, sobald sie erledigt sind, Info-Schritte mit WEITER (das Spiel steht so lange). Jeder Schritt lässt sich überspringen, BEENDEN führt ins Hauptmenü (`scripts/view/tutorial_coach.gd`).
 - **Lexikon:** Reiter SCHIFFE und SPEZIES mit Bild, Werten und Beschreibung (`description`/`role` in `data/ships/*.json`, `lore` in `data/species.json`). Freigeschaltet wird über alle Runs hinweg (`user://codex.json`): ein Schiff, sobald man gegen es kämpft, eine Spezies, sobald sie in der eigenen Crew ist. Frachter und Menschen sind von Anfang an bekannt; neue Einträge meldet die Infozeile („Neu im Lexikon: …“). Unbekannte Einträge zeigen nur einen Schatten und einen Hinweis.
 - **Update-Hinweis:** Gibt es unter Releases eine neuere Version, zeigt das Hauptmenü oben ein Banner („Neue Version 0.3.23 verfügbar“, x blendet es aus). Android: LADEN lädt die APK in der App und öffnet den Installationsdialog; iOS: ANSEHEN öffnet die Release-Seite. Details unter **Android-APK → Updates in der App**.
-- **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Sprache (Deutsch/English), Ton, Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
+- **Einstellungen** (im Menü und im Spiel über den Knopf ≡ oben rechts oder Zurück/Escape, das Spiel steht so lange): Sprache (Deutsch/English), Ton, Musik (Aus, Auto oder fest eines der Stücke 1–5), Schrift HD/Retro, Spieltempo 75/100/125 %, Auto-Pause, Bildschirmwackeln, Vollbild (nur Computer). Gespeichert in `user://settings.json`. Im Spiel zusätzlich WEITERSPIELEN und HAUPTMENÜ (gespeichert wird wie sonst auch nur außerhalb von Kampf und Sprung; im Tutorial: TUTORIAL BEENDEN).
+
+### Musik
+
+- **Fünf Stücke** im Stil von UK-Garage/Breakbeat (2-Step- und Breakbeat-Drums mit Swing, Sub-Bass, breite Synthflächen, gechoppte synthetische Vocals mit Echo, Rave-Stabs), je 84–95 s als nahtlose Schleife in `assets/music/*.ogg`, erzeugt mit `python3 tools/musicgen/build.py` (Stücke in `tools/musicgen/tracks.py`):
+
+  | Nr. | Stück | Tempo | Charakter | Auto |
+  | --- | --- | --- | --- | --- |
+  | 1 | Neonküste | 132 BPM | warm, sehnsüchtig, 2-Step mit Vocal-Hook | Ruhe |
+  | 2 | Driftline | 130 BPM | dunkler, rollende Breaks, Reese-Bass | Ruhe |
+  | 3 | Hullbound | 134 BPM | euphorisch, Rave-Stabs, Arpeggio | Hauptmenü |
+  | 4 | Nachtsektor | 122 BPM | tief und entspannt, Half-Time, E-Piano | Ruhe |
+  | 5 | Jägerfront | 138 BPM | treibend, Acid-Bass, Stabs | Kampf |
+
+- **Autoload `Music`** (`scripts/music.gd`) auf eigenem Bus (−7 dB), überblendet weich (1,6 s). Einstellung „Musik“: **Aus**, **Auto** (Stück je Situation; in Ruhe wechseln sich 1, 2 und 4 nach jedem Kampf ab, am Run-Ende Stille) oder **1–5** (dieses Stück überall, zum Vergleichen). Gespeichert als `music_track`. „Ton aus“ schaltet auch die Musik stumm.
 
 ### Mehrsprachigkeit
 

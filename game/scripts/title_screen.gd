@@ -48,6 +48,7 @@ func _ready() -> void:
 		add_child(overlay)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
+	Music.situation("titel")
 
 
 func _layout() -> void:

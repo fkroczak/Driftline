@@ -732,6 +732,7 @@ func _process(delta: float) -> void:
 	enemy_view.show_jump = battle != null and battle.enemy_fleeing
 	enemy_view.sensor_level = state.level("sensoren")
 	_update_sound_loops()
+	Music.situation("kampf" if _phase == "kampf" else ("ende" if _phase == "ende" else "ruhe"))
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende" \
 			or settings_panel.visible or ship_panel.visible or shop_panel.visible or coach.wants_pause():
 		return  # Spiel steht, Befehle gehen trotzdem
