@@ -548,6 +548,19 @@ func _warp_in(done: Callable) -> void:
 	tween.tween_callback(done)
 
 
+## Situation für die Hintergrundmusik (siehe Music).
+func _music_situation() -> String:
+	if _phase == "ende":
+		return "ende"
+	if _phase == "kampf":
+		return "jaeger" if run.hunter_battle else "piraten"
+	if shop_panel.visible or (dialog.visible and str(run.dialog.get("scene", "")) == "station"):
+		return "station"
+	if dialog.visible:
+		return "ereignis"
+	return "ruhe"
+
+
 # --- Dialoge ---
 
 
@@ -732,6 +745,7 @@ func _process(delta: float) -> void:
 	enemy_view.show_jump = battle != null and battle.enemy_fleeing
 	enemy_view.sensor_level = state.level("sensoren")
 	_update_sound_loops()
+	Music.situation(_music_situation())
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende" \
 			or settings_panel.visible or ship_panel.visible or shop_panel.visible or coach.wants_pause():
 		return  # Spiel steht, Befehle gehen trotzdem
@@ -798,6 +812,13 @@ func _on_battle_event(e: Dictionary) -> void:
 			Sfx.play("crew_died", _side_db(e.own_ship))
 			effects.sparkle(pos, Color("#E24B4A"))
 			effects.float_text(pos + Vector2(0, -8), Loc.t("%s gefallen") % e.name, Color("#F7C1C1"))
+		"intruder_died":
+			var pos := _tile_pos(e)
+			Sfx.play("crew_died", _side_db(e.own_ship) - 3.0)
+			effects.sparkle(pos, Color("#97C459"))
+			effects.float_text(pos + Vector2(0, -8), Loc.t("%s besiegt") % e.name, Color("#C0DD97"))
+		"door_broken":
+			effects.sparkle(_tile_pos(e), Color("#FAC775"))
 			if e.own_ship:
 				_red_flash = 0.15
 		"fire":

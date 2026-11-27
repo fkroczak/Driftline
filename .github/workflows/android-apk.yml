@@ -6,7 +6,8 @@
 #  - Actions → „Release bauen (Android + iOS)“ → „Run workflow“ (Branch wählbar)
 #  - oder ein Tag pushen, z. B. git tag release-0.2 && git push origin release-0.2
 #    (alte „apk-…“-Tags gehen weiter und bauen ebenfalls beide)
-# Das Release entsteht nur, wenn beide Builds geklappt haben.
+# Das Release entsteht nur, wenn beide Builds geklappt haben. Danach bleiben nur die 10 neuesten
+# Releases erhalten, ältere werden samt Tag gelöscht.
 name: Release bauen (Android + iOS)
 
 on:
@@ -152,3 +153,17 @@ jobs:
             **Android:** APK auf dem Handy herunterladen und öffnen; sie installiert sich als Update über die vorige Version. Beim ersten Mal „Aus dieser Quelle installieren“ erlauben.
 
             **iOS:** Die IPA ist unsigniert. Mit AltStore oder Sideloadly und der eigenen Apple-ID aufs iPhone bringen (kostenlose Apple-ID: alle 7 Tage neu signieren).
+
+      # Nur die 10 neuesten Releases behalten; ältere samt Tag löschen
+      - name: Alte Releases aufräumen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: 10
+        run: |
+          gh api "repos/${{ github.repository }}/releases?per_page=100" --paginate \
+            --jq '.[] | [.published_at // .created_at, .tag_name] | @tsv' \
+            | sort -r | tail -n +$((KEEP + 1)) | cut -f2 \
+            | while read -r tag; do
+                echo "Lösche Release $tag"
+                gh release delete "$tag" --cleanup-tag --yes --repo "${{ github.repository }}"
+              done

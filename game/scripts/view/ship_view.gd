@@ -113,7 +113,7 @@ func _add_sprite(member: CrewMember) -> void:
 	var sprite := Sprite2D.new()
 	sprite.texture = CrewArt.sheet_of(member.species, member.gender, member.look)
 	sprite.hframes = 4
-	if hostile:
+	if hostile != state.intruders.has(member):  # Gegner-Crew und Enterer rötlich
 		sprite.modulate = Color(1.0, 0.82, 0.78)
 	add_child(sprite)
 	_crew_sprites[member] = sprite
@@ -172,12 +172,12 @@ func _process(delta: float) -> void:
 
 
 func _sync_crew() -> void:
-	for member in state.crew:
+	for member in state.crew + state.intruders:
 		if not _crew_sprites.has(member):
 			_add_sprite(member)
 	for member: CrewMember in _crew_sprites.keys():
 		var sprite: Sprite2D = _crew_sprites[member]
-		if not state.crew.has(member):
+		if not state.crew.has(member) and not state.intruders.has(member):
 			# Gestorben: kurz rot aufleuchten, dann ausblenden
 			_crew_sprites.erase(member)
 			var tween := create_tween()
@@ -189,7 +189,7 @@ func _sync_crew() -> void:
 			if member == last_order:
 				last_order = null
 			continue
-		sprite.visible = can_see_crew()
+		sprite.visible = can_see_crew() or state.intruders.has(member)
 		sprite.position = state.layout.tile_center(member.tile_position()).round()
 		sprite.frame = FRAME_BY_FACING.get(member.facing, 0)
 		# Arbeiten sichtbar machen: Hämmern wippt, Löschen zittert leicht
@@ -199,6 +199,9 @@ func _sync_crew() -> void:
 					sprite.position += Vector2(member.facing)
 			"loeschen":
 				sprite.position.x += -1.0 if fmod(_time * 10.0, 1.0) < 0.5 else 0.0
+			"kaempfen", "aufbrechen":
+				if fmod(_time * 8.0, 1.0) < 0.4:
+					sprite.position += Vector2(member.facing) * 2.0
 
 
 func _draw() -> void:
@@ -421,7 +424,7 @@ func _draw_fires() -> void:
 func _draw_crew_health() -> void:
 	if not can_see_crew():
 		return
-	for member in state.crew:
+	for member in state.crew + state.intruders:
 		var head := state.layout.tile_center(member.tile_position()).round()
 		if member.activity != "":
 			ActivityIcons.draw(self, head + Vector2(-3, -18 + (1 if fmod(_time * 2.0, 1.0) < 0.5 else 0)), member.activity)

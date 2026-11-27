@@ -12,6 +12,10 @@ const ROLE_CAPTAIN := "captain"
 const REPAIR_SKILL := "reparatur"
 ## Je Stufe Reparatur so viel schneller (Stufe 5 = +50 %).
 const REPAIR_LEVEL_BONUS := 0.1
+## Nahkampf: Schaden je Sekunde und Punkt Kampfwert (Kampfwert 3 = 6 LP/s).
+const MELEE_DPS_PER_POINT := 2.0
+## Kampfwert, wenn die Spezies keinen angibt.
+const DEFAULT_MELEE := 3.0
 
 var display_name: String
 var species: String
@@ -34,7 +38,8 @@ var pinned := false
 ## Stammplatz (z. B. die eigene Konsole), zu dem die Gegner-KI nach Reparaturen zurückkehrt.
 var home_tile := Vector2i(-1, -1)
 var hp := MAX_HP
-## Was die Figur gerade tut (für die Darstellung): "", "loeschen", "flicken", "reparieren", "heilen".
+## Was die Figur gerade tut (für die Darstellung): "", "loeschen", "flicken", "reparieren", "heilen",
+## "kaempfen", "aufbrechen" (Enterer an einer geschlossenen Tür).
 var activity := ""
 ## Kachel, an der gearbeitet wird (Feuer, Leck); sonst die eigene.
 var activity_tile := Vector2i.ZERO
@@ -59,6 +64,16 @@ func is_captain() -> bool:
 ## Tempo beim Löschen, Flicken und Reparieren (1 = Mensch ohne Erfahrung): Spezies mal Erfahrung.
 func repair_factor() -> float:
 	return float(Species.value(species, "repair", 1.0)) * (1.0 + REPAIR_LEVEL_BONUS * level(REPAIR_SKILL))
+
+
+## Kampfwert im Nahkampf (1–5) aus der Spezies.
+func melee() -> float:
+	return float(Species.value(species, "melee", DEFAULT_MELEE))
+
+
+## Nahkampfschaden je Sekunde.
+func melee_dps() -> float:
+	return MELEE_DPS_PER_POINT * melee()
 
 
 func breathes() -> bool:
