@@ -548,6 +548,19 @@ func _warp_in(done: Callable) -> void:
 	tween.tween_callback(done)
 
 
+## Situation für die Hintergrundmusik (siehe Music).
+func _music_situation() -> String:
+	if _phase == "ende":
+		return "ende"
+	if _phase == "kampf":
+		return "jaeger" if run.hunter_battle else "piraten"
+	if shop_panel.visible or (dialog.visible and str(run.dialog.get("scene", "")) == "station"):
+		return "station"
+	if dialog.visible:
+		return "ereignis"
+	return "ruhe"
+
+
 # --- Dialoge ---
 
 
@@ -732,6 +745,7 @@ func _process(delta: float) -> void:
 	enemy_view.show_jump = battle != null and battle.enemy_fleeing
 	enemy_view.sensor_level = state.level("sensoren")
 	_update_sound_loops()
+	Music.situation(_music_situation())
 	if legend.visible or is_paused() or dialog.visible or map_view.visible or _phase == "ende" \
 			or settings_panel.visible or ship_panel.visible or shop_panel.visible or coach.wants_pause():
 		return  # Spiel steht, Befehle gehen trotzdem

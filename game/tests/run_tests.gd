@@ -1277,6 +1277,7 @@ func test_settings_have_defaults() -> void:
 	for key: String in Settings.DEFAULTS:
 		check(typeof(Settings.get_value(key)) == typeof(Settings.DEFAULTS[key]), "Einstellung %s hat falschen Typ" % key)
 	check(Settings.speed() > 0.0, "Spieltempo muss positiv sein")
+	check(str(Settings.DEFAULTS["music_track"]) == "auto", "Musik steht anfangs auf Auto")
 
 
 # --- Mehrsprachigkeit ---
@@ -1983,3 +1984,14 @@ func test_update_picks_newest_release_file() -> void:
 	var ipa := UpdateCheck.find_update(releases, "ios", "0.3.21")
 	check(ipa != null and ipa.version == "0.3.22" and ipa.page == "https://r/22", "iOS: 0.3.22 erwartet")
 	check(UpdateCheck.find_update(releases, "", "0.3.1") == null, "Update für unbekannte Plattform")
+
+
+func test_music_tracks_exist() -> void:
+	var music := preload("res://scripts/music.gd")
+	check(music.TRACKS.size() == 5, "Fünf Musikstücke")
+	for track: String in music.TRACKS:
+		check(ResourceLoader.exists(music.DIR + track + ".ogg"), "Musik %s fehlt" % track)
+		check(music.TITLES.has(track), "Titel für %s fehlt" % track)
+	for situation: String in music.AUTO:
+		var track := str(music.AUTO[situation])
+		check(track == "" or track in music.TRACKS, "Auto-Stück %s unbekannt" % track)

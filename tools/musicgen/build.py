@@ -1,6 +1,6 @@
 """Erzeugt die Spielmusik: python3 tools/musicgen/build.py [NAME ...] [--wav ORDNER]
 
-- game/assets/music/<name>.ogg: nahtlose Schleife je Stück (Ogg Vorbis über ffmpeg)
+- game/assets/music/<name>.ogg: nahtlose Schleife je Stück aus AMBIENT (Ogg Vorbis über ffmpeg)
 - mit --wav: zusätzlich unkomprimiert, zum Anhören und Vergleichen
 """
 
@@ -37,7 +37,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("only", nargs="*", help="nur diese Stücke")
     parser.add_argument("--wav", type=Path, help="zusätzlich WAV-Dateien hierhin")
-    parser.add_argument("--set", default="TRACKS", help="TRACKS oder AMBIENT (ruhige Hintergrundstücke)")
+    parser.add_argument("--set", default="AMBIENT", help="AMBIENT (im Spiel) oder TRACKS (erste, lautere Entwürfe)")
     parser.add_argument("--out", type=Path, default=OUT, help="Zielordner für die Ogg-Dateien")
     parser.add_argument("--quality", type=float, default=4.0, help="Vorbis-Qualität (0–10)")
     args = parser.parse_args()
