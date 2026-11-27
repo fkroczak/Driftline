@@ -36,8 +36,7 @@ func _rows() -> Array:
 		{"key": "language", "label": Loc.t("Sprache"), "options": [["de", "Deutsch"], ["en", "English"]],
 			"note": Loc.t("Sprache der Texte im Spiel"), "current": Loc.language()},
 		{"key": "muted", "label": Loc.t("Ton"), "options": [[false, Loc.t("An")], [true, Loc.t("Aus")]],
-			"note": Loc.t("Soundeffekte und Musik an oder aus")},
-		{"key": "music_track", "label": Loc.t("Musik"), "options": _track_options(), "note": _track_note()},
+			"note": Loc.t("Soundeffekte an oder aus")},
 		{"key": "crisp_text", "label": Loc.t("Schrift"), "options": [[true, "HD"], [false, "Retro"]],
 			"note": Loc.t("HD: Schrift in voller Auflösung · Retro: alles im groben Pixelraster")},
 		{"key": "speed", "label": Loc.t("Spieltempo"), "options": [[0.75, Loc.t("Langsam")], [1.0, Loc.t("Normal")], [1.25, Loc.t("Schnell")]],
@@ -50,23 +49,6 @@ func _rows() -> Array:
 	if Settings.has_fullscreen():
 		rows.append({"key": "fullscreen", "label": Loc.t("Vollbild"), "options": [[true, Loc.t("An")], [false, Loc.t("Aus")]], "note": Loc.t("Nur am Computer")})
 	return rows
-
-
-## Aus, Auto und die Stücke 1–5 (zum Vergleichen fest einstellbar).
-func _track_options() -> Array:
-	var opts: Array = [["off", Loc.t("Aus")], ["auto", Loc.t("Auto")]]
-	for i in Music.TRACKS.size():
-		opts.append([Music.TRACKS[i], str(i + 1)])
-	return opts
-
-
-func _track_note() -> String:
-	var track := str(Settings.get_value("music_track"))
-	if track in Music.TRACKS:
-		return Loc.t("Läuft überall: %s") % Music.title_of(track)
-	if track == "off":
-		return Loc.t("Keine Hintergrundmusik")
-	return Loc.t("Auto: Stück passend zu Menü, Reise und Kampf")
 
 
 func _draw() -> void:
@@ -82,8 +64,6 @@ func _draw() -> void:
 		HudStyle.text(self, Vector2(box.position.x + 8, y + 12), row.label, HudStyle.COLOR_TEXT)
 		var opts: Array = row.options
 		var ow := 52.0 if opts.size() == 3 else 60.0
-		if opts.size() > 3:
-			ow = floorf((BOX.x - 60.0) / opts.size()) - 3.0
 		var x := box.end.x - 8 - opts.size() * (ow + 3) + 3
 		var current: Variant = row.get("current", Settings.get_value(row.key))
 		for opt: Array in opts:

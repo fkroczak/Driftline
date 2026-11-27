@@ -9,7 +9,6 @@ extends RefCounted
 ## - shake: Bildschirm wackelt bei Treffern.
 ## - fullscreen: nur am Computer.
 ## - muted: Ton aus (Sfx liest und schreibt ihn hier mit).
-## - music_track: Musik "off", "auto" (Stück je Situation) oder ein festes Stück (siehe Music).
 ## - language: "de", "en" oder leer (= Systemsprache), siehe Loc.
 
 const PATH := "user://settings.json"
@@ -20,7 +19,6 @@ const DEFAULTS := {
 	"shake": true,
 	"fullscreen": false,
 	"muted": false,
-	"music_track": "auto",
 	"language": "",
 }
 
@@ -70,9 +68,6 @@ static func apply() -> void:
 	var sfx := tree.root.get_node_or_null("Sfx")
 	if sfx and bool(sfx.get("muted")) != bool(get_value("muted")):
 		sfx.set("muted", get_value("muted"))
-	var music := tree.root.get_node_or_null("Music")
-	if music:
-		music.call("refresh")
 	tree.root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS if get_value("crisp_text") else Window.CONTENT_SCALE_MODE_VIEWPORT
 	if has_fullscreen() and DisplayServer.get_name() != "headless":
 		var want := DisplayServer.WINDOW_MODE_FULLSCREEN if get_value("fullscreen") else DisplayServer.WINDOW_MODE_WINDOWED
