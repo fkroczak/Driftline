@@ -7,9 +7,11 @@ const ICONS := {
 	"flicken": {"color": Color("#C4CAD3"), "rows": ["XXXX.", "XXXX.", "..X..", "..X..", "..X.."]},
 	"loeschen": {"color": Color("#85B7EB"), "rows": ["..X..", ".XXX.", "XXXXX", "XXXXX", ".XXX."]},
 	"heilen": {"color": Color("#97C459"), "rows": ["..X..", "..X..", "XXXXX", "..X..", "..X.."]},
+	"kaempfen": {"color": Color("#E24B4A"), "rows": ["X...X", ".X.X.", "..X..", ".X.X.", "X...X"]},
+	"aufbrechen": {"color": Color("#E24B4A"), "rows": ["XX...", "XXX..", ".XXX.", "..X.X", "...XX"]},
 }
 const NAMES := {
-	"reparieren": "repariert", "flicken": "flickt Leck", "loeschen": "löscht", "heilen": "wird geheilt",  # i18n
+	"reparieren": "repariert", "flicken": "flickt Leck", "loeschen": "löscht", "heilen": "wird geheilt", "kaempfen": "kämpft", "aufbrechen": "bricht Tür auf",  # i18n
 }
 
 

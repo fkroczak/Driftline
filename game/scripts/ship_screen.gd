@@ -812,6 +812,13 @@ func _on_battle_event(e: Dictionary) -> void:
 			Sfx.play("crew_died", _side_db(e.own_ship))
 			effects.sparkle(pos, Color("#E24B4A"))
 			effects.float_text(pos + Vector2(0, -8), Loc.t("%s gefallen") % e.name, Color("#F7C1C1"))
+		"intruder_died":
+			var pos := _tile_pos(e)
+			Sfx.play("crew_died", _side_db(e.own_ship) - 3.0)
+			effects.sparkle(pos, Color("#97C459"))
+			effects.float_text(pos + Vector2(0, -8), Loc.t("%s besiegt") % e.name, Color("#C0DD97"))
+		"door_broken":
+			effects.sparkle(_tile_pos(e), Color("#FAC775"))
 			if e.own_ship:
 				_red_flash = 0.15
 		"fire":

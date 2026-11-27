@@ -33,6 +33,13 @@ extends RefCounted
 ##
 ## Türen sind anfangs zu. Die eigene Crew läuft trotzdem hindurch; Luft und Feuer nicht.
 ##
+## Enterer (intruders): feindliche Crew an Bord dieses Schiffs. Stehen Crew und Enterer im selben
+## Raum, kämpfen sie (CrewMember.melee_dps, jeder greift den Gegner mit den wenigsten LP an).
+## Wer kämpft, löscht, flickt, repariert und bedient keine Konsole. Geschlossene Türen müssen
+## Enterer erst aufbrechen (DOOR_BREAK_TIME je Türstufe); danach steht die Tür offen und lässt
+## sich wieder schließen. Feuer, Luftmangel und Treffer verletzen Enterer wie die eigene Crew,
+## die Medbay heilt sie nicht.
+##
 ## Konsolenregel (Räume mit Konsole, siehe data/ships/*.json):
 ## 1. Ist die Konsole frei, setzt sich die erfahrenste Person im Raum hin.
 ## 2. Sitzt dort jemand weniger Erfahrenes, tauschen beide den Platz,
@@ -77,6 +84,8 @@ const HEAL_PER_LEVEL := 6.0
 const JUMP_TIME := 40.0
 ## Außerhalb des Kampfs: Sekunden ohne Energie im Antrieb, geteilt durch 1 + Balken.
 const PEACE_JUMP_TIME := 15.0
+## Sekunden, die ein Enterer je Türstufe zum Aufbrechen einer geschlossenen Tür braucht.
+const DOOR_BREAK_TIME := 4.0
 
 var layout: ShipLayout
 var crew: Array[CrewMember] = []
@@ -109,6 +118,12 @@ var jump_charge := 0.0
 ## Im Kampf: Sprung lädt langsam, Waffen laden. Außerhalb: Sprung lädt schnell, Waffen nicht.
 var in_combat := true
 var _fire_damage := {}  # System-ID -> Fortschritt bis zum nächsten Brandschaden
+## Feindliche Crew an Bord (Enterkommando).
+var intruders: Array[CrewMember] = []
+## Wer gerade im Nahkampf ist (Crew und Enterer) -> true.
+var _fighting := {}
+## Türschlüssel -> Sekunden, die Enterer schon an dieser Tür arbeiten.
+var _door_break := {}
 ## Meldungen für die Darstellung (z. B. Reparatur fertig); wer sie liest, leert die Liste.
 var events: Array[Dictionary] = []
 
@@ -284,7 +299,7 @@ func take_hit(room_idx: int, amount: int, weapon: Weapon = null) -> int:
 		var sys_chance := weapon.system_chance if weapon else 1.0
 		if sys and rng.randf() < sys_chance:
 			dealt = sys.apply_damage(amount)
-		for member: CrewMember in crew.duplicate():
+		for member: CrewMember in crew + intruders:
 			if layout.room_index_at(member.current_tile()) == room_idx:
 				_hurt(member, HP_PER_HIT * amount)
 		var tiles := layout.room_tiles(room_idx)
@@ -396,8 +411,8 @@ func average_oxygen() -> float:
 func _crew_work(delta: float) -> void:
 	var idle := {}  # Raum -> [stehende Personen]
 	for member in crew:
-		member.activity = ""
-		if not member.is_moving():
+		member.activity = "kaempfen" if _fighting.has(member) else ""
+		if not member.is_moving() and not _fighting.has(member):
 			var room := layout.room_index_at(member.tile)
 			if room >= 0:
 				if not idle.has(room):
@@ -508,7 +523,7 @@ func _update_fires(delta: float) -> void:
 
 func _update_crew_health(delta: float) -> void:
 	var medbay := layout.room_of_system("medbay")
-	for member: CrewMember in crew.duplicate():
+	for member: CrewMember in crew + intruders:
 		var t := member.current_tile()
 		var room := layout.room_index_at(t)
 		var damage := 0.0
@@ -519,7 +534,7 @@ func _update_crew_health(delta: float) -> void:
 		if room >= 0 and oxygen[room] < O2_LOW and member.breathes():
 			damage += HP_SUFFOCATE
 		var heal := member.medbay_factor()
-		if room == medbay and room >= 0 and not member.is_moving() and level("medbay") > 0 and heal > 0.0:
+		if room == medbay and room >= 0 and not member.is_moving() and level("medbay") > 0 and heal > 0.0 and crew.has(member):
 			if member.hp < member.max_hp and member.activity == "":
 				member.activity = "heilen"
 			member.hp = minf(member.hp + level("medbay") * HEAL_PER_LEVEL * heal * delta, member.max_hp)
@@ -551,10 +566,119 @@ func add_crew_anywhere(p_name: String, species: String) -> CrewMember:
 
 func _hurt(member: CrewMember, amount: float) -> void:
 	member.hp -= amount
-	if member.hp <= 0.0 and crew.has(member):
-		member.hp = 0.0
+	if member.hp > 0.0:
+		return
+	member.hp = 0.0
+	_fighting.erase(member)
+	if crew.has(member):
 		crew.erase(member)
 		events.append({"type": "crew_died", "name": member.display_name, "tile": member.tile_position(), "member": member})
+	elif intruders.has(member):
+		intruders.erase(member)
+		events.append({"type": "intruder_died", "name": member.display_name, "tile": member.tile_position(), "member": member})
+
+
+# --- Enterer und Nahkampf ---
+
+
+## Setzt einen Enterer (feindliche Crew) auf eine Kachel dieses Schiffs.
+func add_intruder(p_name: String, species: String, tile: Vector2i) -> CrewMember:
+	assert(layout.is_walkable(tile), "Enterer-Kachel %s liegt in keinem Raum" % tile)
+	var member := CrewMember.new(p_name, species, tile)
+	intruders.append(member)
+	return member
+
+
+## Schickt einen Enterer in einen Raum (erste Kachel, die kein anderer Enterer ansteuert).
+## Geschlossene Türen auf dem Weg bricht er unterwegs auf.
+func move_intruder(member: CrewMember, room_idx: int) -> bool:
+	if room_idx < 0 or room_idx >= layout.rooms.size():
+		return false
+	var taken := {}
+	for other in intruders:
+		if other != member:
+			taken[other.destination()] = true
+	var start := _start_tile(member)
+	for t in layout.room_tiles(room_idx):
+		if taken.has(t) or not layout.is_walkable(t):
+			continue
+		var path := layout.find_path(start, t)
+		if t != start and path.is_empty():
+			continue
+		if member.is_moving():
+			path.push_front(start)
+		member.path = path
+		return true
+	return false
+
+
+func is_fighting(member: CrewMember) -> bool:
+	return _fighting.has(member)
+
+
+## Türstufe: Stufe des Systems „tueren“, ohne dieses System 1.
+func door_level() -> int:
+	return maxi(level("tueren"), 1) if systems.has("tueren") else 1
+
+
+func door_break_time() -> float:
+	return DOOR_BREAK_TIME * door_level()
+
+
+## Enterer laufen; vor einer geschlossenen Tür bleiben sie stehen und brechen sie auf.
+func _move_intruders(delta: float) -> void:
+	var working := {}
+	for member in intruders:
+		if _fighting.has(member):
+			member.activity = "kaempfen"
+			continue
+		member.activity = ""
+		if member.is_moving() and member.step_progress == 0.0:
+			var next: Vector2i = member.path[0]
+			if layout.has_door(member.tile, next) and not is_door_open(member.tile, next):
+				var key: Variant = ShipLayout.door_key(member.tile, next)
+				member.set_activity("aufbrechen", next)
+				working[key] = true
+				_door_break[key] = _door_break.get(key, 0.0) + delta
+				if _door_break[key] >= door_break_time():
+					_door_break.erase(key)
+					set_door_open(member.tile, next, true)
+					events.append({"type": "door_broken", "tile": next, "room": layout.room_index_at(next)})
+				continue
+		member.update(delta)
+	for key: Variant in _door_break.keys():
+		if not working.has(key):
+			_door_break.erase(key)  # niemand mehr an der Tür: von vorn
+
+
+## Nahkampf: Crew und Enterer im selben Raum greifen sich an. Wer steht, schlägt zu (auf den
+## Gegner mit den wenigsten LP im Raum); getroffen werden kann jeder im Raum, auch wer läuft.
+## Der Schaden wird gleichzeitig verrechnet.
+func _fight(delta: float) -> void:
+	_fighting.clear()
+	if intruders.is_empty():
+		return
+	var hits: Array = []  # [Ziel, Schaden]
+	for sides: Array in [[crew, intruders], [intruders, crew]]:
+		for attacker: CrewMember in sides[0]:
+			var room := layout.room_index_at(attacker.current_tile())
+			if room < 0:
+				continue
+			var target: CrewMember = null
+			for enemy: CrewMember in sides[1]:
+				if layout.room_index_at(enemy.current_tile()) != room:
+					continue
+				if target == null or enemy.hp < target.hp:
+					target = enemy
+			if target == null:
+				continue
+			if attacker.is_moving():
+				continue
+			_fighting[attacker] = true
+			attacker.set_activity("kaempfen", target.current_tile())
+			hits.append([target, attacker.melee_dps() * delta])
+	for hit: Array in hits:
+		_hurt(hit[0], hit[1])
 
 
 func _rebalance() -> void:
@@ -586,6 +710,7 @@ func _rebalance() -> void:
 
 
 func _update_combat(delta: float) -> void:
+	_fight(delta)
 	_crew_work(delta)
 	_update_oxygen(delta)
 	_update_fires(delta)
@@ -752,6 +877,7 @@ func add_crew(p_name: String, species: String, tile: Vector2i, experience := {})
 func update(delta: float) -> void:
 	for member in crew:
 		member.update(delta)
+	_move_intruders(delta)
 	_staff_consoles()
 	for member in crew:
 		if not member.is_moving() and layout.is_console(member.tile):
@@ -790,7 +916,7 @@ func operator_of(room_idx: int) -> CrewMember:
 	if console == null:
 		return null
 	for member in crew:
-		if not member.is_moving() and member.tile == console:
+		if not member.is_moving() and member.tile == console and not _fighting.has(member):
 			return member
 	return null
 
@@ -856,7 +982,7 @@ func _staff_consoles() -> void:
 			continue  # jemand ist schon auf dem Weg zur Konsole
 		var best: CrewMember = null
 		for member in crew:
-			if member.is_moving() or layout.room_index_at(member.tile) != room:
+			if member.is_moving() or layout.room_index_at(member.tile) != room or _fighting.has(member):
 				continue
 			if best == null or member.level(system) > best.level(system):
 				best = member

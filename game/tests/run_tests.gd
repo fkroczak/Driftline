@@ -1996,3 +1996,95 @@ func test_music_tracks_exist() -> void:
 	for situation: String in music.AUTO:
 		var track := str(music.AUTO[situation])
 		check(track == "" or track in music.TRACKS, "Auto-Stück %s unbekannt" % track)
+
+
+# --- Entern: Nahkampf und Türen aufbrechen ---
+
+
+func test_species_melee_values() -> void:
+	var dps := {}
+	for sp in ["mensch", "kithra", "androide", "veyari", "ormok", "petrani"]:
+		dps[sp] = CrewMember.new("X", sp, Vector2i.ZERO).melee_dps()
+	check(is_equal_approx(dps.mensch, 6.0), "Mensch: 6 LP/s erwartet, %.1f" % dps.mensch)
+	check(is_equal_approx(dps.kithra, 10.0) and is_equal_approx(dps.ormok, 10.0), "Kith'ra und Ormok: 10 LP/s erwartet")
+	check(is_equal_approx(dps.veyari, 2.0), "Veyari: 2 LP/s erwartet, %.1f" % dps.veyari)
+	check(is_equal_approx(dps.androide, 6.0) and is_equal_approx(dps.petrani, 6.0), "Androide und Petrani: 6 LP/s erwartet")
+
+
+func test_crew_fights_intruder_in_room() -> void:
+	var state := _quiet_state()
+	var a := state.add_crew("A", "mensch", Vector2i(6, 6))
+	var b := state.add_crew("B", "mensch", Vector2i(6, 7))
+	var enemy := state.add_intruder("Enterer", "mensch", Vector2i(7, 6))
+	_settle(state, 1.0)  # wer zur Konsole läuft, kämpft erst danach
+	check(state.is_fighting(a) and state.is_fighting(enemy), "Crew und Enterer im selben Raum kämpfen nicht")
+	check(a.activity == "kaempfen", "Tätigkeit beim Kampf ist '%s'" % a.activity)
+	_settle(state, 10.0)
+	check(state.intruders.is_empty(), "Zwei gegen einen: Enterer lebt nach 10 s noch (%.0f LP)" % enemy.hp)
+	check(state.crew.size() == 2, "Crew ist gefallen")
+	check(a.hp < a.max_hp or b.hp < b.max_hp, "Enterer hat nicht zurückgeschlagen")
+	check(not state.is_fighting(a), "Kampf endet nicht nach dem Sieg")
+
+
+func test_intruder_attacks_weakest_and_kills_alone_crew() -> void:
+	var state := _quiet_state()
+	var strong := state.add_crew("Stark", "ormok", Vector2i(6, 6))
+	var weak := state.add_crew("Schwach", "veyari", Vector2i(6, 7))
+	state.add_intruder("Enterer", "ormok", Vector2i(7, 6))
+	_settle(state, 2.0)
+	check(weak.hp < weak.max_hp and is_equal_approx(strong.hp, strong.max_hp), "Enterer greift nicht den mit den wenigsten LP an")
+
+
+func test_fighting_crew_neither_repairs_nor_mans_console() -> void:
+	var state := _quiet_state()
+	var waffen := state.layout.room_index_by_id("waffen")
+	state.get_system("waffen").apply_damage(1)
+	var gunner := state.add_crew("Schütze", "mensch", Vector2i(6, 6))
+	_settle(state, 1.0)
+	var console: Variant = state.layout.console_of(waffen)
+	if console != null:
+		check(state.operator_of(waffen) == gunner, "Schütze sitzt nicht an der Konsole")
+	var progress := state.get_system("waffen").repair_progress
+	state.add_intruder("Enterer", "petrani", Vector2i(7, 7))
+	_settle(state, 2.0)
+	check(state.operator_of(waffen) == null, "Wer kämpft, bedient trotzdem die Konsole")
+	check(state.get_system("waffen").damage == 1 and state.get_system("waffen").repair_progress <= progress + 0.001, "Wer kämpft, repariert trotzdem")
+
+
+func test_intruder_breaks_closed_door() -> void:
+	var state := _quiet_state()
+	var target := state.layout.room_index_by_id("erweiterung_1")
+	var enemy := state.add_intruder("Enterer", "mensch", Vector2i(1, 1))
+	check(not state.is_door_open(Vector2i(1, 1), Vector2i(2, 1)), "Tür ist nicht zu")
+	check(state.move_intruder(enemy, target), "Enterer findet keinen Weg")
+	_settle(state, 3.0)
+	check(enemy.tile == Vector2i(1, 1) and enemy.activity == "aufbrechen", "Enterer geht durch die geschlossene Tür (Kachel %s, '%s')" % [enemy.tile, enemy.activity])
+	_settle(state, 1.5)
+	check(state.is_door_open(Vector2i(1, 1), Vector2i(2, 1)), "Tür nach %.0f s nicht aufgebrochen" % ShipState.DOOR_BREAK_TIME)
+	check(state.events.any(func(e: Dictionary) -> bool: return e.type == "door_broken"), "Kein Ereignis door_broken")
+	_settle(state, 3.0)
+	check(state.layout.room_index_at(enemy.tile) == target, "Enterer kommt nach dem Aufbrechen nicht an")
+
+
+func test_open_door_does_not_stop_intruder() -> void:
+	var state := _quiet_state()
+	state.set_door_open(Vector2i(1, 1), Vector2i(2, 1), true)
+	var enemy := state.add_intruder("Enterer", "mensch", Vector2i(1, 1))
+	state.move_intruder(enemy, state.layout.room_index_by_id("erweiterung_1"))
+	_settle(state, 1.5)
+	check(state.layout.room_index_at(enemy.tile) == state.layout.room_index_by_id("erweiterung_1"), "Offene Tür bremst den Enterer")
+
+
+func test_medbay_does_not_heal_intruders_but_fire_hurts_them() -> void:
+	var state := _quiet_state()
+	var medbay := state.layout.room_index_by_id("medbay")
+	while state.add_power("medbay"):
+		pass
+	var tile: Vector2i = state.layout.room_tiles(medbay)[0]
+	var enemy := state.add_intruder("Enterer", "mensch", tile)
+	enemy.hp = 50.0
+	_settle(state, 3.0)
+	check(is_equal_approx(enemy.hp, 50.0), "Medbay heilt Enterer (%.0f LP)" % enemy.hp)
+	state.start_fire(tile)
+	_settle(state, 1.0)
+	check(enemy.hp < 50.0, "Feuer verletzt Enterer nicht")
