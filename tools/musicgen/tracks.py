@@ -96,3 +96,68 @@ TRACKS = {
         "mix": {"arp": -3, "reverb": -2},
     },
 }
+
+# Ruhige Hintergrundmusik: leise Drums (gedämpft), viel Fläche und Raum, wenig Melodie,
+# weniger Verdichtung im Master. Je ein Stück pro Spielsituation.
+_CALM = {"drive": 1.0, "peak_db": -4.0, "pump": 0.25, "clap": False, "open_hat": False, "fills": False,
+         "pad": "warm", "hall": 5.0}
+
+AMBIENT = {
+    # Ruhe an Bord / Sternenkarte: fast ohne Rhythmus, schwebend
+    "stille_drift": {**_CALM,
+        "title": "Stille Drift", "bpm": 84, "seed": 11,
+        "chords": [[50, 57, 60, 64, 65], [46, 53, 57, 62], [43, 50, 55, 58, 62], [45, 52, 57, 60, 64]],
+        "bars_per_chord": 2, "bass": "drone", "pad_cut": 1100, "voxpad_vowel": "u",
+        "keys_pattern": [(0, 10)], "arp_pattern": [0, 3, 2, 4], "arp_every": 4, "arp_wave": "tri",
+        "arp_bright": 1600, "arp_range": (62, 81),
+        "sections": [(8, "pad voxpad"), (8, "pad keys bass"), (8, "pad keys bass arp voxpad"),
+                     (8, "pad bass arp")],
+        "mix": {"pad": 2, "voxpad": -4, "keys": -5, "arp": -6, "bass": -6, "reverb": 4},
+    },
+    # Auftrag / Ereignis: geheimnisvoll, Arpeggio im Nebel, leiser Puls
+    "signal_im_nebel": {**_CALM,
+        "title": "Signal im Nebel", "bpm": 100, "seed": 12, "swing": 0.1,
+        "chords": [[52, 59, 63, 66], [48, 55, 59, 62, 66], [50, 57, 61, 64], [47, 54, 59, 62]],
+        "bars_per_chord": 2, "drums": "pulse", "bass": "half", "lp_cut": 900, "pad_cut": 1300,
+        "arp_pattern": [0, 2, 4, 3, 1, 3, 5, 2], "arp_every": 2, "arp_wave": "tri", "arp_bright": 2000,
+        "arp_range": (64, 84), "voxpad_vowel": "o",
+        "sections": [(8, "pad arp"), (8, "pad arp kick hat perc lp bass"),
+                     (8, "pad arp kick hat perc lp bass voxpad"), (8, "pad voxpad arp")],
+        "mix": {"drums": -9, "arp": -3, "bass": -4, "voxpad": -5, "reverb": 3},
+    },
+    # Piratenangriff: angespannt, pulsierender Bass, Drums nur angedeutet
+    "enterhaken": {**_CALM,
+        "title": "Enterhaken", "bpm": 118, "seed": 13, "pad": "saw",
+        "chords": [[45, 52, 57, 60], [41, 48, 53, 57], [43, 50, 55, 58], [40, 47, 52, 56]],
+        "bars_per_chord": 2, "drums": "pulse", "bass": "pulse8", "lp_cut": 1400, "pad_cut": 800,
+        "pump": 0.35, "peak_db": -6.5,
+        "arp_pattern": [0, 1, 2, 1], "arp_every": 1, "arp_wave": "saw", "arp_bright": 900,
+        "arp_range": (57, 72),
+        "sections": [(8, "pad bass kick hat lp"), (8, "pad bass kick hat perc lp arp"),
+                     (8, "pad bass kick hat perc arp lp"), (8, "pad bass arp")],
+        "mix": {"drums": -7, "bass": -2, "arp": -8, "pad": -1, "reverb": 1},
+    },
+    # Jägerangriff: dunkel und bedrohlich, tiefer Chor, Trommeln wie aus der Ferne
+    "schatten_der_jaeger": {**_CALM,
+        "title": "Schatten der Jäger", "bpm": 124, "seed": 14, "pad": "saw",
+        "chords": [[41, 48, 53, 56], [40, 47, 52, 55], [44, 51, 56, 60], [43, 50, 55, 59]],
+        "bars_per_chord": 2, "drums": "tension", "bass": "drone", "reese": True, "reese_cut": 300,
+        "lp_cut": 1100, "pad_cut": 700, "kick_tune": 55, "kick_decay": 0.28, "pump": 0.3,
+        "peak_db": -5.0, "voxpad_vowel": "o",
+        "arp_pattern": [0, 0, 1, 0, 2, 0, 1, 0], "arp_every": 1, "arp_wave": "saw", "arp_bright": 700,
+        "arp_range": (53, 68),
+        "sections": [(8, "pad voxpad bass kick lp"), (8, "pad voxpad bass kick snare hat perc lp"),
+                     (8, "pad voxpad bass kick snare hat perc lp arp"), (8, "pad voxpad bass arp")],
+        "mix": {"drums": -6, "bass": -3, "voxpad": -2, "arp": -9, "reverb": 2},
+    },
+    # Händler / Reparaturstation: warm, freundlich, E-Piano
+    "andockhafen": {**_CALM,
+        "title": "Andockhafen", "bpm": 92, "seed": 15, "swing": 0.15,
+        "chords": [[53, 60, 64, 69], [50, 57, 60, 65], [46, 53, 57, 62, 64], [48, 55, 58, 64]],
+        "bars_per_chord": 2, "drums": "half", "bass": "half", "lp_cut": 1200, "pad_cut": 1500,
+        "keys_pattern": [(0, 6), (6, 4), (10, 6)], "voxpad_vowel": "a",
+        "sections": [(8, "pad keys"), (8, "pad keys kick hat perc lp bass"),
+                     (8, "pad keys kick hat perc lp bass voxpad"), (8, "pad keys voxpad")],
+        "mix": {"drums": -9, "keys": 1, "bass": -5, "voxpad": -6, "reverb": 3},
+    },
+}

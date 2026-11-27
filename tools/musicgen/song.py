@@ -45,6 +45,20 @@ DRUMS = {
         "shaker": ["xoxoxoxoxoxoxoxo", "xoxoxoxoxoxoxoxo"],
         "rim": ["...o.....o......", "...o.....o...o.."],
     },
+    "pulse": {
+        "kick": ["X.......X.......", "X.......X.....x."],
+        "snare": ["................", "................"],
+        "hat": ["....o.......o...", "....o.......o.o."],
+        "shaker": ["o.o.o.o.o.o.o.o.", "o.o.o.o.o.o.o.o."],
+        "rim": ["................", ".............o.."],
+    },
+    "tension": {
+        "kick": ["X..x..X...x..x..", "X..x..X...x.xx.x"],
+        "snare": ["........o.......", "........o.....o."],
+        "hat": ["o.o.o.o.o.o.o.o.", "o.o.o.o.o.o.oooo"],
+        "shaker": ["................", "................"],
+        "rim": ["....o.......o...", "....o.......o..."],
+    },
 }
 FILL = "....X..o.oXoXoXX"
 VEL = {"X": 1.0, "x": 0.75, "o": 0.35, ".": 0.0}
@@ -54,6 +68,8 @@ BASS = {
     "roll": [(0, 3, 0), (3, 3, 0), (8, 2, 12), (10, 4, 0), (14, 2, 10)],
     "long": [(0, 14, 0), (14, 2, 7)],
     "half": [(0, 12, 0), (12, 4, -2)],
+    "pulse8": [(i, 1.6, 0) for i in range(0, 16, 2)],
+    "drone": [(0, 16, 0)],
     "acid": [(0, 1, 0), (2, 1, 0), (3, 1, 12), (6, 1, 0), (7, 1, 3), (8, 1, 0), (10, 1, 12),
              (11, 1, 0), (12, 1, 7), (14, 1, 10), (15, 1, 0)],
 }
@@ -164,7 +180,7 @@ def _bass(song, bar, cache):
                 cache[key] = ins.reese(note, sec, s.get("reese_cut", 480))
             else:
                 cache[key] = ins.sub(note, sec, glide_from=None)
-        gain = 0.3 if style == "acid" else 0.42
+        gain = 0.3 if style in ("acid", "pulse8") else 0.42
         song.add("bass", cache[key], bar, step, gain)
         prev = note
     return prev
@@ -365,5 +381,5 @@ def render(spec):
     mix = filt(mix + hiss, 30, 0.7, "high", True)
     mix = mix + filt(mix, 7000, 0.6, "high", True) * 0.5  # etwas Luft obenrum
     mix = mix / (np.max(np.abs(mix)) + 1e-9)
-    mix = soft(mix * 1.6, 1.0)
-    return mix / (np.max(np.abs(mix)) + 1e-9) * 10 ** (-1.0 / 20), song
+    mix = soft(mix * spec.get("drive", 1.6), 1.0)
+    return mix / (np.max(np.abs(mix)) + 1e-9) * 10 ** (spec.get("peak_db", -1.0) / 20), song
